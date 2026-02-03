@@ -3,6 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import './Login.css';
 import { loginUser, loginWithGoogle } from '../../services/auth';
 
+// ✅ Nuevos iconos (asegúrate de ponerlos en: src/assets/feature-icons/)
+import geoIcon from '../../assets/feature-icons/geolocalizacion.png';
+import alertIcon from '../../assets/feature-icons/alertas.png';
+import communityIcon from '../../assets/feature-icons/comunidad.png';
+
 function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -14,68 +19,6 @@ function Login() {
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-
-  // ================================
-  // GOOGLE BUTTON RENDER (GIS)
-  // ================================
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-    if (!clientId) return;
-
-    const renderGoogleButton = () => {
-      if (!window.google?.accounts?.id) return;
-
-      // init
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (resp) => {
-          try {
-            const idToken = resp?.credential;
-            if (!idToken) throw new Error("No se recibio credential de Google");
-
-            setLoading(true);
-            setErrors({});
-
-            const r = await loginWithGoogle(idToken);
-
-            localStorage.setItem('token', r.token);
-            localStorage.setItem('user', JSON.stringify(r.user));
-
-            if (rememberMe) localStorage.setItem('rememberMe', 'true');
-            else localStorage.removeItem('rememberMe');
-
-            setLoginSuccess(true);
-            setTimeout(() => {
-              navigate('/map', { replace: true });
-            }, 800);
-
-          } catch (e2) {
-            setErrors({ general: e2.message || "Error con Google" });
-            setLoading(false);
-          }
-        },
-      });
-
-      // render
-      const el = document.getElementById("googleBtn");
-      if (!el) return;
-
-      el.innerHTML = "";
-      window.google.accounts.id.renderButton(el, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        text: "continue_with",
-        shape: "pill",
-        width: 360,
-      });
-    };
-
-    // espera corta por si el script aun esta cargando
-    const t = setTimeout(renderGoogleButton, 80);
-    return () => clearTimeout(t);
-  }, [navigate, rememberMe]);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -164,7 +107,66 @@ function Login() {
     }
   };
 
-  const handleSocialLogin = (provider) => {
+  // ✅ Render del boton oficial de Google dentro de tu contenedor (sin romper diseño)
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (!clientId) return; // si falta env, no hacemos nada
+    if (!window.google?.accounts?.id) return; // si aun no carga GSI, no hacemos nada
+
+    const btn = document.getElementById('googleBtn');
+    if (!btn) return;
+
+    // Evita duplicarlo si React re-renderiza
+    btn.innerHTML = '';
+
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async (resp) => {
+        try {
+          const idToken = resp?.credential;
+          if (!idToken) throw new Error('No se recibio credential de Google');
+
+          setLoading(true);
+          setErrors({});
+
+          const r = await loginWithGoogle(idToken);
+
+          // Guarda token/user como en login normal
+          localStorage.setItem('token', r.token);
+          localStorage.setItem('user', JSON.stringify(r.user));
+
+          // Respeta rememberMe
+          if (rememberMe) localStorage.setItem('rememberMe', 'true');
+          else localStorage.removeItem('rememberMe');
+
+          setLoginSuccess(true);
+          setTimeout(() => {
+            navigate('/map', { replace: true });
+          }, 800);
+
+        } catch (e2) {
+          setErrors({ general: e2.message || 'Error con Google' });
+          setLoading(false);
+        }
+      },
+    });
+
+    // Renderiza el boton oficial dentro de tu bloque con estilos consistentes
+    window.google.accounts.id.renderButton(btn, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'pill',
+      width: btn.offsetWidth || 360,
+      logo_alignment: 'left'
+    });
+
+  }, [navigate, rememberMe]);
+
+  const handleSocialLogin = async (provider) => {
+    // Apple: por ahora placeholder (gratis no hay login real con Apple)
     alert(`Login con ${provider} - Funcionalidad por implementar`);
   };
 
@@ -259,18 +261,12 @@ function Login() {
 
             </div>
 
-            {/* Features Cards con Iconos 3D */}
+            {/* ✅ Features Cards con nuevas ilustraciones (sin romper el diseño) */}
             <div className="radar-features-grid">
 
               <div className="feature-card-radar">
                 <div className="feature-icon-3d">
-                  <div className="icon-pin-wrapper">
-                    <div className="pin-shape">
-                      <div className="pin-head"></div>
-                      <div className="pin-point"></div>
-                    </div>
-                    <div className="pin-red-dot"></div>
-                  </div>
+                  <img className="feature-illustration" src={geoIcon} alt="Geolocalizacion" />
                 </div>
                 <h3 className="feature-title">Geolocalización</h3>
                 <p className="feature-description">Marca incidentes con precisión</p>
@@ -278,13 +274,7 @@ function Login() {
 
               <div className="feature-card-radar">
                 <div className="feature-icon-3d">
-                  <div className="icon-bell-wrapper">
-                    <div className="bell-shape">
-                      <div className="bell-top"></div>
-                      <div className="bell-body"></div>
-                      <div className="bell-bottom"></div>
-                    </div>
-                  </div>
+                  <img className="feature-illustration" src={alertIcon} alt="Alertas en tiempo real" />
                 </div>
                 <h3 className="feature-title">Alertas en Tiempo Real</h3>
                 <p className="feature-description">Recibe notificaciones inmediatas</p>
@@ -292,15 +282,7 @@ function Login() {
 
               <div className="feature-card-radar">
                 <div className="feature-icon-3d">
-                  <div className="icon-community-wrapper">
-                    <div className="people-group">
-                      <div className="person person-left"></div>
-                      <div className="person person-right"></div>
-                    </div>
-                    <div className="chat-bubble-icon">
-                      <div className="bubble-tail"></div>
-                    </div>
-                  </div>
+                  <img className="feature-illustration" src={communityIcon} alt="Comunidad activa" />
                 </div>
                 <h3 className="feature-title">Comunidad Activa</h3>
                 <p className="feature-description">Colabora con tus vecinos</p>
@@ -404,9 +386,9 @@ function Login() {
             <div className="divider-radar">o continúa con</div>
 
             <div className="social-buttons-radar">
-              {/* BOTON GOOGLE RENDERIZADO POR GIS */}
+              {/* ✅ Google real (renderButton en useEffect) */}
               <div className="btn-social google" style={{ padding: 0 }}>
-                <div id="googleBtn" style={{ width: "100%" }}></div>
+                <div id="googleBtn" style={{ width: '100%' }}></div>
               </div>
 
               <button
