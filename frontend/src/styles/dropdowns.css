@@ -1,0 +1,67 @@
+/* Dropdown pop */
+.rc-menu-pop{
+  position:absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 300px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 90px rgba(0,0,0,0.62);
+  padding: 10px;
+  z-index: 9999;
+}
+
+.rc-menu-item{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255,255,255,0.92);
+  cursor:pointer;
+  text-align:left;
+}
+.rc-menu-item:hover{
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.rc-menu-item.danger:hover{
+  background: rgba(239,68,68,0.14);
+  border-color: rgba(239,68,68,0.20);
+}
+
+.rc-mi-ico{
+  width: 34px;
+  height: 34px;
+  border-radius: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.rc-mi-ico.danger{
+  background: rgba(239,68,68,0.14);
+  border-color: rgba(239,68,68,0.20);
+}
+
+.rc-mi-text{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+  line-height: 1.05;
+}
+.rc-mi-title{ font-weight: 950; }
+.rc-mi-sub{ font-size: 12px; color: rgba(255,255,255,0.68); }
+
+.rc-menu-sep{
+  height: 1px;
+  background: rgba(255,255,255,0.10);
+  margin: 8px 6px;
+}

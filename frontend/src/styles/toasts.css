@@ -1,0 +1,51 @@
+/* ======================================================
+   TOASTS – FIX FINAL
+====================================================== */
+
+.rc-toast{
+  position: fixed;
+  top: 18px;
+  right: 18px;
+
+  width: 320px;
+  max-width: calc(100vw - 36px);
+
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+
+  z-index: 300000;
+
+  /* ✅ NO rompe layout ni clicks */
+  pointer-events: auto;
+}
+
+.rc-toast.ok{
+  border: 1px solid rgba(34,197,94,0.35);
+}
+
+.rc-toast.err{
+  border: 1px solid rgba(239,68,68,0.35);
+}
+
+.rc-toast-title{
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.rc-toast-msg{
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.rc-toast-close{
+  position:absolute;
+  right: 8px;
+  top: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+}

@@ -1,0 +1,80 @@
+/* Panel */
+.rc-panel{
+  width: var(--rc-panel-w);
+  background: rgba(10,16,28,0.55);
+  border-right: 1px solid var(--rc-border);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--rc-shadow-soft);
+  display:flex;
+  flex-direction:column;
+
+  /* ✅ FIX: no recortar dropdowns */
+  overflow: visible;
+
+  /* ✅ para stacking */
+  position: relative;
+  z-index: 50;
+}
+
+.rc-panel-header{
+  padding: 14px 14px;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rc-border);
+}
+.rc-panel-title{ font-weight: 900; letter-spacing: -0.2px; }
+
+/* ✅ el scroll queda aqui (y NO recorta el menu porque el menu esta en el panel, no fuera) */
+.rc-panel-body{
+  padding: 14px;
+  overflow:auto;
+}
+
+/* Fields */
+.rc-field{ margin-bottom: 14px; }
+.rc-field label{
+  display:block;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--rc-muted);
+  margin-bottom: 8px;
+}
+.rc-input, .rc-select{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--rc-border);
+  background: rgba(255,255,255,0.08);
+  color: var(--rc-text);
+  outline: none;
+}
+.rc-input::placeholder{ color: rgba(255,255,255,0.55); }
+.rc-help{ margin-top: 8px; color: var(--rc-muted); font-size: 12px; }
+
+.rc-check{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 14px;
+  cursor:pointer;
+  border: 1px solid transparent;
+}
+.rc-check:hover{
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+}
+.rc-check input{ width: 18px; height: 18px; accent-color: var(--rc-primary); }
+
+.rc-secondary-btn{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.08);
+  color: var(--rc-text);
+  cursor:pointer;
+  font-weight: 800;
+}
+.rc-secondary-btn:hover{ background: rgba(255,255,255,0.12); }

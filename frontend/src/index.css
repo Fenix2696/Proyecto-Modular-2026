@@ -1,0 +1,46 @@
+/* index.css (base global neutral para dashboards) */
+
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  color-scheme: light;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ✅ evita que el navegador permita scroll por pequeños desbordes */
+html, body {
+  overflow: hidden;
+}
+
+body {
+  display: block;       /* ✅ NO flex */
+  background: #ffffff;  /* base */
+  color: #0f172a;
+  min-width: 320px;
+}
+
+/* No imponer botón global (tus componentes tienen su propio CSS) */
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}

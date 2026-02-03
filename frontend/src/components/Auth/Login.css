@@ -1,0 +1,1335 @@
+/* =====================================================
+   RADAR CIUDADANO - LOGIN
+   Diseño exacto según imágenes de referencia
+   ===================================================== */
+
+/* Reset y Container */
+.radar-login-container {
+  all: initial !important;
+  display: block !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 999999 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif !important;
+  overflow: hidden !important;
+}
+
+.radar-login-container * {
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+}
+
+.radar-split {
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* =====================================================
+   HERO - LADO IZQUIERDO CON IMAGEN DE FONDO
+   ===================================================== */
+.radar-hero-section {
+  flex: 0 0 50% !important;
+  position: relative !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 60px 50px !important;
+
+  /* BACKGROUND - Imagen + Overlay */
+  /* RUTA CORREGIDA: desde Login.css (en src/components/Auth/) subimos 2 niveles */
+  background-image: url('../../assets/images/city-background.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Overlay de Gradiente sobre la imagen */
+.radar-hero-section::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: linear-gradient(135deg,
+    rgba(91, 127, 219, 0.85) 0%,
+    rgba(124, 92, 219, 0.85) 50%,
+    rgba(159, 95, 219, 0.85) 100%) !important;
+  z-index: 1 !important;
+}
+
+/* Efectos de luz adicionales */
+.radar-hero-section::after {
+  content: '' !important;
+  position: absolute !important;
+  top: -50% !important;
+  right: -20% !important;
+  width: 600px !important;
+  height: 600px !important;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%) !important;
+  filter: blur(60px) !important;
+  z-index: 2 !important;
+}
+
+.radar-hero-content {
+  position: relative !important;
+  z-index: 10 !important;
+  max-width: 600px !important;
+  width: 100% !important;
+}
+
+/* =====================================================
+   LOGO CON CÍRCULO DOBLE
+   ===================================================== */
+.radar-logo-wrapper {
+  margin: 0 auto 30px !important;
+  width: 110px !important;
+  height: 110px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.logo-circle-outer {
+  width: 110px !important;
+  height: 110px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 3px solid rgba(255, 255, 255, 0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow:
+    0 15px 50px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4) !important;
+  animation: logoFloatRadar 4s ease-in-out infinite !important;
+}
+
+@keyframes logoFloatRadar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.logo-circle-inner {
+  width: 75px !important;
+  height: 75px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 2.5px solid rgba(255, 255, 255, 0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.1),
+    0 4px 15px rgba(0, 0, 0, 0.15) !important;
+}
+
+.logo-shield {
+  width: 50px !important;
+  height: 50px !important;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25)) !important;
+}
+
+.wave-animation {
+  animation: waveMove 2s ease-in-out infinite !important;
+}
+
+@keyframes waveMove {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  50% { opacity: 0.8; transform: translateY(-1px); }
+}
+
+/* =====================================================
+   TÍTULO Y SUBTÍTULO
+   ===================================================== */
+.radar-main-title {
+  font-size: 58px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  text-align: center !important;
+  margin: 0 0 18px 0 !important;
+  letter-spacing: -1px !important;
+  text-shadow: 0 4px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+.radar-main-subtitle {
+  font-size: 18px !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-align: center !important;
+  margin: 0 0 45px 0 !important;
+  line-height: 1.6 !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* =====================================================
+   MAPA CON CÍRCULOS RADAR
+   ===================================================== */
+.radar-map-box {
+  position: relative !important;
+  height: 340px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(30px) !important;
+  border-radius: 32px !important;
+  border: 3px solid rgba(255, 255, 255, 0.25) !important;
+  margin-bottom: 40px !important;
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  overflow: hidden !important;
+}
+
+/* Grid sutil de fondo */
+.radar-map-box::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1.5px, transparent 1.5px) !important;
+  background-size: 40px 40px !important;
+  pointer-events: none !important;
+}
+
+/* Overlay de líneas diagonales */
+.radar-map-box::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background:
+    repeating-linear-gradient(45deg,
+      transparent,
+      transparent 15px,
+      rgba(255, 255, 255, 0.015) 15px,
+      rgba(255, 255, 255, 0.015) 30px) !important;
+  pointer-events: none !important;
+}
+
+/* =====================================================
+   MARCADORES CON CÍRCULOS RADAR
+   ===================================================== */
+.radar-point {
+  position: absolute !important;
+  z-index: 10 !important;
+}
+
+/* Ondas/Círculos Radar Concéntricos */
+.radar-waves {
+  position: absolute !important;
+  width: 200px !important;
+  height: 200px !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  pointer-events: none !important;
+}
+
+.wave-ring {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(255, 255, 255, 0.15) !important;
+  background: rgba(236, 72, 153, 0.08) !important;
+}
+
+.wave-ring.ring-1 {
+  width: 80px !important;
+  height: 80px !important;
+  animation: radarPulse 3s ease-out infinite !important;
+  animation-delay: 0s !important;
+}
+
+.wave-ring.ring-2 {
+  width: 130px !important;
+  height: 130px !important;
+  animation: radarPulse 3s ease-out infinite !important;
+  animation-delay: 0.5s !important;
+}
+
+.wave-ring.ring-3 {
+  width: 180px !important;
+  height: 180px !important;
+  animation: radarPulse 3s ease-out infinite !important;
+  animation-delay: 1s !important;
+}
+
+@keyframes radarPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Marcador Central (Punto Blanco) */
+.point-marker {
+  position: relative !important;
+  width: 68px !important;
+  height: 68px !important;
+  background: #ffffff !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 5px rgba(255, 255, 255, 0.2),
+    inset 0 -8px 15px rgba(0, 0, 0, 0.15),
+    inset 0 2px 0 rgba(255, 255, 255, 0.8) !important;
+  cursor: pointer !important;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  z-index: 20 !important;
+}
+
+.point-marker:hover {
+  transform: scale(1.12) translateY(-6px) !important;
+}
+
+.marker-emoji {
+  font-size: 32px !important;
+  position: relative !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)) !important;
+}
+
+/* =====================================================
+   FEATURES CARDS CON ICONOS 3D
+   ===================================================== */
+.radar-features-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 20px !important;
+}
+
+.feature-card-radar {
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(25px) !important;
+  border-radius: 24px !important;
+  padding: 30px 22px !important;
+  text-align: center !important;
+  border: 2.5px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow:
+    0 12px 45px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.feature-card-radar:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  transform: translateY(-5px) !important;
+  box-shadow: 0 15px 55px rgba(0, 0, 0, 0.25) !important;
+}
+
+.feature-icon-3d {
+  width: 85px !important;
+  height: 85px !important;
+  margin: 0 auto 18px !important;
+  position: relative !important;
+}
+
+/* ICONO 1: PIN CON PUNTO ROJO */
+.icon-pin-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.pin-shape {
+  width: 70px !important;
+  height: 70px !important;
+  position: relative !important;
+}
+
+.pin-head {
+  width: 70px !important;
+  height: 70px !important;
+  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%) !important;
+  border-radius: 50% 50% 50% 0 !important;
+  transform: rotate(-45deg) !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  box-shadow:
+    0 10px 30px rgba(59, 130, 246, 0.6),
+    inset -4px -4px 10px rgba(0, 0, 0, 0.25),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.4) !important;
+}
+
+.pin-head::after {
+  content: '' !important;
+  width: 28px !important;
+  height: 28px !important;
+  background: white !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.15) !important;
+}
+
+.pin-red-dot {
+  width: 18px !important;
+  height: 18px !important;
+  background: #EF4444 !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  box-shadow:
+    0 0 15px rgba(239, 68, 68, 0.9),
+    0 3px 8px rgba(239, 68, 68, 0.6) !important;
+  z-index: 10 !important;
+  animation: redDotPulse 2s ease-out infinite !important;
+}
+
+@keyframes redDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+/* ICONO 2: CAMPANA DORADA */
+.icon-bell-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.bell-shape {
+  width: 65px !important;
+  height: 70px !important;
+  position: relative !important;
+}
+
+.bell-top {
+  width: 18px !important;
+  height: 15px !important;
+  background: linear-gradient(135deg, #FDE68A 0%, #FCD34D 100%) !important;
+  border-radius: 50% 50% 0 0 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.bell-body {
+  width: 65px !important;
+  height: 60px !important;
+  background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%) !important;
+  border-radius: 50% 50% 0 0 / 65% 65% 0 0 !important;
+  position: absolute !important;
+  top: 12px !important;
+  left: 0 !important;
+  box-shadow:
+    0 12px 35px rgba(245, 158, 11, 0.6),
+    inset -4px -4px 10px rgba(0, 0, 0, 0.25),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.4) !important;
+}
+
+.bell-bottom {
+  width: 14px !important;
+  height: 18px !important;
+  background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
+  border-radius: 0 0 50% 50% !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3) !important;
+  animation: bellSwingRadar 2.5s ease-in-out infinite !important;
+  transform-origin: top center !important;
+}
+
+@keyframes bellSwingRadar {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(-8deg); }
+  75% { transform: translateX(-50%) rotate(8deg); }
+}
+
+/* ICONO 3: PERSONAS CON CHAT */
+.icon-community-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.people-group {
+  width: 75px !important;
+  height: 60px !important;
+  position: relative !important;
+}
+
+.person {
+  width: 42px !important;
+  height: 42px !important;
+  background: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%) !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  box-shadow:
+    0 10px 25px rgba(139, 92, 246, 0.6),
+    inset -3px -3px 8px rgba(0, 0, 0, 0.2),
+    inset 2px 2px 5px rgba(255, 255, 255, 0.4) !important;
+}
+
+.person-left {
+  top: 8px !important;
+  left: 0 !important;
+  z-index: 2 !important;
+}
+
+.person-right {
+  top: 8px !important;
+  right: 0 !important;
+  z-index: 1 !important;
+}
+
+.chat-bubble-icon {
+  width: 36px !important;
+  height: 28px !important;
+  background: white !important;
+  border-radius: 14px !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 5px !important;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  z-index: 3 !important;
+}
+
+.bubble-tail {
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid transparent !important;
+  border-right: 8px solid transparent !important;
+  border-top: 10px solid white !important;
+  position: absolute !important;
+  bottom: -8px !important;
+  right: 10px !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) !important;
+}
+
+.feature-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0 0 8px 0 !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.feature-description {
+  font-size: 13px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+/* =====================================================
+   FORMULARIO - LADO DERECHO
+   ===================================================== */
+.radar-form-section {
+  flex: 0 0 50% !important;
+  background: #EEF2F6 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 50px 35px !important;
+}
+
+.form-box-radar {
+  max-width: 480px !important;
+  width: 100% !important;
+  background: #ffffff !important;
+  padding: 50px 45px !important;
+  border-radius: 32px !important;
+  box-shadow:
+    0 25px 80px rgba(0, 0, 0, 0.08),
+    0 0 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.form-header-radar {
+  text-align: center !important;
+  margin-bottom: 40px !important;
+}
+
+.form-header-radar h2 {
+  font-size: 36px !important;
+  font-weight: 800 !important;
+  color: #0F172A !important;
+  margin: 0 0 10px 0 !important;
+  letter-spacing: -0.5px !important;
+}
+
+.form-header-radar p {
+  font-size: 15px !important;
+  color: #64748B !important;
+  margin: 0 !important;
+}
+
+/* Alertas */
+.alert-error,
+.alert-success {
+  padding: 14px 18px !important;
+  border-radius: 14px !important;
+  margin-bottom: 24px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.alert-error {
+  background: #FEF2F2 !important;
+  color: #DC2626 !important;
+  border: 2px solid #FECACA !important;
+}
+
+.alert-success {
+  background: #F0FDF4 !important;
+  color: #059669 !important;
+  border: 2px solid #A7F3D0 !important;
+}
+
+/* Form */
+.login-form-radar {
+  margin-bottom: 32px !important;
+}
+
+.input-group-radar {
+  margin-bottom: 24px !important;
+}
+
+.input-group-radar label {
+  display: block !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  margin-bottom: 10px !important;
+  font-size: 14px !important;
+}
+
+.input-radar {
+  width: 100% !important;
+  padding: 15px 20px !important;
+  border: 2px solid transparent !important;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+  background: #F1F5F9 !important;
+  color: #0F172A !important;
+  transition: all 0.2s ease !important;
+}
+
+.input-radar:focus {
+  outline: none !important;
+  background: #ffffff !important;
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
+}
+
+.input-radar.input-error {
+  border-color: #DC2626 !important;
+  background: #FEF2F2 !important;
+}
+
+.input-with-icon {
+  position: relative !important;
+}
+
+.toggle-password {
+  position: absolute !important;
+  right: 18px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 22px !important;
+  color: #64748B !important;
+  transition: color 0.2s !important;
+}
+
+.toggle-password:hover {
+  color: #667eea !important;
+}
+
+.error-msg {
+  display: block !important;
+  color: #DC2626 !important;
+  font-size: 13px !important;
+  margin-top: 8px !important;
+  font-weight: 500 !important;
+}
+
+.form-options-radar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 28px !important;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+}
+
+.checkbox-label input {
+  width: 18px !important;
+  height: 18px !important;
+  cursor: pointer !important;
+  accent-color: #667eea !important;
+}
+
+.checkbox-label span {
+  font-size: 14px !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
+}
+
+.link-forgot {
+  color: #667eea !important;
+  text-decoration: none !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  transition: color 0.2s !important;
+}
+
+.link-forgot:hover {
+  color: #764ba2 !important;
+}
+
+.btn-login-radar {
+  width: 100% !important;
+  padding: 17px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 14px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-login-radar:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5) !important;
+}
+
+.btn-login-radar.success {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+}
+
+.divider-radar {
+  display: flex !important;
+  align-items: center !important;
+  margin: 32px 0 !important;
+  color: #94A3B8 !important;
+  font-size: 14px !important;
+}
+
+.divider-radar::before,
+.divider-radar::after {
+  content: '' !important;
+  flex: 1 !important;
+  height: 1px !important;
+  background: #E2E8F0 !important;
+}
+
+.divider-radar::before { margin-right: 16px !important; }
+.divider-radar::after { margin-left: 16px !important; }
+
+.social-buttons-radar {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin-bottom: 32px !important;
+}
+
+.btn-social {
+  width: 100% !important;
+  padding: 15px 20px !important;
+  background: #ffffff !important;
+  border: 2px solid #E2E8F0 !important;
+  border-radius: 14px !important;
+  cursor: pointer !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #0F172A !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-social:hover {
+  background: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-social.google:hover {
+  border-color: #4285F4 !important;
+}
+
+.btn-social.apple:hover {
+  border-color: #000000 !important;
+}
+
+.social-svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.register-link-radar {
+  text-align: center !important;
+  font-size: 14px !important;
+  color: #64748B !important;
+}
+
+.register-link-radar a {
+  color: #667eea !important;
+  text-decoration: none !important;
+  font-weight: 700 !important;
+}
+
+.register-link-radar a:hover {
+  color: #764ba2 !important;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+@media (max-width: 768px) {
+  .radar-split {
+    flex-direction: column !important;
+  }
+
+  .radar-hero-section {
+    flex: 0 0 45vh !important;
+    padding: 30px 25px !important;
+  }
+
+  .radar-main-title {
+    font-size: 38px !important;
+  }
+
+  .radar-map-box {
+    height: 220px !important;
+    margin-bottom: 30px !important;
+  }
+
+  .radar-features-grid {
+    display: none !important;
+  }
+
+  .radar-form-section {
+    flex: 1 !important;
+    padding: 30px 20px !important;
+  }
+
+  .form-box-radar {
+    padding: 36px 30px !important;
+  }
+}
+
+
+/* =====================================================
+   MEJORAS: ICONOS 3D PROFESIONALES + MAPA CON CALLES
+   Agregar al final de Login.css
+   ===================================================== */
+
+/* =====================================================
+   MAPA MEJORADO CON CALLES
+   ===================================================== */
+.radar-map-box {
+  position: relative !important;
+  height: 340px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(30px) !important;
+  border-radius: 32px !important;
+  border: 3px solid rgba(255, 255, 255, 0.25) !important;
+  margin-bottom: 40px !important;
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  overflow: hidden !important;
+}
+
+/* Patrón de calles horizontal y vertical */
+.radar-map-box::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-image:
+    /* Calles principales - más gruesas */
+    linear-gradient(to right, transparent 0%, transparent 48%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0.08) 52%, transparent 52%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, transparent 48%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0.08) 52%, transparent 52%, transparent 100%),
+    /* Calles secundarias - más delgadas */
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1.5px, transparent 1.5px),
+    /* Grid fino de fondo */
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px) !important;
+  background-size:
+    100% 100%,
+    100% 100%,
+    60px 60px,
+    60px 60px,
+    20px 20px,
+    20px 20px !important;
+  pointer-events: none !important;
+  opacity: 0.8 !important;
+}
+
+/* Conexiones entre puntos (líneas diagonales sutiles) */
+.radar-map-box::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background:
+    /* Líneas diagonales que simulan conexiones */
+    linear-gradient(135deg, transparent 45%, rgba(255, 255, 255, 0.015) 45%, rgba(255, 255, 255, 0.015) 55%, transparent 55%),
+    linear-gradient(-135deg, transparent 45%, rgba(255, 255, 255, 0.015) 45%, rgba(255, 255, 255, 0.015) 55%, transparent 55%) !important;
+  background-size: 80px 80px !important;
+  pointer-events: none !important;
+  opacity: 0.6 !important;
+}
+
+/* =====================================================
+   ICONO 1: PIN DE GEOLOCALIZACIÓN MEJORADO
+   ===================================================== */
+.icon-pin-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  filter: drop-shadow(0 8px 20px rgba(59, 130, 246, 0.4)) !important;
+}
+
+.pin-shape {
+  width: 70px !important;
+  height: 85px !important;
+  position: relative !important;
+}
+
+/* Cuerpo principal del pin */
+.pin-head {
+  width: 70px !important;
+  height: 70px !important;
+  background:
+    linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, #2563EB 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%) !important;
+  background-blend-mode: normal, overlay !important;
+  border-radius: 50% 50% 50% 0 !important;
+  transform: rotate(-45deg) !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  box-shadow:
+    0 12px 35px rgba(59, 130, 246, 0.7),
+    inset -5px -5px 12px rgba(0, 0, 0, 0.3),
+    inset 4px 4px 8px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(37, 99, 235, 0.8) !important;
+}
+
+/* Círculo blanco interior */
+.pin-head::after {
+  content: '' !important;
+  width: 32px !important;
+  height: 32px !important;
+  background:
+    radial-gradient(circle at 35% 35%, #ffffff 0%, #f0f9ff 100%) !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Punto inferior del pin */
+.pin-head::before {
+  content: '' !important;
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid transparent !important;
+  border-right: 8px solid transparent !important;
+  border-top: 16px solid #2563EB !important;
+  position: absolute !important;
+  bottom: -14px !important;
+  left: 50% !important;
+  transform: translateX(-50%) rotate(45deg) !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
+}
+
+/* Punto rojo pulsante mejorado */
+.pin-red-dot {
+  width: 20px !important;
+  height: 20px !important;
+  background:
+    radial-gradient(circle at 35% 35%, #FCA5A5 0%, #EF4444 50%, #DC2626 100%) !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  top: 6px !important;
+  right: 6px !important;
+  box-shadow:
+    0 0 20px rgba(239, 68, 68, 1),
+    0 0 10px rgba(239, 68, 68, 0.8),
+    0 4px 10px rgba(239, 68, 68, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 2px rgba(185, 28, 28, 0.8) !important;
+  z-index: 10 !important;
+  animation: redDotPulseEnhanced 2s ease-out infinite !important;
+}
+
+@keyframes redDotPulseEnhanced {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow:
+      0 0 20px rgba(239, 68, 68, 1),
+      0 0 10px rgba(239, 68, 68, 0.8),
+      0 4px 10px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.9;
+    box-shadow:
+      0 0 30px rgba(239, 68, 68, 1),
+      0 0 15px rgba(239, 68, 68, 0.9),
+      0 6px 15px rgba(239, 68, 68, 0.7);
+  }
+}
+
+/* =====================================================
+   ICONO 2: CAMPANA DORADA MEJORADA
+   ===================================================== */
+.icon-bell-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  filter: drop-shadow(0 8px 20px rgba(245, 158, 11, 0.5)) !important;
+}
+
+.bell-shape {
+  width: 68px !important;
+  height: 75px !important;
+  position: relative !important;
+}
+
+/* Top de la campana (gancho) */
+.bell-top {
+  width: 20px !important;
+  height: 16px !important;
+  background:
+    linear-gradient(135deg, #FEF3C7 0%, #FDE68A 50%, #FCD34D 100%) !important;
+  border-radius: 50% 50% 0 0 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  box-shadow:
+    inset 0 -2px 5px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6),
+    0 2px 4px rgba(251, 191, 36, 0.4) !important;
+}
+
+/* Cuerpo de la campana */
+.bell-body {
+  width: 68px !important;
+  height: 62px !important;
+  background:
+    linear-gradient(135deg, #FDE68A 0%, #FBBF24 40%, #F59E0B 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%) !important;
+  background-blend-mode: normal, overlay !important;
+  border-radius: 50% 50% 0 0 / 70% 70% 0 0 !important;
+  position: absolute !important;
+  top: 13px !important;
+  left: 0 !important;
+  box-shadow:
+    0 15px 40px rgba(245, 158, 11, 0.7),
+    inset -5px -5px 15px rgba(0, 0, 0, 0.3),
+    inset 4px 4px 10px rgba(255, 255, 255, 0.5),
+    inset 0 -3px 6px rgba(217, 119, 6, 0.8) !important;
+}
+
+/* Brillo superior de la campana */
+.bell-body::before {
+  content: '' !important;
+  width: 50% !important;
+  height: 40% !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, transparent 100%) !important;
+  border-radius: 50% 50% 0 0 !important;
+  position: absolute !important;
+  top: 5px !important;
+  left: 10px !important;
+  pointer-events: none !important;
+}
+
+/* Borde inferior de la campana */
+.bell-body::after {
+  content: '' !important;
+  width: 100% !important;
+  height: 8px !important;
+  background: linear-gradient(180deg, #D97706 0%, #B45309 100%) !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  border-radius: 0 0 4px 4px !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Badajo (clapper) mejorado */
+.bell-bottom {
+  width: 16px !important;
+  height: 20px !important;
+  background:
+    linear-gradient(135deg, #EA580C 0%, #DC2626 100%),
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 100%) !important;
+  background-blend-mode: normal, overlay !important;
+  border-radius: 0 0 50% 50% !important;
+  position: absolute !important;
+  bottom: -2px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.3) !important;
+  animation: bellSwingEnhanced 2.5s ease-in-out infinite !important;
+  transform-origin: top center !important;
+}
+
+@keyframes bellSwingEnhanced {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(-12deg); }
+  75% { transform: translateX(-50%) rotate(12deg); }
+}
+
+/* Ondas de sonido */
+.bell-shape::before,
+.bell-shape::after {
+  content: '' !important;
+  position: absolute !important;
+  border: 2px solid rgba(251, 191, 36, 0.4) !important;
+  border-radius: 50% !important;
+  animation: bellRing 2s ease-out infinite !important;
+}
+
+.bell-shape::before {
+  width: 90px !important;
+  height: 90px !important;
+  top: -5px !important;
+  left: -11px !important;
+}
+
+.bell-shape::after {
+  width: 110px !important;
+  height: 110px !important;
+  top: -15px !important;
+  left: -21px !important;
+  animation-delay: 0.3s !important;
+}
+
+@keyframes bellRing {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* =====================================================
+   ICONO 3: COMUNIDAD MEJORADA (PERSONAS + CHAT)
+   ===================================================== */
+.icon-community-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  filter: drop-shadow(0 8px 20px rgba(139, 92, 246, 0.4)) !important;
+}
+
+.people-group {
+  width: 80px !important;
+  height: 65px !important;
+  position: relative !important;
+}
+
+/* Personas mejoradas con detalles */
+.person {
+  width: 45px !important;
+  height: 45px !important;
+  background:
+    linear-gradient(135deg, #C4B5FD 0%, #A78BFA 40%, #8B5CF6 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%) !important;
+  background-blend-mode: normal, overlay !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  box-shadow:
+    0 12px 30px rgba(139, 92, 246, 0.7),
+    inset -4px -4px 10px rgba(0, 0, 0, 0.3),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(124, 58, 237, 0.8) !important;
+}
+
+/* Brillo en las personas */
+.person::before {
+  content: '' !important;
+  width: 18px !important;
+  height: 18px !important;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%) !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  top: 8px !important;
+  left: 8px !important;
+  pointer-events: none !important;
+}
+
+.person-left {
+  top: 10px !important;
+  left: 0 !important;
+  z-index: 2 !important;
+}
+
+.person-right {
+  top: 10px !important;
+  right: 0 !important;
+  z-index: 1 !important;
+}
+
+/* Burbuja de chat mejorada */
+.chat-bubble-icon {
+  width: 40px !important;
+  height: 32px !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f8fafc 100%),
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 1) 0%, rgba(226, 232, 240, 0.8) 100%) !important;
+  background-blend-mode: normal, overlay !important;
+  border-radius: 16px !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 2px !important;
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 1),
+    inset 0 -1px 2px rgba(148, 163, 184, 0.3),
+    0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+  z-index: 3 !important;
+}
+
+/* Puntos de texto en la burbuja */
+.chat-bubble-icon::before {
+  content: '...' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  color: #8B5CF6 !important;
+  letter-spacing: 2px !important;
+}
+
+/* Cola de la burbuja mejorada */
+.bubble-tail {
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 10px solid transparent !important;
+  border-right: 10px solid transparent !important;
+  border-top: 12px solid #ffffff !important;
+  position: absolute !important;
+  bottom: -9px !important;
+  right: 12px !important;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.2)) !important;
+}
+
+/* Sombra de la cola */
+.bubble-tail::after {
+  content: '' !important;
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid transparent !important;
+  border-right: 8px solid transparent !important;
+  border-top: 10px solid #f8fafc !important;
+  position: absolute !important;
+  top: -12px !important;
+  left: -8px !important;
+}
+
+/* =====================================================
+   ANIMACIONES ADICIONALES PARA LOS ICONOS
+   ===================================================== */
+
+/* Hover en las feature cards */
+.feature-card-radar:hover .icon-pin-wrapper,
+.feature-card-radar:hover .icon-bell-wrapper,
+.feature-card-radar:hover .icon-community-wrapper {
+  animation: iconBounce 0.6s ease-in-out !important;
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.05); }
+}
+
+/* Pulso sutil en los iconos */
+.feature-icon-3d {
+  animation: iconPulse 3s ease-in-out infinite !important;
+}
+
+@keyframes iconPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+}

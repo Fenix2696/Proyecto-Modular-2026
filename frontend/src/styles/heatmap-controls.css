@@ -1,0 +1,92 @@
+/* ===== Mini panel Heatmap ===== */
+.rc-heat-mini{
+  position:absolute;
+  left: 16px;
+  bottom: 132px;
+  z-index: 85;
+
+  width: 340px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 90px rgba(0,0,0,0.60);
+  padding: 12px 12px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.rc-heat-mini-title{
+  font-weight: 950;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: -0.2px;
+}
+
+.rc-heat-mini-sub{
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.62);
+  line-height: 1.25;
+}
+
+.rc-heat-mini-left{
+  min-width: 0;
+}
+
+/* Switch tipo iOS */
+.rc-switch{
+  position: relative;
+  width: 56px;
+  height: 32px;
+  display:inline-block;
+  flex: 0 0 auto;
+}
+
+.rc-switch input{
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rc-switch span{
+  position:absolute;
+  inset:0;
+  border-radius: 999px;
+  cursor:pointer;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.rc-switch span::after{
+  content:"";
+  position:absolute;
+  left: 3px;
+  top: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.35);
+  transition: transform .15s ease;
+}
+
+.rc-switch input:checked + span{
+  background: rgba(239,68,68,0.22);
+  border-color: rgba(239,68,68,0.30);
+  box-shadow: 0 0 0 6px rgba(239,68,68,0.10);
+}
+
+.rc-switch input:checked + span::after{
+  transform: translateX(24px);
+}
+
+/* Responsive */
+@media (max-width: 520px){
+  .rc-heat-mini{
+    width: calc(100vw - 32px);
+  }
+}

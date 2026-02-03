@@ -1,0 +1,175 @@
+.rc-filters{
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+
+  /* ayuda a stacking */
+  position: relative;
+}
+
+/* ✅ importante: cada bloque crea su capa controlable */
+.rc-filters-section{
+  position: relative;
+  z-index: 1;
+
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px);
+}
+
+/* ✅ cuando abre el dropdown, este bloque pasa por encima del de abajo */
+.rc-filters-section.is-front{
+  z-index: 50;
+}
+
+.rc-filters-label{
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  margin-bottom: 10px;
+  letter-spacing: 0.2px;
+}
+
+/* ===== Dropdown custom ===== */
+.rc-dd{
+  position: relative;
+}
+
+.rc-dd-trigger{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  cursor:pointer;
+  font-weight: 900;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.rc-dd-trigger:hover{
+  border-color: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+}
+
+.rc-dd-trigger.is-open{
+  border-color: rgba(88,166,255,0.35);
+  box-shadow: 0 0 0 3px rgba(88,166,255,0.18), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.rc-dd-chev{
+  opacity: 0.75;
+  transform: translateY(-1px);
+}
+
+.rc-dd-menu{
+  position:absolute;
+  left:0;
+  right:0;
+  top: calc(100% + 8px);
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(10,16,26,0.94);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+  z-index: 9999; /* ok ahora si */
+}
+
+.rc-dd-item{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(255,255,255,0.88);
+  cursor:pointer;
+  font-weight: 800;
+}
+
+.rc-dd-item:hover{
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+}
+
+.rc-dd-item.is-active{
+  background: rgba(88,166,255,0.18);
+  border-color: rgba(88,166,255,0.25);
+}
+
+.rc-dd-check{
+  width: 18px;
+  text-align:right;
+  opacity: 0.9;
+}
+
+/* ===== Lista de checkboxes ===== */
+.rc-filters-list{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.rc-filters-item{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 12px 12px;
+  border-radius: 16px;
+  cursor:pointer;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.rc-filters-item:hover{
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.14);
+}
+
+.rc-filters-check{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--rc-primary);
+}
+
+.rc-filters-text{
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+}
+
+/* ===== Boton reset ===== */
+.rc-filters-footer{
+  padding-top: 6px;
+}
+
+.rc-filters-reset{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  cursor:pointer;
+  font-weight: 950;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.rc-filters-reset:hover{
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.16);
+}

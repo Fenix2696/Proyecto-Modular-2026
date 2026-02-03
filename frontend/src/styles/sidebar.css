@@ -1,0 +1,214 @@
+/* ======================================================
+   SIDEBAR – Radar Ciudadano
+====================================================== */
+
+.rc-sidebar{
+  width: 240px;
+  height: 100%;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  background: linear-gradient(
+    180deg,
+    rgba(15,23,42,0.98),
+    rgba(15,23,42,0.94)
+  );
+
+  border-right: 1px solid rgba(255,255,255,0.08);
+
+  transition: width 0.25s ease, padding 0.25s ease;
+  overflow: hidden;
+  z-index: 20;
+}
+
+/* ======================================================
+   COLLAPSED (☰)
+   👉 cuando se colapsa, DESAPARECE
+====================================================== */
+
+.rc-sidebar.collapsed{
+  width: 0 !important;
+  padding: 0 !important;
+  border-right: none !important;
+}
+
+/* ======================================================
+   HEADER
+====================================================== */
+
+.rc-sidebar-header{
+  height: 64px;
+  padding: 0 16px;
+
+  display: flex;
+  align-items: center;
+
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.rc-sidebar-title{
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  color: rgba(226,232,240,0.95);
+  white-space: nowrap;
+}
+
+/* ======================================================
+   NAV
+====================================================== */
+
+.rc-sidebar-nav{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 8px;
+}
+
+/* ======================================================
+   ITEM
+====================================================== */
+
+.rc-side-item{
+  position: relative;
+
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  border-radius: 12px;
+  border: none;
+
+  background: transparent;
+  color: rgba(226,232,240,0.75);
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.rc-side-item:hover{
+  background: rgba(255,255,255,0.06);
+  color: rgba(226,232,240,0.95);
+}
+
+.rc-side-item.active{
+  background: rgba(255,255,255,0.12);
+  color: white;
+}
+
+/* ======================================================
+   ICON
+====================================================== */
+
+.rc-side-ico{
+  width: 22px;
+  height: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: inherit;
+}
+
+.rc-side-ico svg{
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* ======================================================
+   LABEL
+====================================================== */
+
+.rc-side-label{
+  white-space: nowrap;
+}
+
+/* ======================================================
+   TOOLTIP (cuando sidebar esta colapsado)
+====================================================== */
+
+.rc-side-tooltip{
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+
+  padding: 6px 10px;
+  border-radius: 8px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  background: rgba(15,23,42,0.96);
+  color: white;
+
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* solo aparece cuando sidebar esta colapsado */
+.rc-sidebar.collapsed .rc-side-item:hover .rc-side-tooltip{
+  opacity: 1;
+}
+
+/* ======================================================
+   SPACER
+====================================================== */
+
+.rc-sidebar-spacer{
+  flex: 1;
+}
+
+/* ======================================================
+   FOOTER
+====================================================== */
+
+.rc-sidebar-footer{
+  padding: 12px 8px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* danger (logout) */
+.rc-side-item.danger{
+  color: #f87171;
+}
+
+.rc-side-item.danger:hover{
+  background: rgba(248,113,113,0.12);
+  color: #fecaca;
+}
+
+/* ======================================================
+   RESPONSIVE (mobile)
+====================================================== */
+
+@media (max-width: 768px){
+  .rc-sidebar{
+    position: absolute;
+    left: 0;
+    top: 64px; /* debajo del topbar */
+    height: calc(100vh - 64px);
+  }
+
+  .rc-sidebar.collapsed{
+    transform: translateX(-100%);
+    width: 240px; /* solo para animacion */
+  }
+}

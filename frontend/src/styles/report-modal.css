@@ -1,0 +1,309 @@
+.rm-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.55);
+  backdrop-filter: blur(8px);
+  z-index: 99999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 16px;
+}
+
+.rm-modal{
+  width: min(720px, 94vw);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.55);
+  overflow: hidden;
+}
+
+.rm-header{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 18px 18px;
+  border-bottom: 1px solid #e7eef6;
+}
+
+.rm-title{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  font-weight: 950;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.rm-pin{ font-size: 18px; }
+
+.rm-close{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid #e7eef6;
+  background: #f8fafc;
+  cursor: pointer;
+}
+.rm-close:hover{ background: #eef2ff; }
+
+.rm-steps{
+  padding: 14px 18px 8px 18px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.rm-step{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap: 6px;
+  min-width: 90px;
+}
+
+.rm-step-dot{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 900;
+}
+
+.rm-step.active .rm-step-dot{
+  background: linear-gradient(135deg,#667eea,#764ba2);
+  color: white;
+  box-shadow: 0 10px 28px rgba(102,126,234,0.25);
+}
+
+.rm-step.done .rm-step-dot{
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.rm-step-label{
+  font-size: 12px;
+  color: #334155;
+  font-weight: 800;
+}
+
+.rm-step-line{
+  flex: 1;
+  height: 2px;
+  background: #e7eef6;
+  border-radius: 999px;
+  margin-top: -14px;
+}
+
+.rm-body{
+  padding: 18px;
+}
+
+.rm-h3{
+  margin: 8px 0 14px 0;
+  font-size: 18px;
+  color: #0f172a;
+  font-weight: 950;
+}
+
+.rm-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rm-type{
+  border-radius: 18px;
+  border: 2px solid #e7eef6;
+  background: #ffffff;
+  padding: 14px;
+  cursor:pointer;
+  text-align:center;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.rm-type:hover{
+  transform: translateY(-2px);
+  background: #f8fafc;
+  border-color: #dbeafe;
+}
+
+.rm-type.active{
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
+.rm-emoji{
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.rm-type-label{
+  font-weight: 950;
+  font-size: 13px;
+}
+
+.rm-field{
+  margin-bottom: 14px;
+}
+
+.rm-field label{
+  display:block;
+  font-weight: 900;
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.rm-input{
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 2px solid #e7eef6;
+  outline: none;
+  font-size: 14px;
+}
+
+.rm-input:focus{
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 6px rgba(167,139,250,0.18);
+}
+
+.rm-textarea{
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 2px solid #e7eef6;
+  outline: none;
+  font-size: 14px;
+  resize: none;
+}
+
+.rm-textarea:focus{
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 6px rgba(167,139,250,0.18);
+}
+
+.rm-small{
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.rm-coords{
+  display:flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.rm-coord{
+  flex: 1;
+  border-radius: 16px;
+  border: 2px solid #e7eef6;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.rm-coord-label{
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.rm-coord-value{
+  font-weight: 950;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.rm-footer{
+  display:flex;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #e7eef6;
+}
+
+.rm-btn{
+  height: 48px;
+  border-radius: 16px;
+  padding: 0 16px;
+  font-weight: 950;
+  cursor:pointer;
+  border: none;
+}
+
+.rm-btn-ghost{
+  flex: 1;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.rm-btn-ghost:hover{ background: #e2e8f0; }
+
+.rm-btn-primary{
+  flex: 1;
+  background: linear-gradient(135deg,#667eea,#764ba2);
+  color: white;
+}
+
+.rm-btn-primary:hover{ filter: brightness(1.05); }
+
+.rm-btn:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 680px){
+  .rm-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* =========================
+   Google Places dropdown
+   ========================= */
+.pac-container{
+  z-index: 100000 !important; /* arriba de modales/overlays */
+  border-radius: 14px !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.25) !important;
+  overflow: hidden !important;
+  font-family: inherit !important;
+}
+
+.pac-item{
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+}
+
+.pac-item:hover{
+  background: rgba(102,126,234,0.10) !important;
+}
+
+.pac-item-query{
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+/* Estilo para el nuevo PlaceAutocompleteElement */
+gmp-place-autocomplete,
+.gmp-autocomplete{
+  width: 100%;
+  display: block;
+}
+
+/* Si el componente respeta estilos básicos */
+.gmp-autocomplete{
+  height: 46px;
+  border-radius: 16px;
+  border: 2px solid #e7eef6;
+  background: #fff;
+  padding: 0 14px;
+  box-sizing: border-box;
+}

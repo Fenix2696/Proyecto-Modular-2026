@@ -1,0 +1,163 @@
+/* =========================
+   BOTON FLOTANTE HEATMAP
+   ========================= */
+.rc-heat-fab {
+  position: absolute;
+  bottom: 90px;
+  left: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(145deg, #ff4d4d, #ff0000);
+  box-shadow:
+    0 10px 25px rgba(255, 0, 0, 0.45),
+    inset 0 0 10px rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  z-index: 50;
+}
+
+.rc-heat-fab:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow:
+    0 14px 30px rgba(255, 0, 0, 0.6),
+    inset 0 0 14px rgba(255,255,255,0.25);
+}
+
+.rc-heat-fab:active {
+  transform: scale(0.96);
+}
+
+/* =========================
+   PANEL ZONAS CALIENTES
+   ========================= */
+.rc-heat-panel {
+  position: absolute;
+  bottom: 150px;
+  left: 16px;
+  width: 280px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    #1a0b0b,
+    #120606
+  );
+  border: 1px solid rgba(255, 0, 0, 0.25);
+  box-shadow:
+    0 25px 60px rgba(255, 0, 0, 0.45),
+    inset 0 0 25px rgba(255, 60, 60, 0.15);
+  color: #fff;
+  z-index: 60;
+}
+
+/* Header */
+.rc-heat-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffb3b3;
+  letter-spacing: 0.4px;
+}
+
+/* Row layout */
+.rc-heat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Label */
+.rc-heat-label {
+  font-size: 13px;
+  color: #ffd6d6;
+}
+
+/* =========================
+   SWITCH ON / OFF
+   ========================= */
+.rc-heat-switch {
+  position: relative;
+  width: 46px;
+  height: 24px;
+}
+
+.rc-heat-switch input {
+  display: none;
+}
+
+.rc-heat-switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #3a0b0b;
+  transition: all 0.25s ease;
+}
+
+.rc-heat-switch span::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: all 0.25s ease;
+}
+
+.rc-heat-switch input:checked + span {
+  background: linear-gradient(145deg, #ff4d4d, #ff0000);
+}
+
+.rc-heat-switch input:checked + span::before {
+  transform: translateX(22px);
+}
+
+/* =========================
+   SELECTS
+   ========================= */
+.rc-heat-select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,0,0,0.25);
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.rc-heat-select option {
+  background: #140707;
+  color: #fff;
+}
+
+/* =========================
+   TEXTO AYUDA
+   ========================= */
+.rc-heat-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #ffb3b3;
+  opacity: 0.85;
+}
+
+/* =========================
+   BOTON CERRAR
+   ========================= */
+.rc-heat-close {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(145deg, #ff4d4d, #ff0000);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
