@@ -96,31 +96,77 @@
   box-shadow: 0 0 0 6px rgba(239,68,68,0.12), 0 18px 50px rgba(0,0,0,0.35);
 }
 
-/* ===== Heatmap FAB ===== */
-.rc-heatmap-fab{
+/* =========================
+   GOOGLE MAPS - INFOWINDOW (INCIDENTES)
+   Fix: el sitio usa tema oscuro (texto blanco) y el InfoWindow es blanco,
+   por eso el texto se ve "invisible". Forzamos texto oscuro dentro del bubble.
+   ========================= */
+
+/* Contenedor del InfoWindow */
+.gm-style .gm-style-iw-c{
+  padding: 12px 14px !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.25) !important;
+  color: #0f172a !important;
+}
+
+/* Contenido scroll interno */
+.gm-style .gm-style-iw-d{
+  overflow: hidden !important;
+  color: #0f172a !important;
+}
+
+/* Asegura que cualquier texto dentro herede el color oscuro */
+.gm-style .gm-style-iw-d *{
+  color: inherit !important;
+}
+
+/* Triangulito (tip) */
+.gm-style .gm-style-iw-t::after{
+  background: #ffffff !important;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.18) !important;
+}
+
+/* Boton cerrar (X) */
+.gm-ui-hover-effect{
+  opacity: 0.75;
+}
+.gm-ui-hover-effect:hover{
+  opacity: 1;
+}
+
+/* Boton Mi ubicacion */
+.rc-me-fab{
   position:absolute;
   left: 16px;
-  bottom: 76px; /* arriba del maptype */
-  z-index: 60;
+  bottom: 136px; /* arriba del heatmap */
+  z-index: 65;
+
   width: 48px;
   height: 48px;
   border-radius: 14px;
+
   border: 1px solid rgba(255,255,255,0.14);
   background: rgba(15, 23, 42, 0.92);
   color: rgba(255,255,255,0.92);
   cursor:pointer;
+
   display:flex;
   align-items:center;
   justify-content:center;
+
   box-shadow: 0 18px 50px rgba(0,0,0,0.35);
   transition: transform .15s ease, background .15s ease, border-color .15s ease;
 }
-.rc-heatmap-fab:hover{
+
+.rc-me-fab:hover{
   transform: translateY(-1px);
   background: rgba(15, 23, 42, 0.98);
   border-color: rgba(255,255,255,0.18);
 }
-.rc-heatmap-fab.active{
-  border-color: rgba(239,68,68,0.35);
-  box-shadow: 0 0 0 6px rgba(239,68,68,0.12), 0 18px 50px rgba(0,0,0,0.35);
+
+.rc-me-fab.disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
 }

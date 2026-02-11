@@ -1,141 +1,151 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * PlacesSearch (NEW)
- * Usa google.maps.places.PlaceAutocompleteElement
- * - NO carga scripts (evita doble carga)
- * - Emite onSelect({lat,lng,address,place})
- * - Controlado: value + onValueChange
+ * PlacesSearch
+ * - google.maps.places.Autocomplete sobre un <input>
+ * - onSelect({lat,lng,address,place})
+ * - value + onValueChange controlado
+ * - onEnter(text) al presionar ENTER
+ *
+ * Fixes UX:
+ * - Evita doble accion (select + enter) con justSelectedRef
+ * - Cierra sugerencias al presionar Enter (blur)
  */
 export default function PlacesSearch({
   onSelect,
+  onEnter,
   placeholder = "Buscar direccion o lugar...",
   value = "",
   onValueChange,
   inputClassName = "rc-input",
-  showHelp = true,
+  showHelp = false,
+  biasGuadalajara = true,
 }) {
-  const hostRef = useRef(null);
-  const elRef = useRef(null);
+  const inputRef = useRef(null);
+  const acRef = useRef(null);
+  const justSelectedRef = useRef(false);
   const [ready, setReady] = useState(false);
 
-  // 1) Espera a que exista window.google (script cargado por IncidentMapGoogle)
+  // Espera a que exista google.maps + places
   useEffect(() => {
     const t = setInterval(() => {
       const ok =
         typeof window !== "undefined" &&
         window.google &&
         window.google.maps &&
-        window.google.maps.importLibrary &&
         window.google.maps.places &&
-        window.google.maps.places.PlaceAutocompleteElement;
+        window.google.maps.places.Autocomplete;
 
       if (ok) {
         clearInterval(t);
         setReady(true);
       }
-    }, 150);
+    }, 120);
 
     return () => clearInterval(t);
   }, []);
 
-  // 2) Crea el PlaceAutocompleteElement una sola vez
+  // Crea Autocomplete una sola vez
   useEffect(() => {
     if (!ready) return;
-    if (!hostRef.current) return;
-    if (elRef.current) return;
+    if (!inputRef.current) return;
+    if (acRef.current) return;
 
-    (async () => {
-      // carga libreria places (ya está en libraries, pero esto asegura el componente)
-      await window.google.maps.importLibrary("places");
+    const input = inputRef.current;
 
-      const el = new window.google.maps.places.PlaceAutocompleteElement({});
-      el.placeholder = placeholder;
+    const ac = new window.google.maps.places.Autocomplete(input, {
+      fields: ["formatted_address", "geometry", "name"],
+      componentRestrictions: { country: "mx" },
+    });
 
-      // styling básico (y además metemos una clase)
-      el.className = `gmp-autocomplete ${inputClassName || ""}`;
+    // Bias Guadalajara
+    if (biasGuadalajara && window.google.maps.LatLngBounds) {
+      const sw = new window.google.maps.LatLng(20.55, -103.50);
+      const ne = new window.google.maps.LatLng(20.78, -103.20);
+      const bounds = new window.google.maps.LatLngBounds(sw, ne);
+      ac.setBounds(bounds);
+      ac.setOptions({ strictBounds: false });
+    }
 
-      // Listener nuevo (gmp-select) :contentReference[oaicite:1]{index=1}
-      el.addEventListener("gmp-select", async ({ placePrediction }) => {
-        try {
-          const place = placePrediction.toPlace();
-          await place.fetchFields({
-            fields: ["displayName", "formattedAddress", "location"],
-          });
+    const onPlaceChanged = () => {
+      const place = ac.getPlace();
+      const address = place?.formatted_address || place?.name || input.value || "";
 
-          const address =
-            place.formattedAddress || place.displayName || "";
+      // Marcamos que acabamos de seleccionar para no disparar onEnter al soltar Enter
+      justSelectedRef.current = true;
+      setTimeout(() => {
+        justSelectedRef.current = false;
+      }, 450);
 
-          const lat = place.location?.lat?.();
-          const lng = place.location?.lng?.();
+      onValueChange?.(address);
 
-          if (onValueChange) onValueChange(address);
+      const loc = place?.geometry?.location;
+      const lat = loc?.lat?.();
+      const lng = loc?.lng?.();
 
-          if (onSelect && typeof lat === "number" && typeof lng === "number") {
-            onSelect({ lat, lng, address, place });
-          }
-        } catch (e) {
-          console.error("Error PlaceAutocompleteElement:", e);
-        }
-      });
-
-      hostRef.current.appendChild(el);
-      elRef.current = el;
-
-      // set initial value si hay
-      if (value) {
-        // algunos browsers permiten set directo al value
-        // si no, igual se verá el placeholder y el usuario escribe
-        try {
-          el.value = value;
-        } catch (_) {}
+      if (onSelect && typeof lat === "number" && typeof lng === "number") {
+        onSelect({ lat, lng, address, place });
       }
-    })();
+
+      // Cierra el dropdown de sugerencias
+      try {
+        input.blur();
+      } catch (_) {}
+    };
+
+    ac.addListener("place_changed", onPlaceChanged);
+    acRef.current = ac;
 
     return () => {
-      // cleanup
-      if (elRef.current && hostRef.current) {
-        try {
-          hostRef.current.removeChild(elRef.current);
-        } catch (_) {}
-      }
-      elRef.current = null;
+      acRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
+  }, [ready, biasGuadalajara, onSelect, onValueChange]);
 
-  // 3) Si value cambia desde afuera, intentamos reflejarlo
+  // Refleja value externo al input
   useEffect(() => {
-    if (!elRef.current) return;
-    try {
-      elRef.current.value = value || "";
-    } catch (_) {}
+    const input = inputRef.current;
+    if (!input) return;
+    if (typeof value === "string" && input.value !== value) {
+      input.value = value;
+    }
   }, [value]);
-
-  // Fallback mientras no está listo (input normal)
-  if (!ready) {
-    return (
-      <div style={{ width: "100%" }}>
-        <input
-          className={inputClassName}
-          value={value}
-          onChange={(e) => onValueChange && onValueChange(e.target.value)}
-          placeholder={placeholder}
-          autoComplete="off"
-        />
-        {showHelp ? (
-          <div className="rc-help">Cargando sugerencias...</div>
-        ) : null}
-      </div>
-    );
-  }
 
   return (
     <div style={{ width: "100%" }}>
-      <div ref={hostRef} style={{ width: "100%" }} />
-      {showHelp ? (
-        <div className="rc-help">Selecciona una sugerencia para guardar lat/lng.</div>
-      ) : null}
+      <input
+        ref={inputRef}
+        className={inputClassName}
+        defaultValue={value}
+        placeholder={placeholder}
+        autoComplete="off"
+        onChange={(e) => onValueChange?.(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+
+          // Si vienes de una seleccion de Autocomplete, no dispares onEnter
+          if (justSelectedRef.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              e.currentTarget.blur();
+            } catch (_) {}
+            return;
+          }
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          const q = (e.currentTarget.value || "").trim();
+          if (q) onEnter?.(q);
+
+          // Cierra sugerencias
+          try {
+            e.currentTarget.blur();
+          } catch (_) {}
+        }}
+      />
+
+      {showHelp ? <div className="rc-help">Escribe y selecciona una sugerencia.</div> : null}
     </div>
   );
 }

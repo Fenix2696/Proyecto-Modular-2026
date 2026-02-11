@@ -307,3 +307,35 @@ gmp-place-autocomplete,
   padding: 0 14px;
   box-sizing: border-box;
 }
+
+
+/* =========================
+   FIX: texto invisible en input de direccion (ReportModal)
+   ========================= */
+
+/* El PlacesSearch le pasa inputClassName="rm-input" */
+.rm-modal .rm-input{
+  background: #ffffff !important;
+  color: #0f172a !important;
+  caret-color: #0f172a !important;
+}
+
+/* Placeholder visible */
+.rm-modal .rm-input::placeholder{
+  color: rgba(15,23,42,0.45) !important;
+}
+
+/* Si el browser aplica estilos raros (Chrome autofill) */
+.rm-modal .rm-input:-webkit-autofill,
+.rm-modal .rm-input:-webkit-autofill:hover,
+.rm-modal .rm-input:-webkit-autofill:focus{
+  -webkit-text-fill-color: #0f172a !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+}
+
+/* Por si PlacesSearch mete wrappers internos */
+.rm-modal input.rm-input{
+  background: #ffffff !important;
+  color: #0f172a !important;
+  caret-color: #0f172a !important;
+}

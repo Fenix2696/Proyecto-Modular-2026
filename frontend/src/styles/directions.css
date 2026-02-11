@@ -1,0 +1,414 @@
+/* ======================================================
+   DIRECTIONS PANEL (integrado a rc-panel)
+====================================================== */
+
+.rc-dir-panel{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  /* ✅ Evita scroll horizontal dentro del panel */
+  overflow-x: hidden;
+}
+
+/* Title inside panel */
+.rc-dir-panel-title{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: rgba(255,255,255,0.92);
+  margin-bottom: 10px;
+}
+
+/* Container */
+.rc-dir-box{
+  padding: 10px 2px 4px 2px;
+
+  /* ✅ nada debe empujar horizontal */
+  overflow-x: hidden;
+}
+
+.rc-dir-inputs{
+  display: grid;
+  grid-template-columns: 26px 1fr 44px;
+  gap: 10px;
+  align-items: start;
+
+  /* ✅ evita overflow por elementos internos */
+  min-width: 0;
+}
+
+.rc-dir-lefticons{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 6px;
+}
+
+.rc-dir-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 0 0 6px rgba(59,130,246,0.18);
+}
+
+.rc-dir-line{
+  width: 2px;
+  height: 30px;
+  background: rgba(255,255,255,0.20);
+  margin: 6px 0;
+  border-radius: 8px;
+}
+
+.rc-dir-pin{
+  opacity: .95;
+}
+
+.rc-dir-fields{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  /* ✅ importante para que no se expanda horizontal */
+  min-width: 0;
+}
+
+.rc-dir-field{
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+
+  /* ✅ Texto visible SIEMPRE */
+  color: rgba(255,255,255,0.92);
+
+  padding: 0 12px;
+  outline: none;
+
+  /* ✅ evita barras */
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-dir-field::placeholder{
+  color: rgba(255,255,255,0.55);
+}
+
+/* ======================================================
+   FIX: PlaceAutocompleteElement (input real dentro del widget)
+   El widget a veces trae estilos propios (blanco sobre blanco).
+====================================================== */
+
+.rc-dir-dest{
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Host del componente */
+.gmp-autocomplete{
+  width: 100% !important;
+  min-width: 0 !important;
+  display: block !important;
+
+  /* ✅ fuerza el estilo a parecer nuestro input */
+  border-radius: 12px !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  background: rgba(255,255,255,0.06) !important;
+
+  /* ✅ evita overflow horizontal */
+  overflow: hidden !important;
+}
+
+/* Input interno del widget */
+.gmp-autocomplete input{
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  box-sizing: border-box !important;
+
+  /* ✅ Aqui estaba el problema: texto no visible */
+  color: rgba(255,255,255,0.92) !important;
+  background: transparent !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+  padding: 0 12px !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.gmp-autocomplete input::placeholder{
+  color: rgba(255,255,255,0.55) !important;
+}
+
+/* Botones/iconos del widget (si aparecen) */
+.gmp-autocomplete button,
+.gmp-autocomplete svg{
+  color: rgba(255,255,255,0.82) !important;
+}
+
+/* Swap */
+.rc-dir-swap{
+  width: 44px;
+  height: 92px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rc-dir-swap:hover{
+  background: rgba(255,255,255,0.10);
+}
+
+/* Modes */
+.rc-dir-modes{
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+
+  /* ✅ si no cabe, que se compacte sin overflow */
+  min-width: 0;
+}
+
+.rc-dir-mode{
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.86);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.rc-dir-mode.active{
+  background: rgba(99,102,241,0.22);
+  border-color: rgba(99,102,241,0.35);
+}
+
+.rc-dir-mode span{
+  transform: translateY(-1px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Sections */
+.rc-dir-section{
+  padding: 0 2px;
+  overflow-x: hidden; /* ✅ */
+}
+
+.rc-dir-subtitle{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(255,255,255,0.86);
+  font-weight: 800;
+  margin: 10px 0;
+}
+
+.rc-dir-pill{
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.85);
+}
+
+.rc-dir-pill--soft{
+  opacity: .85;
+}
+
+.rc-dir-routes{
+  display: grid;
+  gap: 10px;
+}
+
+.rc-dir-route{
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.90);
+  padding: 10px 12px;
+  cursor: pointer;
+
+  /* ✅ evita empujar horizontal */
+  min-width: 0;
+}
+
+.rc-dir-route.active{
+  background: rgba(99,102,241,0.18);
+  border-color: rgba(99,102,241,0.35);
+}
+
+.rc-dir-route-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rc-dir-route-main{
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rc-dir-time{
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.rc-dir-dist{
+  font-size: 12px;
+  opacity: .8;
+}
+
+.rc-dir-risk{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  opacity: .85;
+  white-space: nowrap;
+}
+
+.rc-dir-route-sub{
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  opacity: .82;
+  min-width: 0;
+}
+
+.rc-dir-route-sub span{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-dir-note{
+  opacity: .9;
+}
+
+.rc-dir-empty{
+  opacity: .78;
+  font-size: 13px;
+  padding: 8px 2px 4px 2px;
+}
+
+/* Incidents */
+.rc-dir-incidents{
+  display: grid;
+  gap: 10px;
+}
+
+.rc-dir-incident{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  padding: 10px 12px;
+  color: rgba(255,255,255,0.92);
+  min-width: 0;
+}
+
+.rc-dir-incident-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+
+.rc-dir-badge{
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.rc-dir-near{
+  font-size: 12px;
+  opacity: .78;
+  white-space: nowrap;
+}
+
+.rc-dir-incident-desc{
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-dir-incident-addr{
+  font-size: 12px;
+  opacity: .78;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-dir-warn{
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: .86;
+  border-left: 3px solid rgba(245,158,11,0.8);
+  padding-left: 10px;
+}
+
+.rc-dir-badge.t-accident{ border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.12); }
+.rc-dir-badge.t-emergency{ border-color: rgba(239,68,68,0.45); background: rgba(239,68,68,0.12); }
+.rc-dir-badge.t-robbery{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.10); }
+.rc-dir-badge.t-theft{ border-color: rgba(249,115,22,0.38); background: rgba(249,115,22,0.10); }
+.rc-dir-badge.t-vandalism{ border-color: rgba(139,92,246,0.40); background: rgba(139,92,246,0.10); }
+
+.rc-dir-foot{
+  padding: 4px 2px 0 2px;
+}
+
+.rc-dir-muted{
+  font-size: 11px;
+  opacity: .7;
+}
+
+/* Mobile */
+@media (max-width: 520px){
+  .rc-dir-modes{
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

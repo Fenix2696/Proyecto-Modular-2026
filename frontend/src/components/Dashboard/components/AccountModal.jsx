@@ -21,12 +21,7 @@ function Toast({ toast, onClose }) {
   );
 }
 
-/* ======================================================
-   AccountModal
-====================================================== */
 export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpdated }) {
-  /* ---------------- Hooks (SIEMPRE ARRIBA) ---------------- */
-
   const initial = useMemo(() => {
     const u = user || {};
     return {
@@ -53,7 +48,27 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     confirm: "",
   });
 
-  /* ---------------- Load / Reset on open ---------------- */
+  // ✅ base backend
+  const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").trim().replace(/\/+$/, "");
+  const apiHost = apiBase.replace(/\/api$/i, ""); // http://localhost:5000
+
+  const normalizePhotoUrl = (raw) => {
+    const v = (raw || "").trim();
+    if (!v) return "";
+
+    // ya absoluto
+    if (/^https?:\/\//i.test(v)) return v;
+
+    // viene como /api/...
+    if (v.startsWith("/api/")) return `${apiHost}${v}`;
+
+    // viene como /uploads/... o /users/...
+    if (v.startsWith("/")) return `${apiBase}${v}`;
+
+    // relativo sin slash
+    return `${apiBase}/${v}`;
+  };
+
   useEffect(() => {
     if (!open) return;
 
@@ -110,15 +125,9 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     };
   }, [localPreview]);
 
-  /* ---------------- Guard clause ---------------- */
   if (!open) return null;
 
-  /* ======================================================
-     Handlers
-  ====================================================== */
-
-  const onChange = (key) => (e) =>
-    setForm((p) => ({ ...p, [key]: e.target.value }));
+  const onChange = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
   const handlePickImage = () => fileRef.current?.click();
 
@@ -146,9 +155,6 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     e.target.value = "";
   };
 
-  /* ======================================================
-     SAVE PROFILE (FIX DEFINITIVO)
-  ====================================================== */
   const saveProfile = async () => {
     setSaving(true);
     setToast(null);
@@ -160,11 +166,7 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
         phone: form.phone,
       });
 
-      const ok1 =
-        r1?.success === true ||
-        r1?.ok === true ||
-        r1?.status === "ok" ||
-        r1?.user;
+      const ok1 = r1?.success === true || r1?.ok === true || r1?.status === "ok" || r1?.user;
 
       if (!ok1) {
         setToast({
@@ -178,11 +180,7 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
       if (pendingFileRef.current) {
         const r2 = await uploadMyPhoto(pendingFileRef.current);
 
-        const ok2 =
-          r2?.success === true ||
-          r2?.ok === true ||
-          r2?.status === "ok" ||
-          r2?.photo_url;
+        const ok2 = r2?.success === true || r2?.ok === true || r2?.status === "ok" || r2?.photo_url;
 
         if (!ok2) {
           setToast({
@@ -202,11 +200,7 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
         message: "Guardado correctamente.",
       });
 
-      try {
-        await onUpdated?.();
-      } catch (e) {
-        console.error("onUpdated error:", e);
-      }
+      await onUpdated?.();
     } catch (err) {
       console.error(err);
       setToast({
@@ -219,9 +213,6 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     }
   };
 
-  /* ======================================================
-     SAVE PASSWORD
-  ====================================================== */
   const savePassword = async () => {
     setSaving(true);
     setToast(null);
@@ -257,11 +248,10 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     }
   };
 
-  const effectivePhoto = localPreview || userPhotoUrl || "";
+  // ✅ prioridad: preview local > prop (ya absoluto) > user.photo_url
+  const basePhoto = userPhotoUrl || user?.photo_url || "";
+  const effectivePhoto = localPreview || normalizePhotoUrl(basePhoto);
 
-  /* ======================================================
-     Render
-  ====================================================== */
   return (
     <div className="rc-modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -290,7 +280,15 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
           <div className="rc-account">
             <div className="rc-account-left">
               <div className="rc-avatar-preview">
-                {effectivePhoto ? <img src={effectivePhoto} alt="Foto" /> : <div className="rc-avatar-fallback">U</div>}
+                {effectivePhoto ? (
+                  <img
+                    src={effectivePhoto}
+                    alt="Foto"
+                    onError={() => console.error("Account photo error:", effectivePhoto)}
+                  />
+                ) : (
+                  <div className="rc-avatar-fallback">U</div>
+                )}
               </div>
 
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />

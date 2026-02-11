@@ -125,7 +125,7 @@
   display: block;
 }
 
-/* wrapper para que keydown funcione aunque PlacesSearch renderice gmp por dentro */
+/* wrapper para keydown */
 .rc-search-field{
   flex: 1 1 auto;
   min-width: 0;
@@ -134,14 +134,6 @@
   align-items: center;
 }
 
-/* input wrapper fix */
-.rc-search-input,
-.rc-search-input--places{
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* input base (fallback si PlacesSearch usa input normal) */
 .rc-search input{
   width: 100%;
   min-width: 0;
@@ -159,7 +151,7 @@
   color: rgba(148,163,184,0.85);
 }
 
-/* Enter button (real) */
+/* Enter button */
 .rc-search-enterbtn{
   flex: 0 0 auto;
   height: 30px;
@@ -189,38 +181,6 @@
 
 .rc-search-enterbtn:active{
   transform: translateY(0px);
-}
-
-/* ======================================================
-   Places Autocomplete (gmp / wrappers) dentro del pill
-   Esto evita que el componente meta su propio borde/fondo
-====================================================== */
-
-.rc-search gmp-place-autocomplete,
-.rc-search .gmp-autocomplete,
-.rc-search .pac-target-input{
-  width: 100%;
-  display: block;
-  height: 100%;
-}
-
-.rc-search gmp-place-autocomplete{
-  background: transparent !important;
-  border: none !important;
-}
-
-.rc-search .gmp-autocomplete{
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  box-sizing: border-box;
-}
-
-/* si PlacesSearch usa input normal con clase */
-.rc-search .rc-search-input{
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
 }
 
 /* ======================================================
@@ -296,20 +256,23 @@
   opacity: 0.85;
 }
 
-/* avatar */
+/* avatar (IMPORTANT: no romper el recorte circular) */
 .rc-avatar{
   position: relative;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  overflow: hidden;
+  overflow: hidden !important; /* ✅ fuerza recorte aunque haya fixes */
   background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.14);
 }
 
 .rc-avatar img{
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .rc-avatar-fallback{
@@ -422,4 +385,41 @@
 
 @media (max-width: 520px){
   .rc-search-enterbtn{ display: none; }
+}
+
+/* ======================================================
+   ✅ FIX SOLO PARA DROPDOWN DE GOOGLE PLACES
+   (sin romper avatar ni todo el topbar)
+====================================================== */
+
+/* Mantener el topbar por encima del mapa */
+.rc-topbar{
+  z-index: 9999;
+}
+
+/* Solo estos contenedores deben permitir overflow visible */
+.rc-topbar-center,
+.rc-search.rc-search--places,
+.rc-search-field{
+  overflow: visible !important;
+}
+
+/* Dropdown de predicciones */
+.pac-container{
+  z-index: 1000000 !important;
+}
+
+/* UI del dropdown */
+.pac-item{
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+}
+
+.pac-item:hover{
+  background: rgba(102,126,234,0.10) !important;
+}
+
+.pac-item-query{
+  font-size: 13px !important;
+  font-weight: 800 !important;
 }
