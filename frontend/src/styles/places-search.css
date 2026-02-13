@@ -1,69 +1,71 @@
 /* ======================================================
-   Google Places Autocomplete – integrado a Radar Ciudadano
-   (Google inyecta .pac-container al <body>)
+   PLACES: modo "desplegable integrado"
+   - sin glow negro
+   - full width
+   - mas alto (muestra todas las sugerencias disponibles)
 ====================================================== */
 
-.pac-container {
-  z-index: 99999 !important; /* arriba de topbar/panels */
-  margin-top: 10px;
+.pac-container{
+  /* Quita el look de pop-up */
+  box-shadow: none !important;
+  background: rgba(15,23,42,0.92) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
 
-  background: rgba(15, 23, 42, 0.98) !important; /* slate-900 */
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-  border-radius: 16px !important;
+  /* Se siente pegado al input */
+  border-radius: 0 0 16px 16px !important;
+  margin-top: 6px !important;
 
-  box-shadow:
-    0 22px 70px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+  /* Que sea amplio, no "tarjetita" */
+  width: min(980px, calc(100vw - 32px)) !important;
+  max-width: min(980px, calc(100vw - 32px)) !important;
 
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* ✅ Muestra todo lo que Google entregue */
+  max-height: 60vh !important;
+  overflow-y: auto !important;
 
-  font-family: inherit;
-  overflow: hidden;
+  /* Scroll mas limpio */
+  scrollbar-width: thin;
 }
 
-/* Quita lineas feas */
-.pac-container:after {
-  display: none !important;
+/* Quita el "halo" negro que se ve en tu screenshot (viene de sombras + blur agresivo) */
+.pac-container{
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
 }
 
-/* Items */
-.pac-item {
-  padding: 12px 14px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-
-  color: rgba(226, 232, 240, 0.95) !important; /* slate-200 */
-  font-size: 14px !important;
-  line-height: 1.25 !important;
-
-  background: transparent !important;
-  cursor: pointer !important;
+/* Items mas tipo lista desplegable */
+.pac-item{
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  padding: 12px 16px !important;
 }
 
-/* Hover / active */
 .pac-item:hover,
-.pac-item-selected {
-  background: rgba(59, 130, 246, 0.12) !important; /* blue glow */
+.pac-item-selected{
+  background: rgba(255,255,255,0.06) !important;
 }
 
-/* Texto principal */
-.pac-item-query {
-  color: rgba(255, 255, 255, 0.92) !important;
+/* Opcional: que el texto secundario sea mas discreto */
+.pac-item span:not(.pac-item-query){
+  color: rgba(148,163,184,0.90) !important;
+}
+
+/* ======================================================
+   SOLO mejora de contraste (sin tocar tamaño)
+====================================================== */
+
+/* Nombre principal */
+.pac-item-query{
+  color: #ffffff !important;
   font-weight: 700 !important;
 }
 
-/* Texto secundario */
-.pac-item span:not(.pac-item-query) {
-  color: rgba(148, 163, 184, 0.95) !important; /* slate-400 */
+/* Dirección secundaria */
+.pac-item span:not(.pac-item-query){
+  color: rgba(203,213,225,0.95) !important;
+  font-weight: 500 !important;
 }
 
-/* Icono pin */
-.pac-icon {
-  opacity: 0.85 !important;
-  filter: invert(1) grayscale(1) brightness(1.25);
-}
-
-/* Si algun estilo externo mete sombras oscuras raras */
-.pac-logo::after {
-  opacity: 0.6 !important;
+/* Match resaltado */
+.pac-matched{
+  color: #ffffff !important;
 }

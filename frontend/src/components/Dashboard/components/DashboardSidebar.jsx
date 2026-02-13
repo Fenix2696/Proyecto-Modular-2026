@@ -1,5 +1,5 @@
 import React from "react";
-import { Map, SlidersHorizontal, BarChart3, Layers, Power } from "lucide-react";
+import { Map, SlidersHorizontal, BarChart3, Layers, Power, Route } from "lucide-react";
 
 export default function DashboardSidebar({
   sidebarCollapsed,
@@ -9,7 +9,7 @@ export default function DashboardSidebar({
 }) {
   const items = [
     { key: "none", label: "Mapa", Icon: Map, title: "Mapa" },
-    // ❌ Quitamos Busqueda del sidebar (ya esta en el topbar)
+    { key: "directions", label: "Direcciones", Icon: Route, title: "Direcciones" },
     { key: "filters", label: "Filtros", Icon: SlidersHorizontal, title: "Filtros" },
     { key: "stats", label: "Estadisticas", Icon: BarChart3, title: "Estadisticas" },
     { key: "layers", label: "Capas", Icon: Layers, title: "Capas" },
@@ -47,7 +47,6 @@ export default function DashboardSidebar({
 
               <span className="rc-side-label">{label}</span>
 
-              {/* Tooltip solo cuando esta colapsado */}
               {sidebarCollapsed && <span className="rc-side-tooltip">{label}</span>}
             </button>
           );

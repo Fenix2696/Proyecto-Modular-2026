@@ -1,5 +1,7 @@
 /* Panel */
 .rc-panel{
+  height: 100%;
+  flex: 0 0 var(--rc-panel-w);
   width: var(--rc-panel-w);
   background: rgba(10,16,28,0.55);
   border-right: 1px solid var(--rc-border);
@@ -25,9 +27,11 @@
 }
 .rc-panel-title{ font-weight: 900; letter-spacing: -0.2px; }
 
-/* ✅ el scroll queda aqui (y NO recorta el menu porque el menu esta en el panel, no fuera) */
+/* ✅ FIX REAL: el scroll queda aqui y ahora SI tiene alto */
 .rc-panel-body{
   padding: 14px;
+  flex: 1;
+  min-height: 0;
   overflow:auto;
 }
 
@@ -78,3 +82,74 @@
   font-weight: 800;
 }
 .rc-secondary-btn:hover{ background: rgba(255,255,255,0.12); }
+
+/* ======================================================
+   LAYERS (Capas)
+====================================================== */
+
+.rc-mapmode-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.rc-mapmode-card{
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 10px;
+  cursor: pointer;
+  color: var(--rc-text);
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.rc-mapmode-card:hover{
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.18);
+  transform: translateY(-1px);
+}
+
+.rc-mapmode-card.active{
+  border-color: rgba(102,126,234,0.55);
+  box-shadow: 0 0 0 4px rgba(102,126,234,0.14);
+}
+
+.rc-mapmode-card img{
+  width: 100%;
+  height: 66px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.rc-mapmode-card span{
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(255,255,255,0.86);
+}
+
+.rc-layer-hints{
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rc-layer-hint{
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 12px;
+  display:flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.78);
+}
+
+.rc-layer-hint b{
+  color: rgba(255,255,255,0.92);
+}

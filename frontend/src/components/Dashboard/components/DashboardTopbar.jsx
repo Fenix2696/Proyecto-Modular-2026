@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Search, LogOut, ChevronDown, Plus, Menu } from "lucide-react";
 import PlacesSearch from "../PlacesSearch";
- // ajusta si tu ruta difiere
 
 function buildAbsolutePhotoUrl(user, photoTs) {
   const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").trim().replace(/\/+$/, "");
@@ -50,7 +49,6 @@ function Avatar({ name, src }) {
 export default function DashboardTopbar({
   onToggleSidebar,
 
-  // search / directions
   destinationInput,
   setDestinationInput,
   onDestinationSelect,
@@ -58,7 +56,6 @@ export default function DashboardTopbar({
 
   onOpenReport,
 
-  // user
   userProfile,
   photoTs,
   onOpenAccount,
@@ -67,29 +64,25 @@ export default function DashboardTopbar({
   const email = userProfile?.email || "Usuario";
   const nameForAvatar = userProfile?.name || userProfile?.full_name || userProfile?.username || email;
 
-  // ✅ url absoluta para topbar
   const photoUrl = useMemo(() => buildAbsolutePhotoUrl(userProfile, photoTs), [userProfile, photoTs]);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="rc-topbar rc-topbar--sticky">
-      {/* LEFT */}
       <div className="rc-topbar-left">
-        <button className="rc-icon-btn" onClick={onToggleSidebar} aria-label="Menu">
+        <button className="rc-icon-btn" onClick={onToggleSidebar} aria-label="Menu" type="button">
           <Menu size={18} />
         </button>
 
         <div className="rc-brand">
           <div className="rc-logo" aria-hidden="true">
-            {/* pon tu logo si tienes */}
             <div className="rc-logo-dot" />
           </div>
           <div className="rc-brand-title">Radar Ciudadano</div>
         </div>
       </div>
 
-      {/* CENTER */}
       <div className="rc-topbar-center">
         <div className="rc-search rc-search--places">
           <div className="rc-search-icon" aria-hidden="true">
@@ -99,21 +92,27 @@ export default function DashboardTopbar({
           <div className="rc-search-field">
             <PlacesSearch
               value={destinationInput}
-              onChange={setDestinationInput}
+              onValueChange={setDestinationInput}  // ✅ FIX
               onSelect={onDestinationSelect}
               onEnter={onDestinationEnter}
+              placeholder="Buscar direccion o lugar..."
+              inputClassName="rc-input rc-input--topbar"
+              showHelp={false}
             />
           </div>
 
-          <button className="rc-search-enterbtn" onClick={() => onDestinationEnter?.(destinationInput)}>
+          <button
+            className="rc-search-enterbtn"
+            onClick={() => onDestinationEnter?.(destinationInput)}
+            type="button"
+          >
             Enter
           </button>
         </div>
       </div>
 
-      {/* RIGHT */}
       <div className="rc-topbar-right">
-        <button className="rc-pill-btn rc-pill-btn--report" onClick={onOpenReport}>
+        <button className="rc-pill-btn rc-pill-btn--report" onClick={onOpenReport} type="button">
           <span className="rc-pill-ico">
             <Plus />
           </span>
@@ -126,6 +125,7 @@ export default function DashboardTopbar({
             onClick={() => setMenuOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
+            type="button"
           >
             <Avatar name={nameForAvatar} src={photoUrl} />
             <div className="rc-account-meta rc-hide-sm">
@@ -139,13 +139,27 @@ export default function DashboardTopbar({
 
           {menuOpen && (
             <div className="rc-menu-pop" role="menu">
-              <button className="rc-menu-item" onClick={() => { setMenuOpen(false); onOpenAccount?.(); }}>
+              <button
+                className="rc-menu-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenAccount?.();
+                }}
+                type="button"
+              >
                 <span className="rc-mi-title">Mi perfil</span>
               </button>
 
               <div className="rc-menu-sep" />
 
-              <button className="rc-menu-item danger" onClick={() => { setMenuOpen(false); onLogout?.(); }}>
+              <button
+                className="rc-menu-item danger"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onLogout?.();
+                }}
+                type="button"
+              >
                 <LogOut size={18} />
                 <div>
                   <div className="rc-mi-title">Cerrar sesion</div>
