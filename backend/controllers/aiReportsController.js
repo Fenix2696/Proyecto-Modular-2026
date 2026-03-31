@@ -1,8 +1,9 @@
 const pool = require("../config/database");
 const axios = require("axios");
 
-const JAVA_GNEWS_URL = "http://localhost:8080/WebSearch/newsByQuery";
-const JAVA_GUARDIA_URL = "http://localhost:8080/WebSearch/guardiaNocturna";
+const JAVA_BASE_URL = (process.env.JAVA_BASE_URL || "http://localhost:8080").replace(/\/+$/, "");
+const JAVA_GNEWS_URL = `${JAVA_BASE_URL}/WebSearch/newsByQuery`;
+const JAVA_GUARDIA_URL = `${JAVA_BASE_URL}/WebSearch/guardiaNocturna`;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 
 // =============================
