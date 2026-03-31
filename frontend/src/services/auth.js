@@ -1,4 +1,8 @@
-const AUTH_URL = "http://localhost:5000/api/auth";
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000/api")
+  .trim()
+  .replace(/\/+$/, "");
+
+const AUTH_URL = `${API_BASE}/auth`;
 
 async function parseJsonSafe(res) {
   const data = await res.json().catch(() => ({}));
