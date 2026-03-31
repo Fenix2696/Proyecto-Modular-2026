@@ -69,6 +69,8 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     return `${apiBase}/${v}`;
   };
 
+  const sanitizePhoneInput = (value) => value.replace(/\D/g, "").slice(0, 10);
+
   useEffect(() => {
     if (!open) return;
 
@@ -127,7 +129,15 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
 
   if (!open) return null;
 
-  const onChange = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
+  const onChange = (key) => (e) => {
+    let value = e.target.value;
+
+    if (key === "phone") {
+      value = sanitizePhoneInput(value);
+    }
+
+    setForm((p) => ({ ...p, [key]: value }));
+  };
 
   const handlePickImage = () => fileRef.current?.click();
 
@@ -160,6 +170,15 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     setToast(null);
 
     try {
+      if (form.phone && form.phone.length !== 10) {
+        setToast({
+          type: "error",
+          title: "Telefono invalido",
+          message: "El telefono debe tener exactamente 10 digitos.",
+        });
+        return;
+      }
+
       const r1 = await updateMe({
         username: form.username,
         name: form.name,
@@ -330,7 +349,15 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
 
               <div className="rc-field">
                 <label>Telefono</label>
-                <input className="rc-input" value={form.phone} onChange={onChange("phone")} />
+                <input
+                  className="rc-input"
+                  value={form.phone}
+                  onChange={onChange("phone")}
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="3331234567"
+                />
+                <small className="rc-field-hint">Solo 10 digitos</small>
               </div>
 
               <div className="rc-modal-actions">

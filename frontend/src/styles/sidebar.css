@@ -1,46 +1,25 @@
-/* ======================================================
-   SIDEBAR – Radar Ciudadano
-====================================================== */
-
 .rc-sidebar{
   width: 240px;
   height: 100%;
   min-width: 0;
-
   display: flex;
   flex-direction: column;
-
   background: linear-gradient(
     180deg,
     rgba(15,23,42,0.98),
     rgba(15,23,42,0.94)
   );
-
   border-right: 1px solid rgba(255,255,255,0.08);
-
-  /* ✅ Incluimos transform para animaciones mobile */
   transition:
     width 0.25s ease,
-    padding 0.25s ease,
     transform 0.25s ease;
-
   overflow: hidden;
-  z-index: 20;
+  z-index: 120;
+  position: relative;
 }
-
-/* ======================================================
-   COLLAPSED (☰)
-   ✅ Desktop: NO desaparece, se vuelve "rail" (solo iconos)
-====================================================== */
 
 .rc-sidebar.collapsed{
   width: 72px;
-}
-
-/* En modo rail: centramos items y escondemos labels */
-.rc-sidebar.collapsed .rc-sidebar-header{
-  padding: 0 10px;
-  justify-content: center;
 }
 
 .rc-sidebar.collapsed .rc-sidebar-title{
@@ -61,17 +40,20 @@
   overflow: hidden;
 }
 
-/* ======================================================
-   HEADER
-====================================================== */
+.rc-sidebar.collapsed .rc-sidebar-account-btn{
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.rc-sidebar.collapsed .rc-sidebar-account-meta{
+  display: none;
+}
 
 .rc-sidebar-header{
   height: 64px;
   padding: 0 16px;
-
   display: flex;
   align-items: center;
-
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
@@ -83,10 +65,6 @@
   white-space: nowrap;
 }
 
-/* ======================================================
-   NAV
-====================================================== */
-
 .rc-sidebar-nav{
   display: flex;
   flex-direction: column;
@@ -94,34 +72,21 @@
   padding: 12px 8px;
 }
 
-/* ======================================================
-   ITEM
-====================================================== */
-
 .rc-side-item{
   position: relative;
-
   width: 100%;
   height: 44px;
   padding: 0 14px;
-
   display: flex;
   align-items: center;
   gap: 12px;
-
   border-radius: 12px;
   border: none;
-
   background: transparent;
   color: rgba(226,232,240,0.75);
-
   font-size: 14px;
   font-weight: 600;
-
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
 }
 
 .rc-side-item:hover{
@@ -134,85 +99,108 @@
   color: white;
 }
 
-/* ======================================================
-   ICON
-====================================================== */
-
 .rc-side-ico{
   width: 22px;
   height: 22px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   color: inherit;
 }
-
-.rc-side-ico svg{
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
-/* ======================================================
-   LABEL
-====================================================== */
 
 .rc-side-label{
   white-space: nowrap;
 }
-
-/* ======================================================
-   TOOLTIP (cuando sidebar esta colapsado)
-====================================================== */
 
 .rc-side-tooltip{
   position: absolute;
   left: calc(100% + 10px);
   top: 50%;
   transform: translateY(-50%);
-
   padding: 6px 10px;
   border-radius: 8px;
-
   font-size: 12px;
   font-weight: 700;
-
   background: rgba(15,23,42,0.96);
   color: white;
-
   border: 1px solid rgba(255,255,255,0.14);
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-
   opacity: 0;
   pointer-events: none;
   white-space: nowrap;
 }
 
-/* ✅ Tooltip aparece cuando sidebar esta en rail */
 .rc-sidebar.collapsed .rc-side-item:hover .rc-side-tooltip{
   opacity: 1;
 }
-
-/* ======================================================
-   SPACER
-====================================================== */
 
 .rc-sidebar-spacer{
   flex: 1;
 }
 
-/* ======================================================
-   FOOTER
-====================================================== */
-
 .rc-sidebar-footer{
   padding: 12px 8px 16px;
   border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-/* danger (logout) */
+.rc-sidebar-account-btn{
+  width: 100%;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  cursor: pointer;
+}
+
+.rc-sidebar-account-avatar{
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  background: rgba(255,255,255,0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+
+.rc-sidebar-account-avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rc-sidebar-account-meta{
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.rc-sidebar-account-name{
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-sidebar-account-email{
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .rc-side-item.danger{
   color: #f87171;
 }
@@ -222,52 +210,25 @@
   color: #fecaca;
 }
 
-/* ======================================================
-   RESPONSIVE (mobile)
-   ✅ En mobile, la sidebar se vuelve drawer
-   - "collapsed" = cerrada (off-canvas)
-====================================================== */
-
 @media (max-width: 768px){
   .rc-sidebar{
     position: fixed;
     left: 0;
-    top: 64px; /* debajo del topbar */
-    height: calc(100vh - 64px);
-    width: 280px;
+    top: 72px;
+    height: calc(100vh - 72px);
+    width: 320px;
     max-width: 86vw;
-
-    /* Abierta por defecto */
     transform: translateX(0);
     box-shadow: 0 24px 60px rgba(0,0,0,0.65);
     border-right: 1px solid rgba(255,255,255,0.10);
+    z-index: 210;
   }
 
-  /* ✅ Cerrada (se va a la izquierda) */
   .rc-sidebar.collapsed{
-    width: 280px;              /* mantiene el ancho para que la animacion sea real */
+    width: 320px;
     transform: translateX(-110%);
   }
 
-  /* En mobile NO queremos rail (porque sería incómodo),
-     entonces restauramos labels cuando esté abierta */
-  .rc-sidebar:not(.collapsed) .rc-sidebar-title{
-    opacity: 1;
-    width: auto;
-  }
-
-  .rc-sidebar:not(.collapsed) .rc-side-label{
-    opacity: 1;
-    width: auto;
-  }
-
-  .rc-sidebar:not(.collapsed) .rc-side-item{
-    justify-content: flex-start;
-    padding: 0 14px;
-    gap: 12px;
-  }
-
-  /* Tooltip no es necesario en mobile */
   .rc-side-tooltip{
     display: none;
   }

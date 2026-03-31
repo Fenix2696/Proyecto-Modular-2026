@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+
+    <linearGradient id="sweep" x1="50%" y1="50%" x2="100%" y2="15%">
+      <stop offset="0%" stop-color="rgba(34,197,94,0)"/>
+      <stop offset="70%" stop-color="#4ade80" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#bbf7d0" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- fondo -->
+  <rect width="128" height="128" rx="28" fill="#081224"/>
+
+  <!-- aro exterior -->
+  <circle cx="64" cy="64" r="46" fill="none" stroke="url(#ring)" stroke-width="6"/>
+
+  <!-- aros internos -->
+  <circle cx="64" cy="64" r="33" fill="none" stroke="#16324f" stroke-width="2"/>
+  <circle cx="64" cy="64" r="20" fill="none" stroke="#16324f" stroke-width="2"/>
+
+  <!-- cruz radar -->
+  <line x1="64" y1="22" x2="64" y2="106" stroke="#16324f" stroke-width="2"/>
+  <line x1="22" y1="64" x2="106" y2="64" stroke="#16324f" stroke-width="2"/>
+
+  <!-- barrido -->
+  <path
+    d="M64 64 L98 39 A42 42 0 0 1 104 52 Z"
+    fill="url(#sweep)"
+    filter="url(#glow)"
+  />
+
+  <!-- linea del barrido -->
+  <line x1="64" y1="64" x2="98" y2="39" stroke="#86efac" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- blips -->
+  <circle cx="44" cy="49" r="4.5" fill="#ef4444"/>
+  <circle cx="85" cy="54" r="4" fill="#f59e0b"/>
+  <circle cx="39" cy="78" r="3.5" fill="#fb7185"/>
+  <circle cx="82" cy="81" r="4.5" fill="#22c55e"/>
+
+  <!-- centro -->
+  <circle cx="64" cy="64" r="6" fill="#67e8f9" filter="url(#glow)"/>
+
+  <!-- escudo minimal -->
+  <path
+    d="M64 76
+       C70 76, 76 79, 76 79
+       L76 88
+       C76 96, 70 101, 64 104
+       C58 101, 52 96, 52 88
+       L52 79
+       C52 79, 58 76, 64 76 Z"
+    fill="#0f172a"
+    stroke="#22c55e"
+    stroke-width="2.5"
+  />
+
+  <!-- check -->
+  <path
+    d="M58 89 L62 93 L70 84"
+    fill="none"
+    stroke="#4ade80"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

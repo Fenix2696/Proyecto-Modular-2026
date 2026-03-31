@@ -142,6 +142,13 @@
   width: 100%;
 }
 
+.rc-field-hint{
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.60);
+}
+
 /* ======================================================
    ACTIONS (FIX BOTONES GRANDES)
 ====================================================== */
@@ -173,4 +180,170 @@
   height: 40px;
   padding: 0 18px;
   border-radius: 999px;
+}
+@media (max-width: 768px) {
+  .account-modal,
+  .rc-account-modal,
+  .profile-modal {
+    width: min(92vw, 420px);
+    max-height: 90vh;
+    padding: 16px;
+    border-radius: 22px;
+    overflow: hidden;
+  }
+
+  .account-modal-body,
+  .rc-account-modal-body,
+  .profile-modal-body {
+    overflow-y: auto;
+    max-height: calc(90vh - 110px);
+    padding-right: 4px;
+  }
+
+  .account-photo-preview,
+  .rc-account-photo-preview,
+  .profile-photo-preview {
+    height: 170px;
+    border-radius: 18px;
+    object-fit: cover;
+  }
+
+  .account-photo-actions,
+  .rc-account-photo-actions,
+  .profile-photo-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .account-tabs,
+  .rc-account-tabs {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .account-field,
+  .rc-account-field {
+    margin-bottom: 12px;
+  }
+
+  .account-field label,
+  .rc-account-field label {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .account-field input,
+  .rc-account-field input {
+    height: 44px;
+    padding: 10px 14px;
+    font-size: 14px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 768px){
+  .rc-modal{
+    width: min(92vw, 430px);
+    max-height: 92vh;
+    padding: 14px;
+    border-radius: 18px;
+    overflow-y: auto;
+  }
+
+  .rc-modal-header{
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .rc-modal-title{
+    font-size: 16px;
+  }
+
+  .rc-role-badge{
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+
+  .rc-tabs{
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .rc-tab{
+    flex: 1;
+    justify-content: center;
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .rc-account{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* bloque superior compacto */
+  .rc-account > :first-child{
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .rc-avatar-preview{
+    width: 96px;
+    height: 96px;
+    border-radius: 16px;
+  }
+
+  .rc-avatar-preview img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* botones junto a la foto */
+  .rc-account > :first-child .rc-secondary-btn,
+  .rc-account > :first-child .rc-pill-btn{
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .rc-field{
+    margin-bottom: 10px;
+  }
+
+  .rc-field label{
+    margin-bottom: 5px;
+    font-size: 11px;
+  }
+
+  .rc-input{
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .rc-field-hint{
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .rc-modal-actions{
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .rc-modal-actions button{
+    min-width: 0;
+    flex: 1;
+    height: 40px;
+  }
 }

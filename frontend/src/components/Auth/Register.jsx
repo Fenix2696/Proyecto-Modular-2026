@@ -20,6 +20,7 @@ function Register() {
   const [ok, setOk] = useState(false);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const sanitizePhoneInput = (value) => value.replace(/\D/g, "").slice(0, 10);
 
   const canSubmit = useMemo(() => {
     return (
@@ -33,7 +34,10 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((s) => ({ ...s, [name]: value }));
+
+    const finalValue = name === "phone" ? sanitizePhoneInput(value) : value;
+
+    setFormData((s) => ({ ...s, [name]: finalValue }));
     if (Object.keys(errors).length) setErrors({});
   };
 
@@ -51,6 +55,10 @@ function Register() {
 
     if (formData.confirmPassword !== formData.password) {
       newErrors.confirmPassword = "No coincide";
+    }
+
+    if (formData.phone && formData.phone.length !== 10) {
+      newErrors.phone = "El telefono debe tener 10 digitos";
     }
 
     if (Object.keys(newErrors).length) {
@@ -153,6 +161,43 @@ function Register() {
                 {errors.confirmPassword && (
                   <span className="error-msg">{errors.confirmPassword}</span>
                 )}
+              </div>
+
+              <div className="input-group-radar">
+                <label>Nombre completo</label>
+                <input
+                  className="input-radar"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="input-group-radar">
+                <label>Nombre de usuario</label>
+                <input
+                  className="input-radar"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="input-group-radar">
+                <label>Telefono</label>
+                <input
+                  className={`input-radar ${errors.phone ? "input-error" : ""}`}
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="3331234567"
+                  disabled={loading}
+                />
+                {errors.phone && <span className="error-msg">{errors.phone}</span>}
               </div>
 
               <button

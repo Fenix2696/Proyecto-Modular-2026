@@ -1,6 +1,7 @@
 /* =========================
-   MAP TYPE SELECTOR (fila de 4)
-   Clases: maptype-backdrop, maptype-modal, maptype-header, maptype-grid, maptype-card
+   MAP TYPE SELECTOR
+   Desktop: grid normal
+   Mobile: 2 columnas
    ========================= */
 
 .maptype-backdrop{
@@ -8,15 +9,15 @@
   inset: 0;
   background: rgba(2, 6, 23, 0.60);
   backdrop-filter: blur(10px);
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 99999;
   padding: 16px;
 }
 
 .maptype-modal{
-  width: min(820px, 94vw); /* mas compacto */
+  width: min(900px, 94vw);
   border-radius: 20px;
   border: 1px solid rgba(255,255,255,0.14);
   background: rgba(15, 23, 42, 0.92);
@@ -24,11 +25,10 @@
   overflow: hidden;
 }
 
-
 .maptype-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid rgba(255,255,255,0.10);
@@ -48,21 +48,21 @@
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.06);
   color: rgba(255,255,255,0.92);
-  cursor:pointer;
+  cursor: pointer;
 }
+
 .maptype-close:hover{
   background: rgba(255,255,255,0.10);
 }
 
-/* ===== FILA DE 3 ===== */
+/* ===== GRID NORMAL ===== */
 .maptype-grid{
   display: grid;
-  grid-template-columns: repeat(3, 220px); /* 3 cards fijas */
-  justify-content: center;                /* 🔥 CENTRADO */
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 14px;
   padding: 16px;
+  align-items: stretch;
 }
-
 
 .maptype-card{
   position: relative;
@@ -73,7 +73,12 @@
   cursor: pointer;
   text-align: left;
   color: rgba(255,255,255,0.92);
-  transition: transform .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  transition:
+    transform .15s ease,
+    border-color .15s ease,
+    background .15s ease,
+    box-shadow .15s ease;
+  min-width: 0;
 }
 
 .maptype-card:hover{
@@ -89,15 +94,15 @@
 
 .maptype-card.active::after{
   content: "✓";
-  position:absolute;
+  position: absolute;
   top: 10px;
   right: 10px;
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(167,139,250,0.95);
   color: #0b1220;
   font-weight: 1000;
@@ -106,49 +111,74 @@
 
 .maptype-card img{
   width: 100%;
-  height: 110px;   /* antes 96 */
+  height: 110px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.10);
   object-fit: cover;
-  display:block;
+  display: block;
   filter: saturate(1.08) contrast(1.05);
 }
 
-
 .maptype-card span{
-  display:block;
+  display: block;
   margin-top: 10px;
   font-weight: 950;
   font-size: 13px;
   color: rgba(255,255,255,0.92);
 }
 
-/* ===== Responsive: si no cabe, se vuelve carrusel horizontal ===== */
-@media (max-width: 720px){
-  .maptype-modal{ width: min(760px, 94vw); }
+/* ===== TABLET ===== */
+@media (max-width: 900px){
+  .maptype-modal{
+    width: min(760px, 94vw);
+  }
 
   .maptype-grid{
-    grid-template-columns: repeat(3, 220px);
-    overflow-x: auto;
-    justify-content: flex-start;
-    scroll-snap-type: x mandatory;
-  }
-  .maptype-card{
-    scroll-snap-align: center;
-  }
-  .maptype-grid::-webkit-scrollbar{
-    height: 10px;
-  }
-  .maptype-grid::-webkit-scrollbar-thumb{
-    background: rgba(255,255,255,0.18);
-    border-radius: 999px;
-  }
-  .maptype-grid::-webkit-scrollbar-track{
-    background: rgba(255,255,255,0.06);
-    border-radius: 999px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+/* ===== MOBILE ===== */
 @media (max-width: 560px){
-  .maptype-card img{ height: 110px; }
+  .maptype-backdrop{
+    padding: 12px;
+  }
+
+  .maptype-modal{
+    width: calc(100vw - 24px);
+    border-radius: 18px;
+  }
+
+  .maptype-header{
+    padding: 14px;
+  }
+
+  .maptype-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .maptype-card{
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .maptype-card img{
+    height: 92px;
+    border-radius: 12px;
+  }
+
+  .maptype-card span{
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .maptype-card.active::after{
+    width: 22px;
+    height: 22px;
+    top: 8px;
+    right: 8px;
+    font-size: 12px;
+  }
 }

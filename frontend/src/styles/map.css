@@ -25,6 +25,7 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+  transition: left .22s ease, transform .15s ease, background .15s ease, border-color .15s ease;
 }
 
 .rc-maptype-fab:hover{
@@ -82,7 +83,7 @@
   align-items:center;
   justify-content:center;
   box-shadow: 0 18px 50px rgba(0,0,0,0.35);
-  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  transition: left .22s ease, transform .15s ease, background .15s ease, border-color .15s ease;
 }
 
 .rc-heatmap-fab:hover{
@@ -157,7 +158,7 @@
   justify-content:center;
 
   box-shadow: 0 18px 50px rgba(0,0,0,0.35);
-  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  transition: left .22s ease, transform .15s ease, background .15s ease, border-color .15s ease;
 }
 
 .rc-me-fab:hover{
@@ -169,4 +170,181 @@
 .rc-me-fab.disabled{
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* ======================================================
+   ✅ FIX: Botones dentro del InfoWindow
+   Por el selector: .gm-style .gm-style-iw-d * { color: inherit !important; }
+   el texto de los botones se vuelve oscuro.
+   Aqui aseguramos que los botones conserven su estilo.
+====================================================== */
+
+.gm-style .gm-style-iw-d .rc-primary-btn{
+  color: #ffffff !important;
+}
+
+.gm-style .gm-style-iw-d .rc-secondary-btn{
+  color: #0f172a !important;
+}
+
+/* ======================================================
+   ✅ Modal de imagen del incidente (usa rc-modal-* global)
+   Solo afinamos visual sin crear CSS extra por componente.
+====================================================== */
+
+.rc-modal .rc-incident-image-frame{
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(2,6,23,0.35);
+}
+
+.rc-modal .rc-incident-image-frame img{
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+}
+
+
+.rc-gmap-root{
+  position: relative;
+}
+
+.rc-map-return-overlay{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  animation: rcMapReturnFade 420ms ease;
+  backdrop-filter: blur(5px);
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,0.08), rgba(15,23,42,0.18));
+}
+
+.rc-map-return-glow{
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, rgba(59,130,246,0.18), transparent 45%);
+  animation: rcMapReturnGlow 420ms ease;
+}
+
+@keyframes rcMapReturnFade{
+  0%{
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  35%{
+    opacity: 1;
+    backdrop-filter: blur(6px);
+  }
+  100%{
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes rcMapReturnGlow{
+  0%{
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  40%{
+    opacity: 1;
+    transform: scale(1);
+  }
+  100%{
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+/* ======================================================
+   MOBILE
+   FABs a la izquierda, pero se recorren cuando abre sidebar
+====================================================== */
+@media (max-width: 768px){
+  .rc-maptype-fab,
+  .rc-heatmap-fab,
+  .rc-me-fab{
+    left: 12px !important;
+    right: auto !important;
+    z-index: 80;
+  }
+
+  .rc-maptype-fab{
+    bottom: 14px !important;
+  }
+
+  .rc-heatmap-fab{
+    bottom: 74px !important;
+  }
+
+  .rc-me-fab{
+    bottom: 134px !important;
+  }
+
+  .rc-dashboard.sidebar-open .rc-maptype-fab,
+  .rc-dashboard.sidebar-open .rc-heatmap-fab,
+  .rc-dashboard.sidebar-open .rc-me-fab{
+    left: min(86vw, 320px) !important;
+  }
+}
+
+/* FAB IA / ROBOT */
+.rc-legend-fab{
+  position: absolute;
+  left: 18px;
+  bottom: 195px;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #000000;
+  color: #e5eefc;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+  z-index: 25;
+  cursor: pointer;
+  font-size: 18px;
+  transition: left 0.22s ease, transform 0.15s ease;
+}
+
+.rc-legend-fab:hover{
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px){
+  .rc-maptype-fab,
+  .rc-heatmap-fab,
+  .rc-me-fab,
+  .rc-legend-fab{
+    left: 12px !important;
+    right: auto !important;
+    z-index: 80;
+  }
+
+  .rc-maptype-fab{
+    bottom: 14px !important;
+  }
+
+  .rc-heatmap-fab{
+    bottom: 74px !important;
+  }
+
+  .rc-me-fab{
+    bottom: 134px !important;
+  }
+
+  .rc-legend-fab{
+    bottom: 194px !important;
+  }
+
+  .rc-dashboard.sidebar-open .rc-maptype-fab,
+  .rc-dashboard.sidebar-open .rc-heatmap-fab,
+  .rc-dashboard.sidebar-open .rc-me-fab,
+  .rc-dashboard.sidebar-open .rc-legend-fab{
+    left: min(86vw, 320px) !important;
+  }
 }

@@ -1,71 +1,61 @@
-/* ======================================================
-   TOPBAR – Radar Ciudadano
-====================================================== */
-
 .rc-topbar{
   position: relative;
-  z-index: 40;
-  height: 64px;
+  z-index: 200;
+  min-height: 64px;
   padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-
   background: linear-gradient(
     180deg,
     rgba(15,23,42,0.98),
     rgba(15,23,42,0.94)
   );
-
   border-bottom: 1px solid rgba(255,255,255,0.08);
   backdrop-filter: blur(10px);
 }
 
-/* Sticky */
 .rc-topbar--sticky{
   position: sticky;
   top: 0;
 }
 
-/* ======================================================
-   LEFT
-====================================================== */
-
-.rc-topbar-left{
+.rc-topbar-left,
+.rc-topbar-right{
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rc-topbar-center{
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
 }
 
 .rc-icon-btn{
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.06);
   color: white;
-  font-size: 18px;
   cursor: pointer;
 }
 
-.rc-icon-btn:hover{
-  background: rgba(255,255,255,0.12);
-}
-
-/* Brand */
 .rc-brand{
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .rc-logo{
   width: 36px;
   height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .rc-brand-title{
@@ -75,37 +65,22 @@
   line-height: 1;
 }
 
-/* ======================================================
-   CENTER – SEARCH
-====================================================== */
-
-.rc-topbar-center{
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
 .rc-search{
   display: flex;
   align-items: center;
   gap: 10px;
-
   width: min(980px, 100%);
   height: 46px;
-
   padding: 6px 10px 6px 12px;
-
   border-radius: 999px;
   border: 1px solid rgba(148,163,184,0.18);
   background: rgba(15,23,42,0.55);
   backdrop-filter: blur(10px);
-
   box-shadow:
     0 12px 30px rgba(0,0,0,0.35),
     inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
-/* icon */
 .rc-search-icon{
   flex: 0 0 auto;
   width: 34px;
@@ -119,13 +94,6 @@
   border: 1px solid rgba(148,163,184,0.12);
 }
 
-.rc-search-icon svg{
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
-/* wrapper para keydown */
 .rc-search-field{
   flex: 1 1 auto;
   min-width: 0;
@@ -141,71 +109,55 @@
   background: transparent;
   border: none;
   outline: none;
-
   color: rgba(226,232,240,0.95);
   font-size: 14px;
-  letter-spacing: 0.1px;
 }
 
 .rc-search input::placeholder{
   color: rgba(148,163,184,0.85);
 }
 
-/* Enter button */
+.rc-search-clear-btn{
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(2,6,23,0.28);
+  color: rgba(226,232,240,0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 .rc-search-enterbtn{
   flex: 0 0 auto;
   height: 30px;
   padding: 0 14px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-size: 12px;
   font-weight: 800;
   color: rgba(226,232,240,0.92);
-
   border-radius: 999px;
   border: 1px solid rgba(148,163,184,0.18);
   background: rgba(2,6,23,0.35);
-
   cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 
-.rc-search-enterbtn:hover{
-  background: rgba(2,6,23,0.52);
-  border-color: rgba(148,163,184,0.28);
-  transform: translateY(-1px);
-}
-
-.rc-search-enterbtn:active{
-  transform: translateY(0px);
-}
-
-/* ======================================================
-   RIGHT
-====================================================== */
-
-.rc-topbar-right{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-/* Report button */
 .rc-pill-btn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 14px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 16px;
   border: none;
   cursor: pointer;
-
   display: flex;
   align-items: center;
   gap: 8px;
-
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .rc-pill-btn--report{
@@ -213,58 +165,35 @@
   color: white;
 }
 
-.rc-pill-btn--report:hover{
-  filter: brightness(1.05);
-}
-
-.rc-pill-ico svg{
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
-/* ======================================================
-   ACCOUNT
-====================================================== */
-
 .rc-account-menu{
   position: relative;
+  min-width: 0;
 }
 
 .rc-account-pill{
   height: 44px;
+  max-width: 100%;
   padding: 0 12px;
   border-radius: 18px;
-
   display: flex;
   align-items: center;
   gap: 10px;
-
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
   color: white;
   cursor: pointer;
+  min-width: 0;
 }
 
-.rc-account-pill:hover{
-  background: rgba(255,255,255,0.10);
-}
-
-.rc-caret svg{
-  width: 16px;
-  height: 16px;
-  opacity: 0.85;
-}
-
-/* avatar (IMPORTANT: no romper el recorte circular) */
 .rc-avatar{
   position: relative;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  overflow: hidden !important; /* ✅ fuerza recorte aunque haya fixes */
+  overflow: hidden !important;
   background: rgba(255,255,255,0.2);
   border: 1px solid rgba(255,255,255,0.14);
+  flex: 0 0 auto;
 }
 
 .rc-avatar img{
@@ -296,16 +225,20 @@
   border: 2px solid #0f172a;
 }
 
-/* account meta */
 .rc-account-meta{
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  min-width: 0;
 }
 
 .rc-account-email{
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
 }
 
 .rc-account-sub{
@@ -313,33 +246,26 @@
   opacity: 0.7;
 }
 
-/* ======================================================
-   DROPDOWN
-====================================================== */
-
 .rc-menu-pop{
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-
   min-width: 220px;
   padding: 6px;
-
   border-radius: 16px;
   background: rgba(15,23,42,0.96);
   border: 1px solid rgba(255,255,255,0.14);
   box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  z-index: 250;
 }
 
 .rc-menu-item{
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
-
   display: flex;
   align-items: center;
   gap: 12px;
-
   background: transparent;
   border: none;
   color: white;
@@ -354,72 +280,79 @@
   color: #f87171;
 }
 
-.rc-mi-ico svg{
-  width: 18px;
-  height: 18px;
-}
-
-.rc-mi-title{
-  font-weight: 900;
-  font-size: 13px;
-}
-
-.rc-mi-sub{
-  font-size: 11px;
-  opacity: 0.7;
-}
-
-.rc-menu-sep{
-  height: 1px;
-  margin: 6px 0;
-  background: rgba(255,255,255,0.10);
-}
-
-/* ======================================================
-   RESPONSIVE
-====================================================== */
-
-@media (max-width: 640px){
-  .rc-hide-sm{ display: none; }
-}
-
-@media (max-width: 520px){
-  .rc-search-enterbtn{ display: none; }
-}
-
-/* ======================================================
-   ✅ FIX SOLO PARA DROPDOWN DE GOOGLE PLACES
-   (sin romper avatar ni todo el topbar)
-====================================================== */
-
-/* Mantener el topbar por encima del mapa */
-.rc-topbar{
-  z-index: 9999;
-}
-
-/* Solo estos contenedores deben permitir overflow visible */
+/* autocomplete */
+.rc-topbar{ z-index: 9999; }
 .rc-topbar-center,
 .rc-search.rc-search--places,
 .rc-search-field{
   overflow: visible !important;
 }
+.pac-container{ z-index: 1000000 !important; }
 
-/* Dropdown de predicciones */
-.pac-container{
-  z-index: 1000000 !important;
+/* MOBILE */
+@media (max-width: 768px){
+  .rc-topbar{
+    min-height: 72px;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .rc-brand--desktop{
+    display: none;
+  }
+
+  .rc-account-menu--desktop{
+    display: none;
+  }
+
+  .rc-topbar-left{
+    flex: 0 0 auto;
+  }
+
+  .rc-topbar-center{
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .rc-topbar-right{
+    flex: 0 0 auto;
+  }
+
+  .rc-search{
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rc-pill-btn--report{
+    height: 40px;
+    min-width: 112px;
+    padding: 0 14px;
+    border-radius: 14px;
+    justify-content: center;
+  }
+
+  .rc-report-label{
+    display: inline;
+  }
 }
 
-/* UI del dropdown */
-.pac-item{
-  padding: 10px 12px !important;
-  font-size: 13px !important;
-}
+@media (max-width: 520px){
+  .rc-search-enterbtn{
+    display: none;
+  }
 
-.pac-item:hover{
-  background: rgba(102,126,234,0.10) !important;
-}
+  .rc-topbar{
+    padding: 8px 10px;
+  }
 
-.pac-item-query{
-  font-size: 13px !important;
-  font-weight: 800 !important;
+  .rc-pill-btn--report{
+    width: auto;
+    min-width: 112px;
+    padding: 0 14px;
+    justify-content: center;
+  }
+
+  .rc-report-label{
+    display: inline;
+  }
 }

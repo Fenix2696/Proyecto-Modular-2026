@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Search, LogOut, ChevronDown, Plus, Menu } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Search, LogOut, ChevronDown, Plus, Menu, X } from "lucide-react";
 import PlacesSearch from "../PlacesSearch";
 
 function buildAbsolutePhotoUrl(user, photoTs) {
-  const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").trim().replace(/\/+$/, "");
+  const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api")
+    .trim()
+    .replace(/\/+$/, "");
+
   const apiHost = apiBase.replace(/\/api$/i, "");
 
   const u = user || {};
@@ -11,7 +14,9 @@ function buildAbsolutePhotoUrl(user, photoTs) {
   const raw = (u.photo_url || u.photo || u.avatar || "").trim();
 
   if (raw) {
-    if (/^https?:\/\//i.test(raw)) return `${raw}${raw.includes("?") ? "&" : "?"}ts=${photoTs}`;
+    if (/^https?:\/\//i.test(raw)) {
+      return `${raw}${raw.includes("?") ? "&" : "?"}ts=${photoTs}`;
+    }
     if (raw.startsWith("/api/")) return `${apiHost}${raw}?ts=${photoTs}`;
     if (raw.startsWith("/")) return `${apiBase}${raw}?ts=${photoTs}`;
     return `${apiBase}/${raw}?ts=${photoTs}`;
@@ -35,7 +40,7 @@ function Avatar({ name, src }) {
   }, [name]);
 
   return (
-    <div className="rc-avatar rc-avatar--sm" aria-label="Avatar">
+    <div className="rc-avatar rc-avatar--sm">
       {src && imgOk ? (
         <img src={src} alt="Foto" onError={() => setImgOk(false)} />
       ) : (
@@ -47,36 +52,72 @@ function Avatar({ name, src }) {
 }
 
 export default function DashboardTopbar({
+  menuButtonRef,
   onToggleSidebar,
-
   destinationInput,
   setDestinationInput,
   onDestinationSelect,
   onDestinationEnter,
-
+  onClearDestination,
   onOpenReport,
-
   userProfile,
   photoTs,
   onOpenAccount,
   onLogout,
 }) {
   const email = userProfile?.email || "Usuario";
-  const nameForAvatar = userProfile?.name || userProfile?.full_name || userProfile?.username || email;
+  const nameForAvatar =
+    userProfile?.name ||
+    userProfile?.full_name ||
+    userProfile?.username ||
+    email;
 
-  const photoUrl = useMemo(() => buildAbsolutePhotoUrl(userProfile, photoTs), [userProfile, photoTs]);
+  const photoUrl = useMemo(
+    () => buildAbsolutePhotoUrl(userProfile, photoTs),
+    [userProfile, photoTs]
+  );
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, []);
+
+  const handleClearSearch = () => {
+    setDestinationInput?.("");
+    onClearDestination?.();
+  };
 
   return (
     <header className="rc-topbar rc-topbar--sticky">
       <div className="rc-topbar-left">
-        <button className="rc-icon-btn" onClick={onToggleSidebar} aria-label="Menu" type="button">
+        <button
+          ref={menuButtonRef}
+          className="rc-icon-btn menu-button"
+          onClick={onToggleSidebar}
+          type="button"
+        >
           <Menu size={18} />
         </button>
 
-        <div className="rc-brand">
-          <div className="rc-logo" aria-hidden="true">
+        <div className="rc-brand rc-brand--desktop">
+          <div className="rc-logo">
             <div className="rc-logo-dot" />
           </div>
           <div className="rc-brand-title">Radar Ciudadano</div>
@@ -85,26 +126,37 @@ export default function DashboardTopbar({
 
       <div className="rc-topbar-center">
         <div className="rc-search rc-search--places">
-          <div className="rc-search-icon" aria-hidden="true">
+          <div className="rc-search-icon">
             <Search />
           </div>
 
           <div className="rc-search-field">
             <PlacesSearch
               value={destinationInput}
-              onValueChange={setDestinationInput}  // ✅ FIX
+              onChange={setDestinationInput}
               onSelect={onDestinationSelect}
               onEnter={onDestinationEnter}
-              placeholder="Buscar direccion o lugar..."
-              inputClassName="rc-input rc-input--topbar"
-              showHelp={false}
+              dropdownVariant="topbar"
+              enableRecentSearches={true}
             />
           </div>
 
+          {!!destinationInput && (
+            <button
+              type="button"
+              className="rc-search-clear-btn"
+              onClick={handleClearSearch}
+              title="Limpiar"
+            >
+              <X size={14} />
+            </button>
+          )}
+
+
           <button
             className="rc-search-enterbtn"
-            onClick={() => onDestinationEnter?.(destinationInput)}
             type="button"
+            onClick={() => onDestinationEnter?.(destinationInput)}
           >
             Enter
           </button>
@@ -112,33 +164,35 @@ export default function DashboardTopbar({
       </div>
 
       <div className="rc-topbar-right">
-        <button className="rc-pill-btn rc-pill-btn--report" onClick={onOpenReport} type="button">
-          <span className="rc-pill-ico">
-            <Plus />
-          </span>
-          <span className="rc-hide-sm">Reportar</span>
+        <button
+          className="rc-pill-btn rc-pill-btn--report"
+          onClick={onOpenReport}
+          type="button"
+        >
+          <Plus />
+          <span className="rc-report-label">Reportar</span>
         </button>
 
-        <div className="rc-account-menu">
+        <div className="rc-account-menu rc-account-menu--desktop" ref={accountMenuRef}>
           <button
             className="rc-account-pill"
             onClick={() => setMenuOpen((v) => !v)}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
             type="button"
           >
             <Avatar name={nameForAvatar} src={photoUrl} />
-            <div className="rc-account-meta rc-hide-sm">
+
+            <div className="rc-account-meta">
               <div className="rc-account-email">{email}</div>
-              <div className="rc-account-sub">{(userProfile?.role || "user").toUpperCase()}</div>
+              <div className="rc-account-sub">
+                {(userProfile?.role || "user").toUpperCase()}
+              </div>
             </div>
-            <span className="rc-caret" aria-hidden="true">
-              <ChevronDown />
-            </span>
+
+            <ChevronDown />
           </button>
 
           {menuOpen && (
-            <div className="rc-menu-pop" role="menu">
+            <div className="rc-menu-pop">
               <button
                 className="rc-menu-item"
                 onClick={() => {
@@ -147,10 +201,8 @@ export default function DashboardTopbar({
                 }}
                 type="button"
               >
-                <span className="rc-mi-title">Mi perfil</span>
+                Mi perfil
               </button>
-
-              <div className="rc-menu-sep" />
 
               <button
                 className="rc-menu-item danger"
@@ -161,10 +213,7 @@ export default function DashboardTopbar({
                 type="button"
               >
                 <LogOut size={18} />
-                <div>
-                  <div className="rc-mi-title">Cerrar sesion</div>
-                  <div className="rc-mi-sub">Salir de tu cuenta</div>
-                </div>
+                Cerrar sesion
               </button>
             </div>
           )}

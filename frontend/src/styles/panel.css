@@ -153,3 +153,145 @@
 .rc-layer-hint b{
   color: rgba(255,255,255,0.92);
 }
+
+/* ======================================================
+   ✅ MODAL BASE (para ReportModal y visor de imagen)
+   - Evita que quede detras del mapa
+====================================================== */
+
+.rc-modal-backdrop{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(2,6,23,0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.rc-modal{
+  width: min(720px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15,23,42,0.96);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+
+.rc-modal-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.rc-modal-title{
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+}
+
+.rc-modal-body{
+  padding: 14px;
+  color: rgba(255,255,255,0.88);
+}
+
+.rc-modal-actions{
+  display:flex;
+  gap: 10px;
+  padding: 14px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+.rc-primary-btn{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(99,102,241,0.35);
+  background: rgba(99,102,241,0.22);
+  color: rgba(255,255,255,0.95);
+  cursor:pointer;
+  font-weight: 900;
+}
+.rc-primary-btn:hover{
+  background: rgba(99,102,241,0.28);
+}
+
+.rc-error{
+  margin-top: 10px;
+  color: rgba(248,113,113,0.95);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.rc-form-grid{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.rc-textarea{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--rc-border);
+  background: rgba(255,255,255,0.08);
+  color: var(--rc-text);
+  outline: none;
+  resize: vertical;
+  min-height: 110px;
+}
+
+/* ======================================================
+   MOBILE
+   Panel encima del sidebar/mapa como overlay
+====================================================== */
+@media (max-width: 768px){
+  .rc-panel{
+    position: fixed;
+    top: 72px;
+    left: 0;
+    width: 100vw;
+    height: calc(100vh - 72px);
+    max-width: 100vw;
+    border-right: none;
+    border-top: 1px solid rgba(255,255,255,0.10);
+    background: rgba(8,13,26,0.97);
+    z-index: 220;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    animation: rcPanelSlideIn .22s ease;
+  }
+
+  .rc-panel-header{
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: rgba(8,13,26,0.98);
+    backdrop-filter: blur(12px);
+  }
+
+  .rc-panel-body{
+    padding: 14px 14px 24px;
+  }
+
+  .rc-mapmode-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .rc-form-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes rcPanelSlideIn{
+  from{
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to{
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

@@ -5,7 +5,6 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { OAuth2Client } = require("google-auth-library");
 
-
 function mapUserRow(row) {
   return {
     id: row.id,
@@ -25,6 +24,27 @@ function getAppBaseUrl() {
 
 function buildResetLink(token) {
   return `${getAppBaseUrl()}/reset-password?token=${encodeURIComponent(token)}`;
+}
+
+function limpiarTelefono(phone) {
+  return String(phone || "").replace(/\D/g, "");
+}
+
+function validarTelefono(phone, requerido = false) {
+  if (phone === undefined || phone === null || phone === "") {
+    if (requerido) {
+      return { ok: false, message: "Telefono requerido" };
+    }
+    return { ok: true, value: null };
+  }
+
+  const limpio = limpiarTelefono(phone);
+
+  if (limpio.length !== 10) {
+    return { ok: false, message: "El telefono debe tener exactamente 10 digitos" };
+  }
+
+  return { ok: true, value: limpio };
 }
 
 async function sendResetEmail(toEmail, resetLink) {
@@ -47,11 +67,84 @@ async function sendResetEmail(toEmail, resetLink) {
 
   const fromEmail = process.env.SMTP_FROM || smtpUser;
 
+  const html = `
+  <div style="margin:0;padding:0;background-color:#0b1220;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#0b1220;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#111827;border:1px solid rgba(255,255,255,0.08);border-radius:20px;overflow:hidden;">
+
+            <tr>
+              <td style="padding:28px 32px;background:linear-gradient(135deg,#0f172a 0%, #111827 45%, #1d4ed8 100%);text-align:center;">
+                <div style="font-size:30px;line-height:1.2;font-weight:800;color:#ffffff;letter-spacing:0.3px;">
+                  Radar Ciudadano
+                </div>
+                <div style="margin-top:8px;font-size:15px;line-height:1.6;color:#cbd5e1;">
+                  Recuperacion de contraseña
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:32px;">
+                <div style="font-size:22px;font-weight:800;color:#f8fafc;margin-bottom:14px;">
+                  Solicitud para restablecer tu contraseña
+                </div>
+
+                <div style="font-size:15px;line-height:1.7;color:#cbd5e1;margin-bottom:18px;">
+                  Recibimos una solicitud para cambiar la contraseña de tu cuenta en <b style="color:#ffffff;">Radar Ciudadano</b>.
+                </div>
+
+                <div style="font-size:15px;line-height:1.7;color:#cbd5e1;margin-bottom:26px;">
+                  Si fuiste tú, da clic en el siguiente botón para continuar:
+                </div>
+
+                <div style="text-align:center;margin:30px 0;">
+                  <a href="${resetLink}"
+                     style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 26px;border-radius:12px;">
+                    Restablecer contraseña
+                  </a>
+                </div>
+
+                <div style="font-size:14px;line-height:1.7;color:#94a3b8;margin-bottom:14px;">
+                  Este enlace es temporal y caducará pronto por seguridad.
+                </div>
+
+                <div style="font-size:14px;line-height:1.7;color:#94a3b8;margin-bottom:12px;">
+                  Si el botón no funciona, copia y pega este enlace en tu navegador:
+                </div>
+
+                <div style="word-break:break-all;background:#0f172a;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;color:#93c5fd;font-size:13px;line-height:1.6;">
+                  ${resetLink}
+                </div>
+
+                <div style="margin-top:26px;font-size:13px;line-height:1.7;color:#64748b;">
+                  Si tú no solicitaste este cambio, puedes ignorar este correo de forma segura.
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:18px 24px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;background:#0f172a;">
+                <div style="font-size:12px;color:#64748b;line-height:1.6;">
+                  © Radar Ciudadano · Correo automatico de recuperacion
+                </div>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+  `;
+
   await transporter.sendMail({
-    from: fromEmail,
+    from: `"Radar Ciudadano" <${fromEmail}>`,
     to: toEmail,
-    subject: "Recuperacion de password - Radar Ciudadano",
-    text: `Usa este enlace para cambiar tu password: ${resetLink}`,
+    subject: "Recuperacion de contraseña - Radar Ciudadano",
+    text: `Usa este enlace para cambiar tu contraseña: ${resetLink}`,
+    html,
   });
 }
 
@@ -113,6 +206,11 @@ async function register(req, res) {
       return res.status(400).json({ success: false, message: "Password minimo 6 caracteres" });
     }
 
+    const telefonoValidado = validarTelefono(phone, false);
+    if (!telefonoValidado.ok) {
+      return res.status(400).json({ success: false, message: telefonoValidado.message });
+    }
+
     const exists = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
     if (exists.rows.length > 0) {
       return res.status(400).json({ success: false, message: "Email ya registrado" });
@@ -124,7 +222,7 @@ async function register(req, res) {
       `INSERT INTO users (email, password, full_name, phone, username, role)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, email, role, username, full_name, phone, photo_data`,
-      [email, hashed, name || null, phone || null, username || null, "user"]
+      [email, hashed, name || null, telefonoValidado.value, username || null, "user"]
     );
 
     const newUser = result.rows[0];
@@ -174,6 +272,11 @@ async function updateProfile(req, res) {
     const userId = req.user.id;
     const { name, phone, username } = req.body;
 
+    const telefonoValidado = validarTelefono(phone, false);
+    if (!telefonoValidado.ok) {
+      return res.status(400).json({ success: false, message: telefonoValidado.message });
+    }
+
     const result = await pool.query(
       `UPDATE users
        SET full_name = $1,
@@ -182,7 +285,7 @@ async function updateProfile(req, res) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $4
        RETURNING id, email, role, username, full_name, phone, photo_data`,
-      [name || null, phone || null, username || null, userId]
+      [name || null, telefonoValidado.value, username || null, userId]
     );
 
     if (result.rows.length === 0) {
@@ -336,6 +439,7 @@ async function resetPassword(req, res) {
     return res.status(500).json({ success: false, message: "Error en servidor" });
   }
 }
+
 async function oauthGoogle(req, res) {
   try {
     const { idToken } = req.body;

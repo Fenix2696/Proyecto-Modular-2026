@@ -1,32 +1,84 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * PlacesSearch
  * - google.maps.places.Autocomplete sobre un <input>
  * - onSelect({lat,lng,address,place})
- * - value + onValueChange controlado
  * - onEnter(text) al presionar ENTER
- *
- * Fixes UX:
- * - Evita doble accion (select + enter) con justSelectedRef
- * - Cierra sugerencias al presionar Enter (blur)
+ * - historial reciente opcional
  */
 export default function PlacesSearch({
   onSelect,
   onEnter,
   placeholder = "Buscar direccion o lugar...",
   value = "",
+  onChange,
   onValueChange,
   inputClassName = "rc-input",
   showHelp = false,
   biasGuadalajara = true,
+  dropdownVariant = "default", // "default" | "topbar" | "panel"
+  enableRecentSearches = false,
+  recentStorageKey = "rc_recent_searches",
+  maxRecentSearches = 6,
 }) {
   const inputRef = useRef(null);
   const acRef = useRef(null);
   const justSelectedRef = useRef(false);
   const [ready, setReady] = useState(false);
+  const [showRecent, setShowRecent] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
 
-  // Espera a que exista google.maps + places
+  const setInputValue = (nextValue) => {
+    onValueChange?.(nextValue);
+    onChange?.(nextValue);
+  };
+
+  const loadRecentSearches = () => {
+    if (!enableRecentSearches) return [];
+    try {
+      const raw = localStorage.getItem(recentStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveRecentSearches = (items) => {
+    if (!enableRecentSearches) return;
+    try {
+      localStorage.setItem(recentStorageKey, JSON.stringify(items));
+    } catch {}
+  };
+
+  const pushRecentSearch = (text) => {
+    if (!enableRecentSearches) return;
+    const clean = String(text || "").trim();
+    if (!clean) return;
+
+    const next = [
+      clean,
+      ...recentSearches.filter(
+        (item) => item.toLowerCase() !== clean.toLowerCase()
+      ),
+    ].slice(0, maxRecentSearches);
+
+    setRecentSearches(next);
+    saveRecentSearches(next);
+  };
+
+  const removeRecentSearch = (text) => {
+    const next = recentSearches.filter((item) => item !== text);
+    setRecentSearches(next);
+    saveRecentSearches(next);
+  };
+
+  useEffect(() => {
+    if (!enableRecentSearches) return;
+    setRecentSearches(loadRecentSearches());
+  }, [enableRecentSearches]);
+
   useEffect(() => {
     const t = setInterval(() => {
       const ok =
@@ -45,7 +97,6 @@ export default function PlacesSearch({
     return () => clearInterval(t);
   }, []);
 
-  // Crea Autocomplete una sola vez
   useEffect(() => {
     if (!ready) return;
     if (!inputRef.current) return;
@@ -58,7 +109,6 @@ export default function PlacesSearch({
       componentRestrictions: { country: "mx" },
     });
 
-    // Bias Guadalajara
     if (biasGuadalajara && window.google.maps.LatLngBounds) {
       const sw = new window.google.maps.LatLng(20.55, -103.50);
       const ne = new window.google.maps.LatLng(20.78, -103.20);
@@ -67,17 +117,53 @@ export default function PlacesSearch({
       ac.setOptions({ strictBounds: false });
     }
 
+    const applyPacVariantClass = () => {
+      const pacs = Array.from(document.querySelectorAll(".pac-container"));
+      if (!pacs.length) return;
+
+      const lastPac = pacs[pacs.length - 1];
+
+      // limpiar clases anteriores
+      lastPac.classList.remove("pac-topbar", "pac-panel", "pac-default");
+
+      if (dropdownVariant === "topbar") {
+        lastPac.classList.add("pac-topbar");
+
+
+        const rect = inputRef.current?.getBoundingClientRect();
+        if (rect) {
+          lastPac.style.width = `${rect.width}px`;
+          lastPac.style.left = `${rect.left}px`;
+        }
+
+      } else if (dropdownVariant === "panel") {
+        lastPac.classList.add("pac-panel");
+
+        // 🔥 AJUSTE DINAMICO PANEL (MAS CHICO)
+        const rect = inputRef.current?.getBoundingClientRect();
+        if (rect) {
+          lastPac.style.width = `${rect.width}px`;
+          lastPac.style.left = `${rect.left}px`;
+          lastPac.style.maxWidth = `${rect.width}px`;
+        }
+
+      } else {
+        lastPac.classList.add("pac-default");
+      }
+    };
+
     const onPlaceChanged = () => {
       const place = ac.getPlace();
       const address = place?.formatted_address || place?.name || input.value || "";
 
-      // Marcamos que acabamos de seleccionar para no disparar onEnter al soltar Enter
       justSelectedRef.current = true;
       setTimeout(() => {
         justSelectedRef.current = false;
       }, 450);
 
-      onValueChange?.(address);
+      setInputValue(address);
+      pushRecentSearch(address);
+      setShowRecent(false);
 
       const loc = place?.geometry?.location;
       const lat = loc?.lat?.();
@@ -87,21 +173,36 @@ export default function PlacesSearch({
         onSelect({ lat, lng, address, place });
       }
 
-      // Cierra el dropdown de sugerencias
       try {
         input.blur();
-      } catch (_) {}
+      } catch {}
     };
+
+   input.addEventListener("focus", () => {
+     setTimeout(applyPacVariantClass, 50);
+   });
+
+   input.addEventListener("input", () => {
+     setTimeout(applyPacVariantClass, 50);
+   });
 
     ac.addListener("place_changed", onPlaceChanged);
     acRef.current = ac;
 
     return () => {
+      input.removeEventListener("focus", applyPacVariantClass);
+      input.removeEventListener("input", applyPacVariantClass);
       acRef.current = null;
     };
-  }, [ready, biasGuadalajara, onSelect, onValueChange]);
+  }, [
+    ready,
+    biasGuadalajara,
+    onSelect,
+    dropdownVariant,
+    enableRecentSearches,
+    recentSearches,
+  ]);
 
-  // Refleja value externo al input
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
@@ -110,25 +211,58 @@ export default function PlacesSearch({
     }
   }, [value]);
 
+  const shouldShowRecent = useMemo(() => {
+    if (!enableRecentSearches) return false;
+    const current = String(value || "").trim();
+    return showRecent && !current && recentSearches.length > 0;
+  }, [enableRecentSearches, showRecent, value, recentSearches]);
+
+  const handleRecentClick = (text) => {
+    setInputValue(text);
+    pushRecentSearch(text);
+    setShowRecent(false);
+    onEnter?.(text);
+
+    try {
+      inputRef.current?.blur();
+    } catch {}
+  };
+
   return (
-    <div style={{ width: "100%" }}>
+    <div
+      className={`rc-places-wrap rc-places-wrap--${dropdownVariant}`}
+      style={{ width: "100%", position: "relative" }}
+    >
       <input
         ref={inputRef}
         className={inputClassName}
         defaultValue={value}
         placeholder={placeholder}
         autoComplete="off"
-        onChange={(e) => onValueChange?.(e.target.value)}
+        onFocus={() => {
+          if (enableRecentSearches) {
+            setRecentSearches(loadRecentSearches());
+            setShowRecent(true);
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => setShowRecent(false), 180);
+        }}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          if (enableRecentSearches) {
+            setShowRecent(!e.target.value.trim());
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
 
-          // Si vienes de una seleccion de Autocomplete, no dispares onEnter
           if (justSelectedRef.current) {
             e.preventDefault();
             e.stopPropagation();
             try {
               e.currentTarget.blur();
-            } catch (_) {}
+            } catch {}
             return;
           }
 
@@ -136,16 +270,52 @@ export default function PlacesSearch({
           e.stopPropagation();
 
           const q = (e.currentTarget.value || "").trim();
-          if (q) onEnter?.(q);
+          if (q) {
+            pushRecentSearch(q);
+            onEnter?.(q);
+          }
 
-          // Cierra sugerencias
+          setShowRecent(false);
+
           try {
             e.currentTarget.blur();
-          } catch (_) {}
+          } catch {}
         }}
       />
 
-      {showHelp ? <div className="rc-help">Escribe y selecciona una sugerencia.</div> : null}
+      {shouldShowRecent && (
+        <div className="rc-recent-searches">
+          <div className="rc-recent-searches-head">Busquedas recientes</div>
+
+          <div className="rc-recent-searches-list">
+            {recentSearches.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="rc-recent-search-item"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleRecentClick(item)}
+              >
+                <span className="rc-recent-search-text">{item}</span>
+
+                <span
+                  className="rc-recent-search-remove"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeRecentSearch(item);
+                  }}
+                >
+                  ✕
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showHelp ? (
+        <div className="rc-help">Escribe y selecciona una sugerencia.</div>
+      ) : null}
     </div>
   );
 }

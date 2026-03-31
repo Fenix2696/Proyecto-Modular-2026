@@ -1,73 +1,99 @@
-import React, { useMemo } from "react";
-import PlacesSearch from "../PlacesSearch";
+import React, { useEffect, useMemo, useState } from "react";
 
 import FiltersPanel from "../panels/FiltersPanel";
 import DirectionsPanel from "../panels/DirectionsPanel";
 import { TYPE_LABEL, TYPE_ICON } from "../utils/incidentTypes";
+import { getActiveAIReports, syncAIReports } from "../../../services/aiReports";
 
-import mapAuto from "../../../assets/images/map-types/map-auto.png";
-import mapSatellite from "../../../assets/images/map-types/map-satellite.png";
-import mapDark from "../../../assets/images/map-types/map-dark.png";
-
-function escapeRegExp(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function safeTimeAgo(getTimeAgo, value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return getTimeAgo(date);
 }
 
-function highlightText(text, query) {
-  if (!text) return null;
+function getNewsTimestamp(item) {
+  const candidates = [
+    item?.published_at,
+    item?.publishedAt,
+    item?.date,
+    item?.created_at,
+    item?.createdAt,
+    item?.updated_at,
+    item?.updatedAt,
+  ];
 
-  const q = (query || "").trim();
-  if (!q) return text;
+  for (const value of candidates) {
+    if (!value) continue;
+    const date = value instanceof Date ? value : new Date(value);
+    const time = date.getTime();
+    if (!Number.isNaN(time)) return time;
+  }
 
-  const safe = escapeRegExp(q);
-  const re = new RegExp(`(${safe})`, "ig");
-  const parts = String(text).split(re);
+  return 0;
+}
 
-  return parts.map((p, idx) =>
-    re.test(p) ? (
-      <mark
-        key={idx}
-        style={{
-          background: "rgba(102,126,234,0.30)",
-          color: "inherit",
-          padding: "0 2px",
-          borderRadius: 6,
-        }}
-      >
-        {p}
-      </mark>
-    ) : (
-      <span key={idx}>{p}</span>
-    )
-  );
+function categoryMeta(category) {
+  const c = String(category || "").toLowerCase();
+
+  switch (c) {
+    case "asalto":
+      return { label: "Asalto", emoji: "🚨", color: "#ff6b6b" };
+    case "robo":
+      return { label: "Robo", emoji: "🔓", color: "#f59e0b" };
+    case "cristalazo":
+      return { label: "Cristalazo", emoji: "🪟", color: "#fb7185" };
+    case "choque":
+      return { label: "Choque", emoji: "🚗", color: "#60a5fa" };
+    case "violencia":
+      return { label: "Violencia", emoji: "⚠️", color: "#ef4444" };
+    case "emergencia":
+      return { label: "Emergencia", emoji: "🚒", color: "#10b981" };
+    case "delito":
+      return { label: "Delito", emoji: "🕵️", color: "#a78bfa" };
+    case "vandalismo":
+      return { label: "Vandalismo", emoji: "🏚️", color: "#94a3b8" };
+    default:
+      return { label: category || "Otro", emoji: "📰", color: "#64748b" };
+  }
+}
+
+function sourceMeta(sourceName) {
+  const s = String(sourceName || "").toLowerCase();
+
+  if (s.includes("guardia nocturna")) {
+    return { label: "Guardia Nocturna", color: "#22c55e" };
+  }
+
+  if (s.includes("gnews")) {
+    return { label: "GNews", color: "#3b82f6" };
+  }
+
+  return { label: sourceName || "Fuente", color: "#64748b" };
+}
+
+function mapAiCategoryToType(category) {
+  const c = String(category || "").toLowerCase();
+
+  if (c === "asalto" || c === "robo") return "robbery";
+  if (c === "choque") return "accident";
+  if (c === "emergencia" || c === "violencia") return "emergency";
+  if (c === "cristalazo" || c === "delito") return "theft";
+  if (c === "vandalismo") return "vandalism";
+
+  return "theft";
 }
 
 export default function DashboardPanel({
   activePanel,
   setActivePanel,
 
-  // Search
-  searchQuery,
-  setSearchQuery,
-  highlightQuery,
-  onPlaceSelect,
-  filteredIncidents,
-  onFocusIncident,
-  getTimeAgo,
-
-  // Filters
   filters,
   setFilters,
   onResetFilters,
 
-  // Layers
-  mapMode,
-  setMapMode,
-
-  // Stats
   stats,
 
-  // Directions (YA venian desde Dashboard.jsx, solo faltaba usarlas)
   originLabel,
   originIsMyLocation,
   originValue,
@@ -91,168 +117,555 @@ export default function DashboardPanel({
   setDirectionsSelectedRouteIndex,
 
   directionsIncidentsForSelectedRoute,
+
+  hasDirectionsRoute = false,
+  isNavigationActive = false,
+  navigationCurrentStep = null,
+  onStartNavigation,
+  onStopNavigation,
+  onClearDirections,
+  getTimeAgo,
+  onStartRouteAndFocusMap,
 }) {
-  if (activePanel === "none") return null;
+  const [aiReports, setAiReports] = useState([]);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [syncingAI, setSyncingAI] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiMessage, setAiMessage] = useState("");
+
+  const loadAIReports = async () => {
+    try {
+      setLoadingAI(true);
+      setAiError("");
+
+      const response = await getActiveAIReports(50);
+      const rows = response?.data || [];
+      setAiReports(Array.isArray(rows) ? rows : []);
+    } catch (error) {
+      console.error("Error cargando noticias IA:", error);
+      setAiReports([]);
+      setAiError("No se pudieron cargar las noticias de IA.");
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  const handleSyncAI = async (force = false) => {
+    try {
+      setSyncingAI(true);
+      setAiError("");
+      setAiMessage("");
+
+      const response = await syncAIReports(force);
+
+      if (response?.usedCache) {
+        setAiMessage(
+          `Usando cache local. Ultimo sync reciente. Reportes activos: ${response?.cachedCount ?? 0}`
+        );
+      } else {
+        setAiMessage(
+          `Sync completado. Insertados: ${response?.inserted ?? 0}, actualizados: ${response?.updated ?? 0}, geolocalizados: ${response?.geocoded ?? 0}`
+        );
+      }
+
+      await loadAIReports();
+    } catch (error) {
+      console.error("Error sincronizando noticias IA:", error);
+      setAiError("No se pudieron sincronizar las noticias.");
+    } finally {
+      setSyncingAI(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activePanel !== "news" && activePanel !== "stats") return;
+    loadAIReports();
+  }, [activePanel]);
+
+  const sortedAIReports = useMemo(() => {
+    return [...aiReports].sort((a, b) => getNewsTimestamp(b) - getNewsTimestamp(a));
+  }, [aiReports]);
+
+  const aiStats = useMemo(() => {
+    const base = {
+      total: 0,
+      robbery: 0,
+      accident: 0,
+      emergency: 0,
+      theft: 0,
+      vandalism: 0,
+    };
+
+    for (const report of aiReports) {
+      const type = mapAiCategoryToType(report?.category);
+      base.total += 1;
+      base[type] = (base[type] || 0) + 1;
+    }
+
+    return base;
+  }, [aiReports]);
+
+  const mergedStats = useMemo(() => {
+    const safeStats = stats || {};
+    return {
+      total: Number(safeStats.total || 0) + aiStats.total,
+      robbery: Number(safeStats.robbery || 0) + aiStats.robbery,
+      accident: Number(safeStats.accident || 0) + aiStats.accident,
+      emergency: Number(safeStats.emergency || 0) + aiStats.emergency,
+      theft: Number(safeStats.theft || 0) + aiStats.theft,
+      vandalism: Number(safeStats.vandalism || 0) + aiStats.vandalism,
+    };
+  }, [stats, aiStats]);
 
   const topType = useMemo(() => {
-    const entries = Object.keys(TYPE_LABEL).map((k) => [k, stats?.[k] || 0]);
+    const entries = Object.keys(TYPE_LABEL).map((k) => [k, mergedStats?.[k] || 0]);
     entries.sort((a, b) => b[1] - a[1]);
     return entries[0]?.[0] || "robbery";
-  }, [stats]);
+  }, [mergedStats]);
+
+  if (activePanel === "none") return null;
 
   return (
     <section className="rc-panel">
       <div className="rc-panel-header">
         <div className="rc-panel-title">
-          {activePanel === "search" && "Busqueda"}
+          {activePanel === "news" && "Noticias IA"}
           {activePanel === "filters" && "Filtros"}
           {activePanel === "stats" && "Estadisticas"}
-          {activePanel === "layers" && "Capas"}
           {activePanel === "directions" && "Direcciones"}
         </div>
 
         <button
           className="rc-icon-btn"
           onClick={() => setActivePanel("none")}
-          title="Cerrar"
+          title="Volver"
           type="button"
         >
-          ✕
+          ←
         </button>
       </div>
 
       <div className="rc-panel-body">
-        {/* SEARCH */}
-        {activePanel === "search" && (
+        {activePanel === "news" && (
           <>
             <div className="rc-field">
-              <label>Buscar en el mapa (Google Places)</label>
-              <PlacesSearch onSelect={({ lat, lng, address }) => onPlaceSelect({ lat, lng, address })} />
-            </div>
-
-            <div className="rc-field">
-              <label>Buscar en reportes</label>
-              <input
-                className="rc-input"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Ej: asalto, choque, avenida..."
-              />
+              <label>Noticias y reportes automaticos</label>
               <div className="rc-help">
-                Resultados: <b>{filteredIncidents.length}</b>
+                Reportes obtenidos desde fuentes externas y clasificados automaticamente.
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                <button
+                  className="rc-secondary-btn"
+                  type="button"
+                  onClick={() => handleSyncAI(false)}
+                  disabled={syncingAI}
+                >
+                  {syncingAI ? "Sincronizando..." : "Actualizar noticias"}
+                </button>
+
+                <button
+                  className="rc-secondary-btn"
+                  type="button"
+                  onClick={() => handleSyncAI(true)}
+                  disabled={syncingAI}
+                >
+                  {syncingAI ? "Forzando..." : "Forzar sync"}
+                </button>
+
+                <button
+                  className="rc-secondary-btn"
+                  type="button"
+                  onClick={loadAIReports}
+                  disabled={loadingAI}
+                >
+                  {loadingAI ? "Cargando..." : "Recargar lista"}
+                </button>
               </div>
             </div>
 
-            <div className="rc-list">
-              {filteredIncidents.slice(0, 25).map((i) => (
-                <button key={i.id} className="rc-card" onClick={() => onFocusIncident(i)} type="button">
-                  <div className="rc-card-row">
-                    <div className="rc-badge" />
-                    <div className="rc-card-title">
-                      {highlightText(i.title || TYPE_LABEL[i.type] || "Incidente", highlightQuery)}
+            {aiMessage && (
+              <div
+                className="rc-help"
+                style={{
+                  color: "#93c5fd",
+                  background: "rgba(59,130,246,0.10)",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  marginBottom: 12,
+                }}
+              >
+                {aiMessage}
+              </div>
+            )}
+
+            {aiError && (
+              <div
+                className="rc-help"
+                style={{
+                  color: "#ff6b6b",
+                  background: "rgba(239,68,68,0.10)",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  marginBottom: 12,
+                }}
+              >
+                {aiError}
+              </div>
+            )}
+
+            {loadingAI ? (
+              <div className="rc-help">Cargando noticias...</div>
+            ) : sortedAIReports.length === 0 ? (
+              <div className="rc-help">No hay reportes automaticos disponibles.</div>
+            ) : (
+              <div className="rc-list">
+                {sortedAIReports.map((n) => {
+                  const timeAgo = safeTimeAgo(
+                    getTimeAgo,
+                    n.published_at ||
+                      n.publishedAt ||
+                      n.date ||
+                      n.created_at ||
+                      n.createdAt ||
+                      n.updated_at ||
+                      n.updatedAt
+                  );
+                  const cat = categoryMeta(n.category);
+                  const src = sourceMeta(n.source_name);
+
+                  return (
+                    <div
+                      key={n.id}
+                      className="rc-card"
+                      style={{
+                        borderLeft: `4px solid ${cat.color}`,
+                      }}
+                    >
+                      <div className="rc-card-row" style={{ alignItems: "flex-start" }}>
+                        <div
+                          className="rc-badge"
+                          style={{
+                            background: cat.color,
+                            width: 12,
+                            height: 12,
+                            minWidth: 12,
+                            borderRadius: 999,
+                            marginTop: 6,
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div className="rc-card-title">{n.title}</div>
+
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 8,
+                              flexWrap: "wrap",
+                              marginTop: 8,
+                              marginBottom: 6,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 12,
+                                padding: "4px 8px",
+                                borderRadius: 999,
+                                background: `${cat.color}22`,
+                                color: cat.color,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {cat.emoji} {cat.label}
+                            </span>
+
+                            <span
+                              style={{
+                                fontSize: 12,
+                                padding: "4px 8px",
+                                borderRadius: 999,
+                                background: `${src.color}22`,
+                                color: src.color,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {src.label}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rc-card-desc">
+                        {n.summary || n.body || "Sin resumen disponible"}
+                      </div>
+
+                      <div className="rc-card-meta">
+                        <span>{cat.label}</span>
+
+                        {n.city && (
+                          <>
+                            <span>•</span>
+                            <span>{n.city}</span>
+                          </>
+                        )}
+
+                        {timeAgo && (
+                          <>
+                            <span>•</span>
+                            <span>{timeAgo}</span>
+                          </>
+                        )}
+                      </div>
+
+                      {n.source_url && (
+                        <a
+                          href={n.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: 12,
+                            color: "#667eea",
+                            textDecoration: "none",
+                            marginTop: 8,
+                            display: "inline-block",
+                          }}
+                        >
+                          Ver noticia →
+                        </a>
+                      )}
                     </div>
-                  </div>
-
-                  <div className="rc-card-desc">{highlightText(i.description || "", highlightQuery)}</div>
-
-                  <div className="rc-card-meta">
-                    <span>{TYPE_LABEL[i.type] || i.type}</span>
-                    <span>•</span>
-                    <span>{getTimeAgo(i.created_at)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 
-        {/* DIRECTIONS (ESTO ERA LO QUE FALTABA) */}
         {activePanel === "directions" && (
-          <DirectionsPanel
-            originLabel={originLabel}
-            originIsMyLocation={originIsMyLocation}
-            originValue={originValue}
-            setOriginValue={setOriginValue}
-            onOriginSelect={onOriginSelect}
-            onOriginEnter={onOriginEnter}
-            destIsMyLocation={destIsMyLocation}
-            destValue={destValue}
-            setDestValue={setDestValue}
-            onDestSelect={onDestSelect}
-            onDestEnter={onDestEnter}
-            onSwap={onSwap}
-            modeKey={directionsModeKey}
-            setModeKey={setDirectionsModeKey}
-            routesInfo={directionsRoutesInfo}
-            selectedRouteIndex={directionsSelectedRouteIndex}
-            setSelectedRouteIndex={setDirectionsSelectedRouteIndex}
-            incidentsForSelectedRoute={directionsIncidentsForSelectedRoute}
+          <>
+            <DirectionsPanel
+              originLabel={originLabel}
+              originIsMyLocation={originIsMyLocation}
+              originValue={originValue}
+              setOriginValue={setOriginValue}
+              onOriginSelect={onOriginSelect}
+              onOriginEnter={onOriginEnter}
+              destIsMyLocation={destIsMyLocation}
+              destValue={destValue}
+              setDestValue={setDestValue}
+              onDestSelect={onDestSelect}
+              onDestEnter={onDestEnter}
+              onSwap={onSwap}
+              modeKey={directionsModeKey}
+              setModeKey={setDirectionsModeKey}
+              routesInfo={directionsRoutesInfo}
+              selectedRouteIndex={directionsSelectedRouteIndex}
+              setSelectedRouteIndex={setDirectionsSelectedRouteIndex}
+              incidentsForSelectedRoute={directionsIncidentsForSelectedRoute}
+            />
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+                marginTop: 14,
+                marginBottom: 12,
+              }}
+            >
+              {!isNavigationActive ? (
+                <button
+                  type="button"
+                  className="rc-primary-btn"
+                  onClick={() => onStartRouteAndFocusMap?.()}
+                  disabled={!hasDirectionsRoute}
+                  style={{
+                    width: "100%",
+                    minHeight: 46,
+                    padding: "12px 14px",
+                    borderRadius: 14,
+                    fontWeight: 800,
+                    background: "#22c55e",
+                    border: "1px solid #22c55e",
+                    color: "#ffffff",
+                    boxShadow: hasDirectionsRoute
+                      ? "0 8px 20px rgba(22,163,74,0.35)"
+                      : "none",
+                    opacity: hasDirectionsRoute ? 1 : 0.55,
+                    cursor: hasDirectionsRoute ? "pointer" : "not-allowed",
+                  }}
+                  title={hasDirectionsRoute ? "Iniciar ruta" : "Primero calcula una ruta"}
+                >
+                  Iniciar ruta
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="rc-primary-btn"
+                  onClick={() => onStopNavigation?.()}
+                  style={{
+                    width: "100%",
+                    minHeight: 46,
+                    padding: "12px 14px",
+                    borderRadius: 14,
+                    fontWeight: 800,
+                    background: "#22c55e",
+                    border: "1px solid #22c55e",
+                    color: "#ffffff",
+                    boxShadow: "0 8px 20px rgba(220,38,38,0.35)",
+                  }}
+                >
+                  Detener ruta
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="rc-secondary-btn"
+                onClick={() => onClearDirections?.()}
+                disabled={!hasDirectionsRoute && !isNavigationActive}
+                style={{
+                  width: "100%",
+                  minHeight: 46,
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  fontWeight: 800,
+                  background: "#ef4444",
+                  border: "1px solid #ef4444",
+                  color: "#ffffff",
+                  boxShadow:
+                    hasDirectionsRoute || isNavigationActive
+                      ? "0 8px 20px rgba(234,88,12,0.35)"
+                      : "none",
+                  opacity: hasDirectionsRoute || isNavigationActive ? 1 : 0.55,
+                  cursor:
+                    hasDirectionsRoute || isNavigationActive ? "pointer" : "not-allowed",
+                }}
+              >
+                Limpiar ruta
+              </button>
+            </div>
+
+            {navigationCurrentStep && (
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.04)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: "0.04em",
+                    opacity: 0.72,
+                    marginBottom: 6,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {isNavigationActive ? "Navegacion activa" : "Siguiente instruccion"}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    lineHeight: 1.2,
+                    color: "#f8fafc",
+                    marginBottom: 8,
+                  }}
+                >
+                  {navigationCurrentStep.plainInstruction || "Sigue la ruta"}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    fontSize: 12,
+                    opacity: 0.8,
+                  }}
+                >
+                  {navigationCurrentStep.distanceText && (
+                    <span>{navigationCurrentStep.distanceText}</span>
+                  )}
+                  {navigationCurrentStep.durationText && (
+                    <span>• {navigationCurrentStep.durationText}</span>
+                  )}
+                  {Number.isFinite(navigationCurrentStep.stepNumber) &&
+                    Number.isFinite(navigationCurrentStep.totalSteps) && (
+                      <span>
+                        • Paso {navigationCurrentStep.stepNumber} de{" "}
+                        {navigationCurrentStep.totalSteps}
+                      </span>
+                    )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {activePanel === "filters" && (
+          <FiltersPanel
+            filters={filters}
+            setFilters={setFilters}
+            onReset={onResetFilters}
           />
         )}
 
-        {/* FILTERS */}
-        {activePanel === "filters" && (
-          <FiltersPanel filters={filters} setFilters={setFilters} onReset={onResetFilters} />
-        )}
-
-        {/* LAYERS */}
-        {activePanel === "layers" && (
-          <>
-            <div className="rc-field">
-              <label>Estilo del mapa</label>
-
-              <div className="rc-mapmode-grid">
-                <button type="button" className={`rc-mapmode-card ${mapMode === "auto" ? "active" : ""}`} onClick={() => setMapMode("auto")}>
-                  <img src={mapAuto} alt="Auto" />
-                  <span>Auto</span>
-                </button>
-
-                <button type="button" className={`rc-mapmode-card ${mapMode === "satellite" ? "active" : ""}`} onClick={() => setMapMode("satellite")}>
-                  <img src={mapSatellite} alt="Satellite" />
-                  <span>Satelite</span>
-                </button>
-
-                <button type="button" className={`rc-mapmode-card ${mapMode === "dark" ? "active" : ""}`} onClick={() => setMapMode("dark")}>
-                  <img src={mapDark} alt="Dark" />
-                  <span>Dark</span>
-                </button>
-              </div>
-
-              <div className="rc-help">Se guarda automaticamente en tu navegador.</div>
-            </div>
-
-            <div className="rc-layer-hints">
-              <div className="rc-layer-hint">
-                <b>Heatmap</b>
-                <span>Usa el boton 🔥 dentro del mapa para activar/desactivar.</span>
-              </div>
-              <div className="rc-layer-hint">
-                <b>Mas capas</b>
-                <span>Proximo: trafico, zonas y filtros por densidad.</span>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* STATS */}
         {activePanel === "stats" && (
           <>
             <div className="rc-stats-hero">
               <div className="rc-stats-hero-left">
                 <div className="rc-stats-hero-title">Resumen</div>
-                <div className="rc-stats-hero-sub">Tipo con mas reportes: {TYPE_LABEL[topType]}</div>
+                <div className="rc-stats-hero-sub">
+                  Tipo con mas reportes: {TYPE_LABEL[topType]}
+                </div>
               </div>
 
               <div className="rc-stats-hero-right">
-                <div className="rc-stats-total">{stats.total}</div>
-                <div className="rc-stats-total-label">Reportes visibles</div>
+                <div className="rc-stats-total">{mergedStats.total}</div>
+                <div className="rc-stats-total-label">Reportes visibles (usuarios + IA)</div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+                marginBottom: 14,
+              }}
+            >
+              <div className="rc-stat-card">
+                <div className="rc-stat-card-top">
+                  <div className="rc-stat-card-meta">
+                    <div className="rc-stat-card-label">Usuarios</div>
+                    <div className="rc-stat-card-sub">Reportes enviados por usuarios</div>
+                  </div>
+                  <div className="rc-stat-card-value">{Number(stats?.total || 0)}</div>
+                </div>
+              </div>
+
+              <div className="rc-stat-card">
+                <div className="rc-stat-card-top">
+                  <div className="rc-stat-card-meta">
+                    <div className="rc-stat-card-label">IA</div>
+                    <div className="rc-stat-card-sub">Noticias y reportes automaticos</div>
+                  </div>
+                  <div className="rc-stat-card-value">{aiStats.total}</div>
+                </div>
               </div>
             </div>
 
             <div className="rc-stats-grid">
               {Object.keys(TYPE_LABEL).map((t) => {
-                const value = stats[t] || 0;
-                const pct = stats.total > 0 ? Math.round((value / stats.total) * 100) : 0;
+                const value = mergedStats[t] || 0;
+                const pct = mergedStats.total > 0 ? Math.round((value / mergedStats.total) * 100) : 0;
 
                 return (
                   <div key={t} className="rc-stat-card">
@@ -260,9 +673,23 @@ export default function DashboardPanel({
                       <div className="rc-stat-card-icon">{TYPE_ICON[t]}</div>
                       <div className="rc-stat-card-meta">
                         <div className="rc-stat-card-label">{TYPE_LABEL[t]}</div>
-                        <div className="rc-stat-card-sub">{pct}% del total</div>
+                        <div className="rc-stat-card-sub">{pct}% del total combinado</div>
                       </div>
                       <div className="rc-stat-card-value">{value}</div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 8,
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        fontSize: 12,
+                        opacity: 0.8,
+                      }}
+                    >
+                      <span>Usuarios: {Number(stats?.[t] || 0)}</span>
+                      <span>IA: {Number(aiStats?.[t] || 0)}</span>
                     </div>
 
                     <div className="rc-stat-bar">
@@ -273,9 +700,9 @@ export default function DashboardPanel({
               })}
             </div>
 
-            <button className="rc-secondary-btn" onClick={() => setActivePanel("filters")} type="button">
-              Ajustar filtros →
-            </button>
+            <div className="rc-help" style={{ marginTop: 10 }}>
+              Estas estadisticas combinan reportes creados por usuarios y reportes generados por IA.
+            </div>
           </>
         )}
       </div>

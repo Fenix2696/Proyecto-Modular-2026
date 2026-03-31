@@ -5,6 +5,9 @@ import MapTypeSelector from "./components/MapTypeSelector";
 import HeatmapControls from "./components/HeatmapControls";
 import { buildHeatmapData, getHeatmapOptions } from "./utils/heatmapUtils";
 
+// url helper para imagen del incidente normal
+import { getIncidentImageUrl } from "../../services/api";
+
 const containerStyle = { width: "100%", height: "100%" };
 const GOOGLE_LIBRARIES = ["places", "visualization", "geometry"];
 
@@ -14,6 +17,18 @@ const TYPE = {
   emergency: { label: "Emergencias", color: "#dc2626", emoji: "⚠️", z: 80 },
   theft: { label: "Hurtos", color: "#f97316", emoji: "🔒", z: 50 },
   vandalism: { label: "Vandalismo", color: "#8b5cf6", emoji: "🏚️", z: 30 },
+};
+
+const AI_CATEGORY_META = {
+  asalto: { label: "Asalto", color: "#ef4444", emoji: "🚨", z: 120 },
+  robo: { label: "Robo", color: "#f97316", emoji: "🔓", z: 120 },
+  cristalazo: { label: "Cristalazo", color: "#fb7185", emoji: "🪟", z: 120 },
+  choque: { label: "Choque", color: "#3b82f6", emoji: "🚗", z: 120 },
+  violencia: { label: "Violencia", color: "#dc2626", emoji: "⚠️", z: 120 },
+  emergencia: { label: "Emergencia", color: "#10b981", emoji: "🚒", z: 120 },
+  delito: { label: "Delito", color: "#8b5cf6", emoji: "🕵️", z: 120 },
+  vandalismo: { label: "Vandalismo", color: "#64748b", emoji: "🏚️", z: 120 },
+  otro: { label: "Reporte IA", color: "#f59e0b", emoji: "📰", z: 120 },
 };
 
 const DEFAULT_CENTER = { lat: 20.6597, lng: -103.3496 };
@@ -51,7 +66,7 @@ function safeNum(n) {
   return Number.isFinite(v) ? v : null;
 }
 
-function buildSvgPin({ emoji, color, selected }) {
+function buildSvgPin({ emoji, color, selected, ringColor = "#ffffff" }) {
   const size = selected ? 62 : 52;
   const circle = selected ? 20 : 18;
   const font = selected ? 18 : 16;
@@ -78,7 +93,7 @@ function buildSvgPin({ emoji, color, selected }) {
     </defs>
     <g filter="url(#shadow)">
       <path d="M32 60c0 0 18-16.3 18-30C50 18.4 42.2 10 32 10S14 18.4 14 30c0 13.7 18 30 18 30z"
-            fill="${color}" stroke="rgba(255,255,255,0.95)" stroke-width="3" ${filterAttr}/>
+            fill="${color}" stroke="${ringColor}" stroke-width="3" ${filterAttr}/>
       <circle cx="32" cy="30" r="${circle}" fill="rgba(255,255,255,0.92)"/>
       <text x="32" y="35" font-size="${font}" text-anchor="middle" dominant-baseline="middle">${emoji}</text>
     </g>
@@ -89,7 +104,33 @@ function buildSvgPin({ emoji, color, selected }) {
 
 function getMarkerIcon(typeKey, selected) {
   const t = TYPE[typeKey] || TYPE.robbery;
-  const url = buildSvgPin({ emoji: t.emoji, color: t.color, selected });
+  const url = buildSvgPin({
+    emoji: t.emoji,
+    color: t.color,
+    selected,
+    ringColor: "#ffffff",
+  });
+
+  return {
+    url,
+    scaledSize: new window.google.maps.Size(selected ? 62 : 52, selected ? 62 : 52),
+    anchor: new window.google.maps.Point(selected ? 31 : 26, selected ? 62 : 52),
+  };
+}
+
+function getAICategoryMeta(category) {
+  const key = String(category || "").toLowerCase();
+  return AI_CATEGORY_META[key] || AI_CATEGORY_META.otro;
+}
+
+function getAIReportIcon(category, selected) {
+  const meta = getAICategoryMeta(category);
+  const url = buildSvgPin({
+    emoji: meta.emoji,
+    color: meta.color,
+    selected,
+    ringColor: "#38bdf8",
+  });
 
   return {
     url,
@@ -116,7 +157,6 @@ function computeMapOptions(mapMode) {
   };
 }
 
-// user dot
 function getUserDotIcon() {
   return {
     path: window.google.maps.SymbolPath.CIRCLE,
@@ -160,10 +200,10 @@ function buildDestinationPinIcon() {
 
 function getTrafficColor(speed) {
   const s = String(speed || "").toUpperCase();
-  if (s.includes("TRAFFIC_JAM") || s.includes("JAM")) return "#ef4444"; // rojo
-  if (s.includes("SLOW")) return "#f59e0b"; // amarillo/naranja
-  if (s.includes("NORMAL")) return "#22c55e"; // verde
-  return "#60a5fa"; // fallback
+  if (s.includes("TRAFFIC_JAM") || s.includes("JAM")) return "#ef4444";
+  if (s.includes("SLOW")) return "#f59e0b";
+  if (s.includes("NORMAL")) return "#22c55e";
+  return "#60a5fa";
 }
 
 function safeDecodePolyline(encoded) {
@@ -176,24 +216,92 @@ function safeDecodePolyline(encoded) {
   }
 }
 
+function getSelectedLatLng(item) {
+  if (!item) return null;
+
+  const lat = safeNum(item.lat ?? item.latitude);
+  const lng = safeNum(item.lng ?? item.longitude);
+
+  if (lat === null || lng === null) return null;
+  return { lat, lng };
+}
+
+function mapAIToHeatType(category) {
+  const c = String(category || "").toLowerCase();
+
+  if (c === "asalto" || c === "robo") return "robbery";
+  if (c === "choque") return "accident";
+  if (c === "emergencia" || c === "violencia") return "emergency";
+  if (c === "cristalazo" || c === "delito") return "theft";
+  if (c === "vandalismo") return "vandalism";
+
+  return "theft";
+}
+
+
+function stripHtml(html) {
+  if (!html) return "";
+
+  const div = document.createElement("div");
+  div.innerHTML = html;
+
+  // Esto convierte entidades HTML (&nbsp;, etc)
+  return div.textContent || div.innerText || "";
+}
+
+function cleanInstruction(html) {
+  const text = stripHtml(html);
+
+  return text
+    .replace(/\s+/g, " ")
+    .replace("hacia", "→ hacia")
+    .replace("Gira", "↪ Gira")
+    .replace("Continua", "↑ Continua")
+    .replace("Dirígete", "↑ Dirígete")
+    .trim();
+}
+function LegendPin({ emoji, bg, ring }) {
+  return (
+    <span
+      style={{
+        width: 20,
+        height: 20,
+        borderRadius: 999,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: bg,
+        border: `2px solid ${ring}`,
+        fontSize: 11,
+        flex: "0 0 auto",
+      }}
+    >
+      {emoji}
+    </span>
+  );
+}
+
 export default function IncidentMapGoogle({
   center,
   zoom,
   incidents,
+  aiReports = [],
   mapMode,
   onChangeMapMode,
   onMapBackgroundClick,
-
   userLocation,
   followMe,
   onCenterToMe,
   onUserPanMap,
-
   directions,
   routeIndex = 0,
-
-  // NUEVO
   trafficData,
+  navigationActive = false,
+  onStopNavigation,
+  onClearDirections,
+  onNavigationStepChange,
+  onNavigationComplete,
+  clearMapToken = 0,
 }) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -203,25 +311,38 @@ export default function IncidentMapGoogle({
   const [mapObj, setMapObj] = useState(null);
 
   const markersRef = useRef(new Map());
+  const aiMarkersRef = useRef(new Map());
   const heatLayerRef = useRef(null);
 
   const [selected, setSelected] = useState(null);
   const [showMapMode, setShowMapMode] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
 
   const [heatPanelOpen, setHeatPanelOpen] = useState(false);
   const [heatmapOn, setHeatmapOn] = useState(false);
 
-  // location layers
+  const [imgOpen, setImgOpen] = useState(false);
+  const [imgTs, setImgTs] = useState(() => Date.now());
+  const [navStepIndex, setNavStepIndex] = useState(0);
+  const [returningToUser, setReturningToUser] = useState(false);
+
+  const incidentImageUrl = useMemo(() => {
+    if (!selected?.id || selected?.isAIReport) return "";
+    return `${getIncidentImageUrl(selected.id)}?ts=${imgTs}`;
+  }, [selected?.id, selected?.isAIReport, imgTs]);
+
+  useEffect(() => {
+    setImgOpen(false);
+  }, [selected?.id, selected?.isAIReport]);
+
   const meMarkerRef = useRef(null);
   const meAccuracyRef = useRef(null);
   const mePulseRef = useRef(null);
   const meHeadingRef = useRef(null);
   const latestPosRef = useRef(null);
 
-  // directions renderer
   const dirRendererRef = useRef(null);
 
-  // traffic polylines
   const trafficPolylinesRef = useRef([]);
   const destMarkerRef = useRef(null);
 
@@ -253,10 +374,49 @@ export default function IncidentMapGoogle({
         const lat = safeNum(i.lat);
         const lng = safeNum(i.lng);
         if (lat === null || lng === null) return null;
-        return { ...i, lat, lng, type: i.type || "robbery" };
+        return { ...i, lat, lng, type: i.type || "robbery", isAIReport: false };
       })
       .filter(Boolean);
   }, [incidents]);
+
+  const cleanAIReports = useMemo(() => {
+    return (aiReports || [])
+      .map((r) => {
+        const latitude = Number(r.latitude);
+        const longitude = Number(r.longitude);
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+        return {
+          ...r,
+          latitude,
+          longitude,
+          category: String(r.category || "otro").toLowerCase(),
+          isAIReport: true,
+        };
+      })
+      .filter(Boolean);
+  }, [aiReports]);
+
+  const heatmapSourceItems = useMemo(() => {
+    const baseIncidents = cleanIncidents.map((i) => ({
+      ...i,
+      lat: Number(i.lat),
+      lng: Number(i.lng),
+      type: i.type,
+    }));
+
+    const aiAsHeatItems = cleanAIReports.map((r) => ({
+      id: `ai-${r.id}`,
+      lat: Number(r.latitude),
+      lng: Number(r.longitude),
+      type: mapAIToHeatType(r.category),
+      isAIReport: true,
+      weight: 1.35,
+    }));
+
+    return [...baseIncidents, ...aiAsHeatItems];
+  }, [cleanIncidents, cleanAIReports]);
 
   const options = useMemo(() => computeMapOptions(effectiveMapMode), [effectiveMapMode]);
 
@@ -265,27 +425,102 @@ export default function IncidentMapGoogle({
     if (!window.google) return [];
     return buildHeatmapData({
       google: window.google,
-      incidents: cleanIncidents,
+      incidents: heatmapSourceItems,
       mode: "all",
       weighted: true,
     });
-  }, [isLoaded, cleanIncidents]);
+  }, [isLoaded, heatmapSourceItems]);
 
   const heatmapOptions = useMemo(() => {
     const count = Array.isArray(heatmapData) ? heatmapData.length : 0;
     return getHeatmapOptions({ preset: "auto", pointCount: count });
   }, [heatmapData]);
 
+  const legendCounts = useMemo(() => {
+    return {
+      user: cleanIncidents.length,
+      ai: cleanAIReports.length,
+    };
+  }, [cleanIncidents, cleanAIReports]);
+
+  const routeSteps = useMemo(() => {
+    if (!directions?.routes?.length) return [];
+    const idx = Math.min(
+      Math.max(Number(routeIndex) || 0, 0),
+      directions.routes.length - 1
+    );
+    const leg = directions.routes[idx]?.legs?.[0];
+    return Array.isArray(leg?.steps) ? leg.steps : [];
+  }, [directions, routeIndex]);
+
+  const currentNavStep = routeSteps[navStepIndex] || null;
+
+  const currentNavInstruction = useMemo(() => {
+    if (!currentNavStep) return null;
+
+    return {
+      index: navStepIndex,
+      stepNumber: navStepIndex + 1,
+      totalSteps: routeSteps.length,
+      htmlInstruction: currentNavStep.html_instructions || "",
+      plainInstruction:
+        cleanInstruction(
+          currentNavStep.html_instructions ||
+          currentNavStep.instructions ||
+          ""
+        ) || "Sigue la ruta",
+      distanceText: currentNavStep.distance?.text || "",
+      durationText: currentNavStep.duration?.text || "",
+      maneuver: currentNavStep.maneuver || "",
+      startLocation: currentNavStep.start_location || null,
+      endLocation: currentNavStep.end_location || null,
+    };
+  }, [currentNavStep, navStepIndex, routeSteps.length]);
+
   const onMapClick = useCallback(() => {
     setSelected(null);
     setShowMapMode(false);
     setHeatPanelOpen(false);
+    setShowLegend(false);
     if (onMapBackgroundClick) onMapBackgroundClick();
   }, [onMapBackgroundClick]);
 
   const handleMapLoad = useCallback((map) => {
     setMapObj(map);
   }, []);
+
+  const animateBackToUser = useCallback(() => {
+    if (!mapObj || !userLocation) return;
+
+    const hasCoords =
+      Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng);
+
+    if (!hasCoords) return;
+
+    setReturningToUser(true);
+
+    try {
+      const currentZoom = mapObj.getZoom?.() || 16;
+      mapObj.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+
+      if (currentZoom > 16) {
+        mapObj.setZoom(currentZoom - 1);
+      } else if (currentZoom < 16) {
+        mapObj.setZoom(16);
+      }
+
+      setTimeout(() => {
+        try {
+          mapObj.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+          mapObj.setZoom(16);
+        } catch (_) {}
+      }, 180);
+    } catch (_) {}
+
+    setTimeout(() => {
+      setReturningToUser(false);
+    }, 420);
+  }, [mapObj, userLocation]);
 
   const cleanupPulseInterval = useCallback(() => {
     if (mePulseRef.current?.__pulseInterval) {
@@ -309,8 +544,21 @@ export default function IncidentMapGoogle({
   const cleanupDirections = useCallback(() => {
     if (dirRendererRef.current) {
       try {
+        dirRendererRef.current.setDirections({ routes: [] });
+      } catch (_) {}
+
+      try {
+        dirRendererRef.current.setRouteIndex(0);
+      } catch (_) {}
+
+      try {
+        dirRendererRef.current.setPanel(null);
+      } catch (_) {}
+
+      try {
         dirRendererRef.current.setMap(null);
       } catch (_) {}
+
       dirRendererRef.current = null;
     }
   }, []);
@@ -338,6 +586,9 @@ export default function IncidentMapGoogle({
     for (const m of markersRef.current.values()) m.setMap(null);
     markersRef.current.clear();
 
+    for (const m of aiMarkersRef.current.values()) m.setMap(null);
+    aiMarkersRef.current.clear();
+
     if (heatLayerRef.current) {
       try {
         heatLayerRef.current.setMap(null);
@@ -353,7 +604,24 @@ export default function IncidentMapGoogle({
     setMapObj(null);
   }, [cleanupMeLayers, cleanupDirections, cleanupTrafficPolylines, cleanupDestMarker]);
 
-  // draw directions (base route)
+  useEffect(() => {
+    if (!mapObj || !clearMapToken) return;
+
+    cleanupDirections();
+    cleanupTrafficPolylines();
+    cleanupDestMarker();
+    setSelected(null);
+
+    animateBackToUser();
+  }, [
+    clearMapToken,
+    mapObj,
+    animateBackToUser,
+    cleanupDirections,
+    cleanupTrafficPolylines,
+    cleanupDestMarker,
+  ]);
+
   useEffect(() => {
     if (!isLoaded || !mapObj || !window.google) return;
 
@@ -372,7 +640,7 @@ export default function IncidentMapGoogle({
         suppressMarkers: true,
         preserveViewport: true,
         polylineOptions: {
-          strokeOpacity: hasTrafficOverlay ? 0 : 0.9, // si hay trafico segmentado, ocultamos la azul
+          strokeOpacity: hasTrafficOverlay ? 0 : 0.9,
           strokeWeight: 6,
           strokeColor: "#60a5fa",
         },
@@ -396,7 +664,6 @@ export default function IncidentMapGoogle({
     } catch (_) {}
   }, [isLoaded, mapObj, directions, routeIndex, trafficData, cleanupDirections, cleanupTrafficPolylines, cleanupDestMarker]);
 
-  // destination pin marker (end_location of selected route)
   useEffect(() => {
     if (!isLoaded || !mapObj || !window.google) return;
 
@@ -437,13 +704,10 @@ export default function IncidentMapGoogle({
     }
   }, [isLoaded, mapObj, directions, routeIndex, cleanupDestMarker]);
 
-  // traffic overlay (Routes API v2) - only on route
   useEffect(() => {
     if (!isLoaded || !mapObj || !window.google) return;
 
-    // reset previous traffic polylines
     cleanupTrafficPolylines();
-
     if (!trafficData) return;
 
     const routes = trafficData?.routes || trafficData?.data?.routes || [];
@@ -462,7 +726,6 @@ export default function IncidentMapGoogle({
       r?.travel_advisory?.speedReadingIntervals ||
       [];
 
-    // If no intervals, draw single green polyline (meaning "no data but route ok")
     if (!Array.isArray(intervals) || intervals.length === 0) {
       const pl = new window.google.maps.Polyline({
         map: mapObj,
@@ -505,7 +768,6 @@ export default function IncidentMapGoogle({
     trafficPolylinesRef.current = polys;
   }, [isLoaded, mapObj, trafficData, routeIndex, cleanupTrafficPolylines]);
 
-  // location: dot + pulse + accuracy + heading
   useEffect(() => {
     if (!isLoaded || !mapObj || !window.google) return;
 
@@ -624,7 +886,6 @@ export default function IncidentMapGoogle({
     }
   }, [isLoaded, mapObj, userLocation, cleanupMeLayers]);
 
-  // heatmap
   useEffect(() => {
     if (!isLoaded) return;
     if (!mapObj) return;
@@ -655,7 +916,6 @@ export default function IncidentMapGoogle({
     }
   }, [isLoaded, mapObj, heatmapOn, heatmapData, heatmapOptions]);
 
-  // incident markers
   useEffect(() => {
     if (!isLoaded) return;
     if (!mapObj) return;
@@ -666,7 +926,7 @@ export default function IncidentMapGoogle({
     if (heatmapOn) return;
 
     for (const i of cleanIncidents) {
-      const isSel = selected?.id === i.id;
+      const isSel = !selected?.isAIReport && selected?.id === i.id;
       const t = TYPE[i.type] || TYPE.robbery;
 
       const marker = new window.google.maps.Marker({
@@ -680,11 +940,148 @@ export default function IncidentMapGoogle({
         setSelected(i);
         setShowMapMode(false);
         setHeatPanelOpen(false);
+        setShowLegend(false);
       });
 
       markersRef.current.set(i.id, marker);
     }
   }, [isLoaded, mapObj, cleanIncidents, selected, heatmapOn]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!mapObj) return;
+
+    for (const m of aiMarkersRef.current.values()) m.setMap(null);
+    aiMarkersRef.current.clear();
+
+    if (heatmapOn) return;
+
+    for (const r of cleanAIReports) {
+      const isSel = !!selected?.isAIReport && selected?.id === r.id;
+      const meta = getAICategoryMeta(r.category);
+
+      const marker = new window.google.maps.Marker({
+        map: mapObj,
+        position: { lat: r.latitude, lng: r.longitude },
+        icon: getAIReportIcon(r.category, isSel),
+        zIndex: isSel ? 2400 : meta.z,
+      });
+
+      marker.addListener("click", () => {
+        setSelected(r);
+        setShowMapMode(false);
+        setHeatPanelOpen(false);
+        setShowLegend(false);
+      });
+
+      aiMarkersRef.current.set(`ai-${r.id}`, marker);
+    }
+  }, [isLoaded, mapObj, cleanAIReports, selected, heatmapOn]);
+
+  useEffect(() => {
+    if (!navigationActive) {
+      setNavStepIndex(0);
+      return;
+    }
+
+    if (!routeSteps.length) {
+      setNavStepIndex(0);
+      return;
+    }
+
+    setNavStepIndex((prev) => {
+      if (prev < 0 || prev >= routeSteps.length) return 0;
+      return prev;
+    });
+  }, [navigationActive, routeSteps.length]);
+
+  useEffect(() => {
+    if (!navigationActive) return;
+    if (!currentNavInstruction) return;
+    onNavigationStepChange?.(currentNavInstruction);
+  }, [navigationActive, currentNavInstruction, onNavigationStepChange]);
+
+  useEffect(() => {
+    if (!navigationActive) return;
+    if (!isLoaded || !window.google?.maps?.geometry?.spherical) return;
+    if (!userLocation) return;
+    if (!currentNavStep?.end_location) return;
+    if (!routeSteps.length) return;
+
+    const userLatLng = new window.google.maps.LatLng(userLocation.lat, userLocation.lng);
+
+    const endLat =
+      typeof currentNavStep.end_location.lat === "function"
+        ? currentNavStep.end_location.lat()
+        : currentNavStep.end_location.lat;
+
+    const endLng =
+      typeof currentNavStep.end_location.lng === "function"
+        ? currentNavStep.end_location.lng()
+        : currentNavStep.end_location.lng;
+
+    if (!Number.isFinite(endLat) || !Number.isFinite(endLng)) return;
+
+    const endLatLng = new window.google.maps.LatLng(endLat, endLng);
+
+    const distanceToStepEnd =
+      window.google.maps.geometry.spherical.computeDistanceBetween(
+        userLatLng,
+        endLatLng
+      );
+
+    if (distanceToStepEnd <= 25) {
+      const nextIndex = navStepIndex + 1;
+
+      if (nextIndex >= routeSteps.length) {
+        onNavigationComplete?.();
+        return;
+      }
+
+      setNavStepIndex(nextIndex);
+    }
+  }, [
+    navigationActive,
+    isLoaded,
+    userLocation,
+    currentNavStep,
+    navStepIndex,
+    routeSteps,
+    onNavigationComplete,
+  ]);
+
+  useEffect(() => {
+    if (!mapObj) return;
+
+    if (!navigationActive) {
+      try {
+        mapObj.setTilt?.(0);
+      } catch (_) {}
+      return;
+    }
+
+    if (!userLocation) return;
+
+    try {
+      mapObj.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+
+      if ((mapObj.getZoom?.() || 0) < 17) {
+        mapObj.setZoom(17);
+      }
+
+      if (Number.isFinite(userLocation.heading)) {
+        try {
+          mapObj.setHeading?.(userLocation.heading || 0);
+        } catch (_) {}
+      }
+
+      try {
+        mapObj.setTilt?.(45);
+      } catch (_) {}
+    } catch (_) {}
+  }, [navigationActive, mapObj, userLocation]);
+
+  const selectedPosition = useMemo(() => getSelectedLatLng(selected), [selected]);
 
   if (loadError) return <div style={{ padding: 16 }}>Error cargando Google Maps.</div>;
   if (!isLoaded) return <div style={{ padding: 16 }}>Cargando Google Maps...</div>;
@@ -702,18 +1099,383 @@ export default function IncidentMapGoogle({
         onLoad={handleMapLoad}
         onUnmount={handleMapUnmount}
       >
-        {!heatmapOn && selected && (
-          <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
-            <div style={{ maxWidth: 280 }}>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>
-                {selected.title || (TYPE[selected.type]?.label ?? "Incidente")}
+        {!heatmapOn && selected && selectedPosition && (
+          <InfoWindow position={selectedPosition} onCloseClick={() => setSelected(null)}>
+            {selected.isAIReport ? (
+              <div style={{ maxWidth: 300 }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginBottom: 8,
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background: "rgba(56,189,248,0.14)",
+                    color: "#0ea5e9",
+                    fontSize: 12,
+                    fontWeight: 800,
+                  }}
+                >
+                  <span>🧠</span>
+                  <span>Reporte IA</span>
+                </div>
+
+                <div style={{ fontWeight: 900, marginBottom: 8 }}>
+                  {selected.title || "Reporte IA"}
+                </div>
+
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    marginBottom: 10,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    background: `${getAICategoryMeta(selected.category).color}22`,
+                    color: getAICategoryMeta(selected.category).color,
+                  }}
+                >
+                  <span>{getAICategoryMeta(selected.category).emoji}</span>
+                  <span>{getAICategoryMeta(selected.category).label}</span>
+                </div>
+
+                {selected.image_url ? (
+                  <div
+                    style={{
+                      marginBottom: 10,
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      border: "1px solid rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    <img
+                      src={selected.image_url}
+                      alt={selected.title || "Reporte"}
+                      style={{
+                        width: "100%",
+                        maxHeight: 150,
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  </div>
+                ) : null}
+
+                <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 10 }}>
+                  {selected.summary || selected.body || "Sin resumen disponible"}
+                </div>
+
+                {selected.address_text ? (
+                  <div style={{ fontSize: 12, opacity: 0.78, marginBottom: 8 }}>
+                    {selected.address_text}
+                  </div>
+                ) : null}
+
+                <div style={{ fontSize: 12, opacity: 0.72, marginBottom: 10 }}>
+                  {[selected.city, selected.state].filter(Boolean).join(", ")}
+                </div>
+
+                {selected.source_url ? (
+                  <a
+                    href={selected.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rc-primary-btn"
+                    style={{
+                      width: "100%",
+                      display: "inline-flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      textDecoration: "none",
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      fontWeight: 800,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    Ver noticia
+                  </a>
+                ) : null}
               </div>
-              <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 10 }}>{selected.description}</div>
-              {selected.address ? <div style={{ fontSize: 12, opacity: 0.75 }}>{selected.address}</div> : null}
-            </div>
+            ) : (
+              <div style={{ maxWidth: 280 }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginBottom: 8,
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.10)",
+                    color: "#e2e8f0",
+                    fontSize: 12,
+                    fontWeight: 800,
+                  }}
+                >
+                  <span>👤</span>
+                  <span>Reporte de usuario</span>
+                </div>
+
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>
+                  {selected.title || (TYPE[selected.type]?.label ?? "Incidente")}
+                </div>
+
+                <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 10 }}>
+                  {selected.description}
+                </div>
+
+                {selected.address ? (
+                  <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 10 }}>
+                    {selected.address}
+                  </div>
+                ) : null}
+
+                {selected.has_image ? (
+                  <button
+                    type="button"
+                    className="rc-primary-btn"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, fontWeight: 800 }}
+                    onClick={() => {
+                      setImgTs(Date.now());
+                      setImgOpen(true);
+                    }}
+                  >
+                    Ver imagen del incidente
+                  </button>
+                ) : null}
+              </div>
+            )}
           </InfoWindow>
         )}
       </GoogleMap>
+
+      {returningToUser && (
+        <div className="rc-map-return-overlay">
+          <div className="rc-map-return-glow" />
+        </div>
+      )}
+
+      {navigationActive && currentNavInstruction && (
+        <div
+          style={{
+            position: "absolute",
+            top: 18,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 35,
+            width: "min(92vw, 680px)",
+            background: "#0f766e",
+            color: "#ffffff",
+            borderRadius: 22,
+            padding: "14px 18px",
+            boxShadow: "0 18px 40px rgba(0,0,0,0.35)",
+            border: "1px solid rgba(255,255,255,0.10)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 14,
+            }}
+          >
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  opacity: 0.78,
+                  marginBottom: 4,
+                }}
+              >
+                Navegacion activa
+              </div>
+
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 900,
+                  lineHeight: 1.2,
+                  marginBottom: 8,
+                }}
+              >
+                {currentNavInstruction.plainInstruction || "Sigue la ruta"}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  fontSize: 12,
+                  opacity: 0.92,
+                }}
+              >
+                {currentNavInstruction.distanceText && (
+                  <span>{currentNavInstruction.distanceText}</span>
+                )}
+                {currentNavInstruction.durationText && (
+                  <span>• {currentNavInstruction.durationText}</span>
+                )}
+                <span>
+                  • Paso {currentNavInstruction.stepNumber} de {" "}
+                  {currentNavInstruction.totalSteps}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                onStopNavigation?.();
+                onClearDirections?.();
+              }}
+              style={{
+                minWidth: 120,
+                height: 42,
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.16)",
+                background: "rgba(239,68,68,0.18)",
+                color: "#ffffff",
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              Salir
+            </button>
+          </div>
+        </div>
+      )}
+
+      {imgOpen && selected?.has_image && !selected?.isAIReport && (
+        <div className="rc-modal-backdrop" onClick={() => setImgOpen(false)}>
+          <div className="rc-modal" style={{ maxWidth: 860 }} onClick={(e) => e.stopPropagation()}>
+            <div className="rc-modal-head">
+              <div className="rc-modal-title">Imagen del incidente</div>
+              <button className="rc-icon-btn" type="button" onClick={() => setImgOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="rc-modal-body">
+              <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid rgba(255,255,255,0.10)" }}>
+                <img
+                  src={incidentImageUrl}
+                  alt="Incidente"
+                  style={{
+                    width: "100%",
+                    maxHeight: "70vh",
+                    objectFit: "contain",
+                    display: "block",
+                    background: "rgba(0,0,0,0.25)",
+                  }}
+                />
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
+                {selected.title || (TYPE[selected.type]?.label ?? "Incidente")}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLegend && (
+        <div
+          style={{
+            position: "absolute",
+            left: 75,
+            bottom: 186,
+            zIndex: 25,
+            minWidth: 220,
+            maxWidth: 280,
+            padding: "12px 14px",
+            borderRadius: 18,
+            background: "#1e293b",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            boxShadow: "0 10px 35px rgba(0,0,0,0.25)",
+            color: "#e5eefc",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              marginBottom: 10,
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 900 }}>
+              Tipos de puntos
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowLegend(false)}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.06)",
+                color: "#e5eefc",
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 10px",
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.05)",
+              }}
+            >
+              <LegendPin emoji="🚨" bg="#ef4444" ring="#ffffff" />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>Reportes de usuarios</div>
+                <div style={{ fontSize: 11, opacity: 0.72 }}>
+                  {legendCounts.user} visibles • borde blanco
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 10px",
+                borderRadius: 12,
+                background: "rgba(56,189,248,0.10)",
+              }}
+            >
+              <LegendPin emoji="🧠" bg="#0ea5e9" ring="#38bdf8" />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>Noticias / IA</div>
+                <div style={{ fontSize: 11, opacity: 0.72 }}>
+                  {legendCounts.ai} visibles • borde azul
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <button
         type="button"
@@ -729,6 +1491,7 @@ export default function IncidentMapGoogle({
         className={`rc-heatmap-fab ${heatmapOn ? "active" : ""}`}
         onClick={() => {
           setShowMapMode(false);
+          setShowLegend(false);
           setHeatPanelOpen((v) => !v);
         }}
         title="Zonas calientes"
@@ -736,13 +1499,32 @@ export default function IncidentMapGoogle({
         🔥
       </button>
 
-      <HeatmapControls open={heatPanelOpen} setOpen={setHeatPanelOpen} heatmapOn={heatmapOn} setHeatmapOn={setHeatmapOn} />
+      <button
+        type="button"
+        className="rc-legend-fab"
+        onClick={() => {
+          setShowMapMode(false);
+          setHeatPanelOpen(false);
+          setShowLegend((v) => !v);
+        }}
+        title="Tipos de puntos"
+      >
+        🤖
+      </button>
+
+      <HeatmapControls
+        open={heatPanelOpen}
+        setOpen={setHeatPanelOpen}
+        heatmapOn={heatmapOn}
+        setHeatmapOn={setHeatmapOn}
+      />
 
       <button
         type="button"
         className="rc-maptype-fab"
         onClick={() => {
           setHeatPanelOpen(false);
+          setShowLegend(false);
           setShowMapMode(true);
         }}
         title="Cambiar tipo de mapa"

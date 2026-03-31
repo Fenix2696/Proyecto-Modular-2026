@@ -73,13 +73,12 @@ export default function DirectionsPanel({
               <input className="rc-dir-field" value={originLabel} readOnly />
             ) : (
               <PlacesSearch
-                value={originValue || ""}
-                onValueChange={setOriginValue}
+                value={originValue}
+                onChange={setOriginValue}
                 onSelect={onOriginSelect}
                 onEnter={onOriginEnter}
-                placeholder="Origen"
-                inputClassName="rc-dir-field rc-dir-field--dest"
-                showHelp={false}
+                dropdownVariant="panel"
+                enableRecentSearches={false}
               />
             )}
 
@@ -88,13 +87,12 @@ export default function DirectionsPanel({
               <input className="rc-dir-field" value={originLabel} readOnly />
             ) : (
               <PlacesSearch
-                value={destValue || ""}
-                onValueChange={setDestValue}
+                value={destValue}
+                onChange={setDestValue}
                 onSelect={onDestSelect}
                 onEnter={onDestEnter}
-                placeholder="Destino"
-                inputClassName="rc-dir-field rc-dir-field--dest"
-                showHelp={false}
+                dropdownVariant="panel"
+                enableRecentSearches={false}
               />
             )}
           </div>

@@ -15,6 +15,7 @@ import ReportModal from "./ReportModal";
 
 import { getAllIncidents, createIncident } from "../../services/api";
 import { getMe } from "../../services/user";
+import { getActiveAIReports } from "../../services/aiReports";
 
 // consume backend Routes API v2
 import { computeTrafficRoutes } from "../../services/routesTraffic";
@@ -89,7 +90,9 @@ function computeIncidentsNearRoute(route, incidents, thresholdM = 220) {
   const step = Math.max(1, Math.floor(path.length / 110));
   const sample = [];
   for (let i = 0; i < path.length; i += step) sample.push(path[i]);
-  if (sample[sample.length - 1] !== path[path.length - 1]) sample.push(path[path.length - 1]);
+  if (sample[sample.length - 1] !== path[path.length - 1]) {
+    sample.push(path[path.length - 1]);
+  }
 
   const res = [];
   for (const it of incidents || []) {
@@ -101,7 +104,10 @@ function computeIncidentsNearRoute(route, incidents, thresholdM = 220) {
 
     let best = Infinity;
     for (const s of sample) {
-      const d = window.google.maps.geometry.spherical.computeDistanceBetween(p, s);
+      const d = window.google.maps.geometry.spherical.computeDistanceBetween(
+        p,
+        s
+      );
       if (d < best) best = d;
       if (best <= 40) break;
     }
@@ -115,7 +121,8 @@ function computeIncidentsNearRoute(route, incidents, thresholdM = 220) {
 
 function scoreRoute(route, incidentsNear) {
   const leg = route?.legs?.[0];
-  const baseSec = leg?.duration_in_traffic?.value || leg?.duration?.value || 999999;
+  const baseSec =
+    leg?.duration_in_traffic?.value || leg?.duration?.value || 999999;
 
   let risk = 0;
   for (const it of incidentsNear) {
@@ -135,18 +142,20 @@ function toRoutesInfo(directions, incidents, modeKey) {
     const leg = r.legs?.[0];
     const incidentsNear = computeIncidentsNearRoute(r, incidents, 220);
     const durationSec =
-      (modeKey === "DRIVING" || modeKey === "MOTO") && leg?.duration_in_traffic?.value
+      (modeKey === "DRIVING" || modeKey === "MOTO") &&
+      leg?.duration_in_traffic?.value
         ? leg.duration_in_traffic.value
         : leg?.duration?.value;
 
     return {
       summary: r.summary || "",
       distanceMeters: leg?.distance?.value,
-      durationSec: durationSec,
+      durationSec,
       incidentsCount: incidentsNear.length,
       incidentsNear,
       note:
-        (modeKey === "TRANSIT" || modeKey === "RAIL") && incidentsNear.length > 0
+        (modeKey === "TRANSIT" || modeKey === "RAIL") &&
+        incidentsNear.length > 0
           ? "Precaucion: hay reportes cerca"
           : "",
     };
@@ -154,7 +163,9 @@ function toRoutesInfo(directions, incidents, modeKey) {
 }
 
 function buildAbsolutePhotoUrl(user, photoTs) {
-  const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").trim().replace(/\/+$/, "");
+  const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api")
+    .trim()
+    .replace(/\/+$/, "");
   const apiHost = apiBase.replace(/\/api$/i, "");
 
   const u = user || {};
@@ -162,7 +173,9 @@ function buildAbsolutePhotoUrl(user, photoTs) {
 
   const raw = (u.photo_url || u.photo || u.avatar || "").trim();
   if (raw) {
-    if (/^https?:\/\//i.test(raw)) return `${raw}${raw.includes("?") ? "&" : "?"}ts=${photoTs}`;
+    if (/^https?:\/\//i.test(raw)) {
+      return `${raw}${raw.includes("?") ? "&" : "?"}ts=${photoTs}`;
+    }
     if (raw.startsWith("/api/")) return `${apiHost}${raw}?ts=${photoTs}`;
     if (raw.startsWith("/")) return `${apiBase}${raw}?ts=${photoTs}`;
     return `${apiBase}/${raw}?ts=${photoTs}`;
@@ -192,6 +205,7 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(true);
   const [incidents, setIncidents] = useState([]);
+  const [aiReports, setAiReports] = useState([]);
 
   const [mapCenter, setMapCenter] = useState([20.6597, -103.3496]);
   const [mapZoom, setMapZoom] = useState(13);
@@ -199,6 +213,9 @@ export default function Dashboard() {
   const [userLocation, setUserLocation] = useState(null);
   const [followMe, setFollowMe] = useState(false);
   const didInitialFlyToMeRef = useRef(false);
+
+  const sidebarRef = useRef(null);
+  const menuButtonRef = useRef(null);
 
   // DIRECTIONS: origen/destino
   const [originInput, setOriginInput] = useState("Tu ubicacion");
@@ -218,6 +235,10 @@ export default function Dashboard() {
   // trafficData (Routes API v2)
   const [trafficData, setTrafficData] = useState(null);
 
+  // navegacion
+  const [navigationActive, setNavigationActive] = useState(false);
+  const [navigationCurrentStep, setNavigationCurrentStep] = useState(null);
+
   const [incidentQuery, setIncidentQuery] = useState("");
 
   const [filters, setFilters] = useState({
@@ -229,11 +250,14 @@ export default function Dashboard() {
     timeRange: "all",
   });
 
-  const [mapMode, setMapMode] = useState(() => localStorage.getItem("mapMode") || "dark");
+  const [mapMode, setMapMode] = useState(
+    () => localStorage.getItem("mapMode") || "dark"
+  );
   useEffect(() => localStorage.setItem("mapMode", mapMode), [mapMode]);
 
   const [userProfile, setUserProfile] = useState(null);
   const [photoTs, setPhotoTs] = useState(() => Date.now());
+  const [clearMapToken, setClearMapToken] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -245,13 +269,41 @@ export default function Dashboard() {
     (async () => {
       setLoading(true);
       try {
-        await Promise.all([loadIncidents(), loadProfile()]);
+        await Promise.all([loadIncidents(), loadAIReports(50), loadProfile()]);
       } finally {
         setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
+
+  useEffect(() => {
+    const handleClickOutsideSidebar = (event) => {
+      if (sidebarCollapsed) return;
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const clickedInsideSidebar = !!target.closest(".rc-sidebar");
+      const clickedInsidePanel = !!target.closest(".rc-panel");
+      const clickedMenuButton = !!target.closest(".menu-button");
+
+      if (!clickedInsideSidebar && !clickedInsidePanel && !clickedMenuButton) {
+        setSidebarCollapsed(true);
+
+        if (activePanel !== "none") {
+          setActivePanel("none");
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutsideSidebar);
+    document.addEventListener("touchstart", handleClickOutsideSidebar);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutsideSidebar);
+      document.removeEventListener("touchstart", handleClickOutsideSidebar);
+    };
+  }, [sidebarCollapsed, activePanel]);
 
   // first view = my location + zoom
   useEffect(() => {
@@ -260,7 +312,8 @@ export default function Dashboard() {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const { latitude, longitude, accuracy, heading, speed } = pos.coords || {};
+        const { latitude, longitude, accuracy, heading, speed } =
+          pos.coords || {};
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
         const loc = {
@@ -291,7 +344,8 @@ export default function Dashboard() {
 
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude, accuracy, heading, speed } = pos.coords || {};
+        const { latitude, longitude, accuracy, heading, speed } =
+          pos.coords || {};
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
         const next = {
@@ -341,12 +395,34 @@ export default function Dashboard() {
       const res = await getAllIncidents();
       if (res?.success && Array.isArray(res.data)) {
         const clean = res.data
-          .map((i) => ({ ...i, timestamp: i.timestamp ? new Date(i.timestamp) : new Date() }))
+          .map((i) => ({
+            ...i,
+            timestamp: i.timestamp ? new Date(i.timestamp) : new Date(),
+          }))
           .filter((i) => Number.isFinite(i.lat) && Number.isFinite(i.lng));
         setIncidents(clean);
-      } else setIncidents([]);
+      } else {
+        setIncidents([]);
+      }
     } catch {
       setIncidents([]);
+    }
+  };
+
+  const loadAIReports = async (limit = 50) => {
+    try {
+      const res = await getActiveAIReports(limit);
+      const rows = res?.data || [];
+      const clean = Array.isArray(rows)
+        ? rows.filter(
+            (r) =>
+              Number.isFinite(Number(r.latitude)) &&
+              Number.isFinite(Number(r.longitude))
+          )
+        : [];
+      setAiReports(clean);
+    } catch {
+      setAiReports([]);
     }
   };
 
@@ -366,13 +442,27 @@ export default function Dashboard() {
       const d = (i.description || "").toLowerCase();
       const a = (i.address || "").toLowerCase();
       const typeText = (TYPE_SEARCH_TEXT[i.type] || i.type || "").toLowerCase();
-      return t.includes(q) || d.includes(q) || a.includes(q) || typeText.includes(q);
+      return (
+        t.includes(q) ||
+        d.includes(q) ||
+        a.includes(q) ||
+        typeText.includes(q)
+      );
     });
   }, [incidents, incidentQuery, filters]);
 
   const stats = useMemo(() => {
-    const base = { total: filteredIncidents.length, robbery: 0, accident: 0, emergency: 0, theft: 0, vandalism: 0 };
-    for (const i of filteredIncidents) if (base[i.type] !== undefined) base[i.type] += 1;
+    const base = {
+      total: filteredIncidents.length,
+      robbery: 0,
+      accident: 0,
+      emergency: 0,
+      theft: 0,
+      vandalism: 0,
+    };
+    for (const i of filteredIncidents) {
+      if (base[i.type] !== undefined) base[i.type] += 1;
+    }
     return base;
   }, [filteredIncidents]);
 
@@ -462,7 +552,6 @@ export default function Dashboard() {
     const destLL = getPointLatLng(destIsMyLocation, destLatLngRef);
     if (!originLL || !destLL) return;
 
-    // 1) backend trafficData (Routes API v2)
     try {
       const originPlain = getPointPlain(originIsMyLocation, originLatLngRef);
       const destPlain = getPointPlain(destIsMyLocation, destLatLngRef);
@@ -476,15 +565,19 @@ export default function Dashboard() {
           alternatives: true,
         });
 
-        if (trafficRes?.success && trafficRes?.data) setTrafficData(trafficRes.data);
-        else setTrafficData(null);
-      } else setTrafficData(null);
+        if (trafficRes?.success && trafficRes?.data) {
+          setTrafficData(trafficRes.data);
+        } else {
+          setTrafficData(null);
+        }
+      } else {
+        setTrafficData(null);
+      }
     } catch (e) {
       console.warn("No se pudo obtener trafficData:", e?.message || e);
       setTrafficData(null);
     }
 
-    // 2) Google DirectionsService (ruta base)
     const service = new window.google.maps.DirectionsService();
     const mode = getModeForDirections(modeKey);
 
@@ -537,12 +630,57 @@ export default function Dashboard() {
 
   const openDirectionsPanel = () => setActivePanel("directions");
 
+  const handleClearDirections = () => {
+    setNavigationActive(false);
+    setNavigationCurrentStep(null);
+
+    setDirections(null);
+    setRoutesInfo([]);
+    setRouteIndex(0);
+    setTrafficData(null);
+
+    setDestInput("");
+    destLatLngRef.current = null;
+    setDestIsMyLocation(false);
+
+    if (userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng)) {
+      setFollowMe(true);
+      setMapCenter([userLocation.lat, userLocation.lng]);
+      setMapZoom(16);
+    } else {
+      setFollowMe(false);
+      setMapCenter([20.6597, -103.3496]);
+      setMapZoom(13);
+    }
+
+    setClearMapToken((prev) => prev + 1);
+  };
+
+  const handleStartNavigation = () => {
+    if (!directions?.routes?.length) return;
+    setNavigationActive(true);
+  };
+
+  const handleStopNavigation = () => {
+    setNavigationActive(false);
+  };
+
+  const handleNavigationStepChange = (step) => {
+    setNavigationCurrentStep(step || null);
+  };
+
+  const handleNavigationComplete = () => {
+    setNavigationActive(false);
+  };
+
   const handleOriginSelect = async ({ lat, lng, address }) => {
     originLatLngRef.current = { lat, lng, address: address || "" };
     setOriginInput(address || "");
     setOriginIsMyLocation(false);
 
     openDirectionsPanel();
+    setNavigationActive(false);
+    setNavigationCurrentStep(null);
 
     try {
       await buildDirections(travelMode);
@@ -559,6 +697,9 @@ export default function Dashboard() {
     setDestIsMyLocation(false);
 
     openDirectionsPanel();
+
+    setNavigationActive(false);
+    setNavigationCurrentStep(null);
 
     setFollowMe(false);
     setMapCenter([lat, lng]);
@@ -604,6 +745,10 @@ export default function Dashboard() {
       originLatLngRef.current = p;
       setOriginInput(p.address || "");
       setOriginIsMyLocation(false);
+
+      setNavigationActive(false);
+      setNavigationCurrentStep(null);
+
       await buildDirections(travelMode);
     } catch {}
   };
@@ -616,6 +761,9 @@ export default function Dashboard() {
       destLatLngRef.current = p;
       setDestInput(p.address || "");
       setDestIsMyLocation(false);
+
+      setNavigationActive(false);
+      setNavigationCurrentStep(null);
 
       setFollowMe(false);
       setMapCenter([p.lat, p.lng]);
@@ -635,10 +783,8 @@ export default function Dashboard() {
         await buildDirections(travelMode);
       } catch {}
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [travelMode, originIsMyLocation, destIsMyLocation, userLocation]);
 
-  // swap tipo Google Maps
   const handleSwap = () => {
     setOriginIsMyLocation((prevOriginMy) => {
       setDestIsMyLocation(prevOriginMy);
@@ -653,6 +799,9 @@ export default function Dashboard() {
     const tmp = originLatLngRef.current;
     originLatLngRef.current = destLatLngRef.current;
     destLatLngRef.current = tmp;
+
+    setNavigationActive(false);
+    setNavigationCurrentStep(null);
 
     setDirections(null);
     setRoutesInfo([]);
@@ -669,19 +818,32 @@ export default function Dashboard() {
     return r?.incidentsNear || [];
   }, [routesInfo, routeIndex]);
 
-  const userPhotoUrl = useMemo(() => buildAbsolutePhotoUrl(userProfile, photoTs), [userProfile, photoTs]);
+  const userPhotoUrl = useMemo(
+    () => buildAbsolutePhotoUrl(userProfile, photoTs),
+    [userProfile, photoTs]
+  );
 
   if (loading) return <div className="rc-loading">Cargando dashboard...</div>;
 
   return (
     <ErrorBoundary>
-      <div className="rc-dashboard">
+      <div className={`rc-dashboard ${!sidebarCollapsed ? "sidebar-open" : ""}`}>
         <DashboardTopbar
-          onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
+          menuButtonRef={menuButtonRef}
+          onToggleSidebar={() => {
+            if (activePanel !== "none") {
+              setActivePanel("none");
+              setSidebarCollapsed(false);
+              return;
+            }
+
+            setSidebarCollapsed((v) => !v);
+          }}
           destinationInput={destInput}
           setDestinationInput={setDestInput}
           onDestinationSelect={handleDestinationSelect}
           onDestinationEnter={handleDestinationEnter}
+          onClearDestination={handleClearDirections}
           onOpenReport={() => setShowReportModal(true)}
           userProfile={userProfile}
           photoTs={photoTs}
@@ -691,10 +853,14 @@ export default function Dashboard() {
 
         <div className="rc-body">
           <DashboardSidebar
-            sidebarCollapsed={sidebarCollapsed}
+            sidebarRef={sidebarRef}
+            collapsed={sidebarCollapsed}
             activePanel={activePanel}
             setActivePanel={setActivePanel}
             onLogout={handleLogout}
+            userProfile={userProfile}
+            photoTs={photoTs}
+            onOpenAccount={() => setShowAccount(true)}
           />
 
           <DashboardPanel
@@ -703,7 +869,7 @@ export default function Dashboard() {
             searchQuery={incidentQuery}
             setSearchQuery={setIncidentQuery}
             highlightQuery={incidentQuery}
-            onPlaceSelect={({ lat, lng, address }) => {
+            onPlaceSelect={({ lat, lng }) => {
               setFollowMe(false);
               setMapCenter([lat, lng]);
               setMapZoom((z) => Math.max(z, 16));
@@ -733,6 +899,18 @@ export default function Dashboard() {
             directionsSelectedRouteIndex={routeIndex}
             setDirectionsSelectedRouteIndex={setRouteIndex}
             directionsIncidentsForSelectedRoute={incidentsForSelectedRoute}
+            hasDirectionsRoute={!!directions?.routes?.length}
+            isNavigationActive={navigationActive}
+            navigationCurrentStep={navigationCurrentStep}
+            onStartNavigation={handleStartNavigation}
+            onStopNavigation={handleStopNavigation}
+            onClearDirections={handleClearDirections}
+            onStartRouteAndFocusMap={() => {
+              handleStartNavigation();
+              setFollowMe(true);
+              setActivePanel("none");
+              setSidebarCollapsed(true);
+            }}
           />
 
           <main className="rc-main">
@@ -741,6 +919,7 @@ export default function Dashboard() {
                 center={mapCenter}
                 zoom={mapZoom}
                 incidents={filteredIncidents}
+                aiReports={aiReports}
                 mapMode={mapMode}
                 onChangeMapMode={setMapMode}
                 userLocation={userLocation}
@@ -750,13 +929,23 @@ export default function Dashboard() {
                 directions={directions}
                 routeIndex={routeIndex}
                 trafficData={trafficData}
+                navigationActive={navigationActive}
+                onStopNavigation={handleStopNavigation}
+                onClearDirections={handleClearDirections}
+                onNavigationStepChange={handleNavigationStepChange}
+                onNavigationComplete={handleNavigationComplete}
+                clearMapToken={clearMapToken}
               />
             </div>
           </main>
         </div>
 
         {showReportModal && (
-          <ReportModal onClose={() => setShowReportModal(false)} onSubmit={handleCreate} currentPosition={mapCenter} />
+          <ReportModal
+            onClose={() => setShowReportModal(false)}
+            onSubmit={handleCreate}
+            currentPosition={mapCenter}
+          />
         )}
 
         <AccountModal

@@ -266,10 +266,45 @@
 }
 
 /* =========================
+   ✅ NUEVO: Upload + preview
+   ========================= */
+.rm-upload-row{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+}
+
+.rm-file{
+  flex: 1;
+}
+
+.rm-preview{
+  margin-top: 10px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid #e7eef6;
+  background: #f8fafc;
+}
+
+.rm-preview img{
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display:block;
+}
+
+.rm-error{
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #ef4444;
+}
+
+/* =========================
    Google Places dropdown
    ========================= */
 .pac-container{
-  z-index: 100000 !important; /* arriba de modales/overlays */
+  z-index: 100000 !important;
   border-radius: 14px !important;
   border: 1px solid rgba(0,0,0,0.08) !important;
   box-shadow: 0 18px 50px rgba(0,0,0,0.25) !important;
@@ -291,51 +326,43 @@
   font-weight: 800 !important;
 }
 
-/* Estilo para el nuevo PlaceAutocompleteElement */
-gmp-place-autocomplete,
-.gmp-autocomplete{
-  width: 100%;
-  display: block;
-}
-
-/* Si el componente respeta estilos básicos */
-.gmp-autocomplete{
-  height: 46px;
-  border-radius: 16px;
-  border: 2px solid #e7eef6;
-  background: #fff;
-  padding: 0 14px;
-  box-sizing: border-box;
-}
-
-
-/* =========================
-   FIX: texto invisible en input de direccion (ReportModal)
-   ========================= */
-
-/* El PlacesSearch le pasa inputClassName="rm-input" */
+/* FIX: texto visible dentro del modal */
 .rm-modal .rm-input{
   background: #ffffff !important;
   color: #0f172a !important;
   caret-color: #0f172a !important;
 }
 
-/* Placeholder visible */
 .rm-modal .rm-input::placeholder{
   color: rgba(15,23,42,0.45) !important;
 }
 
-/* Si el browser aplica estilos raros (Chrome autofill) */
-.rm-modal .rm-input:-webkit-autofill,
-.rm-modal .rm-input:-webkit-autofill:hover,
-.rm-modal .rm-input:-webkit-autofill:focus{
-  -webkit-text-fill-color: #0f172a !important;
-  box-shadow: 0 0 0 1000px #ffffff inset !important;
+
+
+.rm-image-preview {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* Por si PlacesSearch mete wrappers internos */
-.rm-modal input.rm-input{
-  background: #ffffff !important;
-  color: #0f172a !important;
-  caret-color: #0f172a !important;
+.rm-image-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.rm-remove-image {
+  background: transparent;
+  border: none;
+  color: #ff4d4f;
+  font-size: 13px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.rm-remove-image:hover {
+  text-decoration: underline;
 }

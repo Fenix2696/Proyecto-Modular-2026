@@ -21,6 +21,10 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
   const [lat, setLat] = useState(currentPosition?.[0] ?? 20.6597);
   const [lng, setLng] = useState(currentPosition?.[1] ?? -103.3496);
 
+  // 🔥 NUEVO — Imagen
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
   const canNext = useMemo(() => {
     if (step === 1) return !!type;
     if (step === 2) return title.trim().length >= 3;
@@ -42,7 +46,6 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
 
   const goBack = () => setStep((s) => Math.max(1, s - 1));
 
-  // 🔥 evita que Enter haga submit y "se salte" ubicacion
   const onFormKeyDown = (e) => {
     if (e.key !== "Enter") return;
     if (e.target && e.target.tagName === "TEXTAREA") return;
@@ -60,6 +63,30 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
     if (addr) setAddress(addr);
   };
 
+  // 🔥 NUEVO — Manejo imagen
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Solo se permiten imagenes");
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      alert("La imagen no puede superar 8MB");
+      return;
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const handleFinalSubmit = () => {
     if (!canNext) return;
 
@@ -70,6 +97,7 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
       address: address.trim(),
       lat,
       lng,
+      imageFile, // 🔥 Se envía al api.js
     });
   };
 
@@ -85,7 +113,12 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
             <span className="rm-pin">📍</span>
             Reportar Incidente
           </div>
-          <button className="rm-close" type="button" onClick={onClose} aria-label="Cerrar">
+          <button
+            className="rm-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
             ✕
           </button>
         </div>
@@ -111,7 +144,12 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
           </div>
         </div>
 
-        <form className="rm-body" onKeyDown={onFormKeyDown} onSubmit={(e) => e.preventDefault()}>
+        <form
+          className="rm-body"
+          onKeyDown={onFormKeyDown}
+          onSubmit={(e) => e.preventDefault()}
+        >
+          {/* STEP 1 */}
           {step === 1 && (
             <>
               <h3 className="rm-h3">Selecciona el tipo de incidente</h3>
@@ -132,6 +170,7 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
             </>
           )}
 
+          {/* STEP 2 */}
           {step === 2 && (
             <>
               <h3 className="rm-h3">Detalles</h3>
@@ -157,9 +196,37 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
                   rows={4}
                 />
               </div>
+
+              {/* 🔥 NUEVA SECCION IMAGEN — SIN ROMPER DISEÑO */}
+              <div className="rm-field">
+                <label>Imagen (opcional)</label>
+
+                {!imagePreview && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="rm-input"
+                  />
+                )}
+
+                {imagePreview && (
+                  <div className="rm-image-preview">
+                    <img src={imagePreview} alt="Preview" />
+                    <button
+                      type="button"
+                      className="rm-remove-image"
+                      onClick={removeImage}
+                    >
+                      Quitar imagen
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
+          {/* STEP 3 */}
           {step === 3 && (
             <>
               <h3 className="rm-h3">Ubicacion</h3>
@@ -184,27 +251,45 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
               <div className="rm-coords">
                 <div className="rm-coord">
                   <div className="rm-coord-label">Lat</div>
-                  <div className="rm-coord-value">{Number(lat).toFixed(6)}</div>
+                  <div className="rm-coord-value">
+                    {Number(lat).toFixed(6)}
+                  </div>
                 </div>
                 <div className="rm-coord">
                   <div className="rm-coord-label">Lng</div>
-                  <div className="rm-coord-value">{Number(lng).toFixed(6)}</div>
+                  <div className="rm-coord-value">
+                    {Number(lng).toFixed(6)}
+                  </div>
                 </div>
               </div>
             </>
           )}
 
           <div className="rm-footer">
-            <button className="rm-btn rm-btn-ghost" type="button" onClick={step === 1 ? onClose : goBack}>
+            <button
+              className="rm-btn rm-btn-ghost"
+              type="button"
+              onClick={step === 1 ? onClose : goBack}
+            >
               {step === 1 ? "Cancelar" : "Atras"}
             </button>
 
             {step < 3 ? (
-              <button className="rm-btn rm-btn-primary" type="button" onClick={goNext} disabled={!canNext}>
+              <button
+                className="rm-btn rm-btn-primary"
+                type="button"
+                onClick={goNext}
+                disabled={!canNext}
+              >
                 Siguiente →
               </button>
             ) : (
-              <button className="rm-btn rm-btn-primary" type="button" onClick={handleFinalSubmit} disabled={!canNext}>
+              <button
+                className="rm-btn rm-btn-primary"
+                type="button"
+                onClick={handleFinalSubmit}
+                disabled={!canNext}
+              >
                 Reportar
               </button>
             )}

@@ -100,7 +100,7 @@ function ForgotPassword() {
             </div>
 
             <div className="register-link-radar" style={{ margingintop: 8 }}>
-              Tip: En modo dev, el backend imprime el link en la consola o lo regresa como resetLink.
+
             </div>
           </div>
         </div>

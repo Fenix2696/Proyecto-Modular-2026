@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 
-// ✅ Import real (Vite empaqueta y sí carga)
+//  Import real (Vite empaqueta y sí carga)
 import mapAuto from "../../../assets/images/map-types/map-auto.png";
 import mapSatellite from "../../../assets/images/map-types/map-satellite.png";
 import mapDark from "../../../assets/images/map-types/map-dark.png";
@@ -13,7 +13,7 @@ const MAP_TYPES = [
 ];
 
 export default function MapTypeSelector({ activeType, onSelect, onClose }) {
-  // ✅ Cerrar con ESC
+  //  Cerrar con ESC
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onClose?.();

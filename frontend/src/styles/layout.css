@@ -86,7 +86,38 @@
 .rc-stat-label{ color: var(--rc-muted); font-weight: 800; font-size: 12px; }
 .rc-stat-value{ font-weight: 950; font-size: 18px; }
 
+/* ======================================================
+   TABLET
+====================================================== */
 @media (max-width: 900px){
-  .rc-panel{ display:none; }
-  .rc-topbar-center{ display:none; }
+  .rc-main{
+    padding: 10px;
+  }
+
+  .rc-map-wrap{
+    border-radius: 18px;
+  }
+}
+
+/* ======================================================
+   MOBILE
+   - ya NO escondemos panel
+   - ya NO escondemos topbar-center
+   - solo ajustamos alturas y mapa
+====================================================== */
+@media (max-width: 768px){
+  .rc-body{
+    height: calc(100vh - 72px);
+  }
+
+  .rc-main{
+    padding: 0;
+  }
+
+  .rc-map-wrap{
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
 }
