@@ -3,7 +3,16 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-const { OAuth2Client } = require("google-auth-library");
+
+let googleClient = null;
+
+function getGoogleClient() {
+  if (!googleClient) {
+    const { OAuth2Client } = require("google-auth-library");
+    googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  }
+  return googleClient;
+}
 
 function mapUserRow(row) {
   return {
@@ -52,7 +61,6 @@ async function sendResetEmail(toEmail, resetLink) {
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
 
-  // Si no hay SMTP configurado, modo dev: imprimimos link en consola
   if (!smtpHost || !smtpUser || !smtpPass) {
     console.log("RESET LINK (DEV):", resetLink);
     return;
@@ -344,9 +352,6 @@ async function changePassword(req, res) {
   }
 }
 
-// =============================
-// Forgot / Reset Password
-// =============================
 async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
@@ -357,7 +362,6 @@ async function forgotPassword(req, res) {
 
     const r = await pool.query("SELECT id, email FROM users WHERE email = $1", [email]);
 
-    // Respuesta generica para no filtrar si existe o no
     if (r.rows.length === 0) {
       return res.json({
         success: true,
@@ -367,7 +371,7 @@ async function forgotPassword(req, res) {
 
     const user = r.rows[0];
     const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
 
     await pool.query(
       `UPDATE users
@@ -447,11 +451,12 @@ async function oauthGoogle(req, res) {
     if (!process.env.GOOGLE_CLIENT_ID) {
       return res.status(500).json({ success: false, message: "GOOGLE_CLIENT_ID no configurado" });
     }
+
     if (!idToken) {
       return res.status(400).json({ success: false, message: "idToken requerido" });
     }
 
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const client = getGoogleClient();
 
     const ticket = await client.verifyIdToken({
       idToken,
@@ -466,7 +471,6 @@ async function oauthGoogle(req, res) {
       return res.status(400).json({ success: false, message: "Google token sin email" });
     }
 
-    // Buscar usuario por email
     let userRow;
     const exists = await pool.query(
       `SELECT id, email, role, username, full_name, phone, photo_data
@@ -477,7 +481,6 @@ async function oauthGoogle(req, res) {
     if (exists.rows.length) {
       userRow = exists.rows[0];
     } else {
-      // Crear usuario nuevo con password aleatorio (no lo usara, pero cumple schema)
       const randomPass = crypto.randomBytes(16).toString("hex");
       const hashed = await bcrypt.hash(String(randomPass), 10);
 
