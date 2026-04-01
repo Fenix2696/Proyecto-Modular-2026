@@ -1,0 +1,59 @@
+############################
+# GENERAL
+############################
+node_modules/
+dist/
+build/
+.env
+.env.*
+*.log
+*.tmp
+*.cache
+.DS_Store
+
+############################
+# JAVA (Maven / Gradle / IntelliJ)
+############################
+target/
+out/
+*.class
+
+# IntelliJ
+.idea/
+*.iml
+
+# Logs
+logs/
+
+############################
+# PYTHON (AI)
+############################
+# Entorno virtual
+AI/src/main/python/ai/.venv/
+AI/src/main/python/ai/venv/
+
+# Cache de python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos temporales
+*.sqlite3
+*.db
+
+# VS Code / Python
+.vscode/
+.python-version
+
+############################
+# ESPECIFICO DE TU PROYECTO
+############################
+# Evitar subir cosas compiladas o basura dentro de AI
+AI/src/main/python/ai/__pycache__/
+AI/src/main/python/ai/*.pyc
+
+############################
+# SISTEMA OPERATIVO
+############################
+Thumbs.db
