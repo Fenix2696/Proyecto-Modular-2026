@@ -6,15 +6,11 @@ const JAVA_GNEWS_URL = `${JAVA_BASE_URL}/WebSearch/newsByQuery`;
 const JAVA_GUARDIA_URL = `${JAVA_BASE_URL}/WebSearch/guardiaNocturna`;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 
-// =============================
-// Config
-// =============================
 const AI_REPORT_VISIBLE_HOURS = 12;
 const MIN_SYNC_INTERVAL_MINUTES = 20;
 const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
 
-// GNews como apoyo, no como fuente principal
 const PRIMARY_SEARCH_QUERIES = [
   "Guadalajara inseguridad",
   "Guadalajara accidente vial",
@@ -30,26 +26,21 @@ const ZMG_KEYWORDS = [
   "san pedro tlaquepaque",
   "tlajomulco",
   "tlajomulco de zuniga",
-  "tlajomulco de zuniga",
   "tonala",
+  "jalisco",
+  "el salto",
+  "juanacatlan",
+  "zmg",
+  "oblatos",
   "tetlan",
   "insurgentes",
   "obrera",
+  "miravalle",
+  "huentitan",
   "periferico",
   "lopez mateos",
   "mariano otero",
   "colon",
-  "basilio vadillo",
-  "la penal",
-  "oblatos",
-  "huentitan",
-  "jalisco",
-  "el salto",
-  "juanacatlan",
-  "tonaltecas",
-  "miravalle",
-  "centro de guadalajara",
-  "zmg",
 ];
 
 const ZONE_FALLBACKS = [
@@ -76,22 +67,6 @@ const ZONE_FALLBACKS = [
     state: "Jalisco",
     lat: 20.6592,
     lng: -103.3568,
-  },
-  {
-    key: "la penal",
-    label: "La Penal, Guadalajara, Jalisco, Mexico",
-    city: "Guadalajara",
-    state: "Jalisco",
-    lat: 20.6679,
-    lng: -103.3148,
-  },
-  {
-    key: "periferico sur",
-    label: "Periferico Sur, Tlaquepaque, Jalisco, Mexico",
-    city: "Tlaquepaque",
-    state: "Jalisco",
-    lat: 20.6071,
-    lng: -103.401,
   },
   {
     key: "zapopan",
@@ -133,33 +108,21 @@ const ZONE_FALLBACKS = [
     lat: 20.6597,
     lng: -103.3496,
   },
-  {
-    key: "el salto",
-    label: "El Salto, Jalisco, Mexico",
-    city: "El Salto",
-    state: "Jalisco",
-    lat: 20.5184,
-    lng: -103.1815,
-  },
 ];
 
-// =============================
-// Helpers
-// =============================
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function parseDate(fechaTexto) {
-  if (!fechaTexto || typeof fechaTexto !== "string") return null;
-  const fecha = new Date(fechaTexto);
-  return Number.isNaN(fecha.getTime()) ? null : fecha;
+function parseDate(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 function getDiffDays(date) {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return Infinity;
-  const ahora = new Date();
-  return (ahora - date) / (1000 * 60 * 60 * 24);
+  return (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
 }
 
 function toNullableString(value) {
@@ -178,31 +141,6 @@ function clampLimit(value, fallback = DEFAULT_REPORT_LIMIT) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(MAX_REPORT_LIMIT, Math.max(1, Math.floor(n)));
-}
-
-function extractImageUrl(item) {
-  return (
-    toNullableString(item?.image_url) ||
-    toNullableString(item?.imageUrl) ||
-    toNullableString(item?.image) ||
-    toNullableString(item?.photo_url) ||
-    toNullableString(item?.photoUrl) ||
-    toNullableString(item?.thumbnail) ||
-    toNullableString(item?.thumbnail_url) ||
-    toNullableString(item?.thumbnailUrl) ||
-    null
-  );
-}
-
-function extractAddressText(item) {
-  return (
-    toNullableString(item?.address_text) ||
-    toNullableString(item?.addressText) ||
-    toNullableString(item?.address) ||
-    toNullableString(item?.location) ||
-    toNullableString(item?.place) ||
-    null
-  );
 }
 
 function extractLatitude(item) {
@@ -225,6 +163,29 @@ function extractLongitude(item) {
   );
 }
 
+function extractAddressText(item) {
+  return (
+    toNullableString(item?.address_text) ||
+    toNullableString(item?.addressText) ||
+    toNullableString(item?.address) ||
+    toNullableString(item?.location) ||
+    toNullableString(item?.place) ||
+    null
+  );
+}
+
+function extractImageUrl(item) {
+  return (
+    toNullableString(item?.image_url) ||
+    toNullableString(item?.imageUrl) ||
+    toNullableString(item?.image) ||
+    toNullableString(item?.thumbnail) ||
+    toNullableString(item?.thumbnail_url) ||
+    toNullableString(item?.thumbnailUrl) ||
+    null
+  );
+}
+
 function containsAny(text, words) {
   const t = String(text || "").toLowerCase();
   return words.some((w) => t.includes(w));
@@ -234,13 +195,18 @@ function cleanLocationText(text) {
   return String(text || "")
     .replace(/\s+/g, " ")
     .replace(/[|]+/g, " ")
-    .replace(/\s{2,}/g, " ")
     .trim();
 }
 
 function normalizeNewsResponse(data) {
   if (Array.isArray(data)) return data;
+
+  // Caso real de GNews: { articles: [...] }
+  if (data && Array.isArray(data.articles)) return data.articles;
+
+  // Caso fallback: objeto individual
   if (data && typeof data === "object") return [data];
+
   return [];
 }
 
@@ -252,64 +218,71 @@ function safePreview(data, maxLength = 500) {
   }
 }
 
-// =============================
-// Categorias
-// =============================
+function normalizeScraperItem(item) {
+  if (!item || typeof item !== "object") return null;
+
+  const sourceObj = item.source && typeof item.source === "object" ? item.source : null;
+
+  return {
+    external_id: toNullableString(item.id),
+    title: toNullableString(item.title),
+    summary:
+      toNullableString(item.summary) ||
+      toNullableString(item.description) ||
+      null,
+    body:
+      toNullableString(item.body) ||
+      toNullableString(item.content) ||
+      toNullableString(item.description) ||
+      null,
+    source_name:
+      toNullableString(item.source_name) ||
+      toNullableString(item.source) ||
+      toNullableString(sourceObj?.name) ||
+      null,
+    source_url:
+      toNullableString(item.source_url) ||
+      toNullableString(item.url),
+    image_url: extractImageUrl(item),
+    raw_category:
+      toNullableString(item.category) ||
+      toNullableString(item.type) ||
+      null,
+    confidence:
+      toNullableNumber(item.confidence),
+    published_at:
+      toNullableString(item.published_at) ||
+      toNullableString(item.publishedAt) ||
+      toNullableString(item.lastUpdated),
+    latitude: extractLatitude(item),
+    longitude: extractLongitude(item),
+    address_text: extractAddressText(item),
+    original: item,
+  };
+}
+
 function normalizeCategory(cat, text = "") {
   const c = String(cat || "").toLowerCase();
   const t = String(text || "").toLowerCase();
 
-  if (
-    t.includes("cristalazo") ||
-    t.includes("rompieron el vidrio") ||
-    t.includes("rompieron los cristales")
-  ) {
-    return "cristalazo";
-  }
-
-  if (
-    t.includes("incendio") ||
-    t.includes("forestal") ||
-    t.includes("humo") ||
-    t.includes("bomberos") ||
-    t.includes("rescate") ||
-    t.includes("explosion") ||
-    t.includes("fuga de gas")
-  ) {
-    return "emergencia";
-  }
+  if (t.includes("cristalazo")) return "cristalazo";
 
   if (
     c.includes("accidente") ||
     c.includes("choque") ||
-    t.includes("choque") ||
     t.includes("accidente") ||
+    t.includes("choque") ||
     t.includes("volcadura") ||
-    t.includes("carambola") ||
-    t.includes("caos vial") ||
-    t.includes("trafico") ||
-    t.includes("colision") ||
-    t.includes("impacto") ||
-    t.includes("moto") ||
-    t.includes("motocicleta")
+    t.includes("carambola")
   ) {
     return "choque";
   }
 
-  if (
-    c.includes("asalto") ||
-    t.includes("asalto") ||
-    t.includes("asaltaron") ||
-    t.includes("asalto a mano armada")
-  ) {
-    return "asalto";
-  }
+  if (c.includes("asalto") || t.includes("asalto")) return "asalto";
 
   if (
     c.includes("robo") ||
     t.includes("robo") ||
-    t.includes("robo de auto") ||
-    t.includes("robo de vehiculo") ||
     t.includes("despojo")
   ) {
     return "robo";
@@ -319,47 +292,33 @@ function normalizeCategory(cat, text = "") {
     c.includes("violencia") ||
     t.includes("violencia") ||
     t.includes("balacera") ||
-    t.includes("ataque armado") ||
     t.includes("homicidio") ||
-    t.includes("ejecutado") ||
-    t.includes("ejecucion") ||
-    t.includes("disparos") ||
-    t.includes("arma blanca") ||
-    t.includes("apunalado") ||
-    t.includes("lesionado a balazos") ||
-    t.includes("herido de bala") ||
-    t.includes("agresion") ||
-    t.includes("fallece tras resistirse")
+    t.includes("ataque armado") ||
+    t.includes("disparos")
   ) {
     return "violencia";
   }
 
   if (
+    t.includes("incendio") ||
+    t.includes("bomberos") ||
+    t.includes("explosion") ||
+    t.includes("rescate")
+  ) {
+    return "emergencia";
+  }
+
+  if (
     t.includes("extorsion") ||
     t.includes("secuestro") ||
-    t.includes("privacion ilegal") ||
-    t.includes("narcomenudeo") ||
-    t.includes("delito") ||
     t.includes("detenido") ||
-    t.includes("detenidos") ||
-    t.includes("capturado") ||
-    t.includes("cateo") ||
-    t.includes("fiscalia") ||
-    t.includes("droga")
+    t.includes("droga") ||
+    t.includes("trata de personas")
   ) {
     return "delito";
   }
 
-  if (
-    c.includes("vandalismo") ||
-    t.includes("vandalismo") ||
-    t.includes("danos") ||
-    t.includes("destrozos") ||
-    t.includes("pintas") ||
-    t.includes("grafiti")
-  ) {
-    return "vandalismo";
-  }
+  if (t.includes("vandalismo") || t.includes("destrozos")) return "vandalismo";
 
   return "otro";
 }
@@ -383,10 +342,8 @@ function isUsefulCategory(category, text = "") {
     "trafico",
     "caos vial",
     "incendio",
-    "forestal",
     "bomberos",
     "homicidio",
-    "arma blanca",
     "extorsion",
     "secuestro",
     "detenido",
@@ -394,48 +351,38 @@ function isUsefulCategory(category, text = "") {
   ]);
 }
 
-function looksLikeRegionalNews(newsItem) {
-  const source = String(newsItem?.source || "").toLowerCase();
-  const title = String(newsItem?.title || "").toLowerCase();
-  const body = String(newsItem?.body || "").toLowerCase();
-  const text = `${title} ${body}`;
+function looksLikeRegionalNews(item) {
+  const text = `${item?.title || ""} ${item?.body || ""}`.toLowerCase();
+  const source = String(item?.source_name || "").toLowerCase();
 
   if (source.includes("guardia nocturna")) return true;
   if (containsAny(text, ZMG_KEYWORDS)) return true;
 
-  const exclusiones = [
+  const excluded = [
     "chiapas",
     "oaxaca",
-    "puebla",
     "veracruz",
-    "monterrey",
-    "nuevo leon",
     "cdmx",
     "ciudad de mexico",
-    "queretaro",
-    "yucatan",
-    "cancun",
+    "monterrey",
+    "nuevo leon",
     "sinaloa",
-    "sonora",
   ];
 
-  if (containsAny(text, exclusiones)) return false;
+  if (containsAny(text, excluded)) return false;
 
   return text.includes("jalisco");
 }
 
-// =============================
-// Geocoding
-// =============================
 function detectZoneFallback(text) {
   const t = String(text || "").toLowerCase();
   return ZONE_FALLBACKS.find((z) => t.includes(z.key)) || null;
 }
 
-function extractCandidateQueries(newsItem) {
-  const title = cleanLocationText(newsItem?.title || "");
-  const body = cleanLocationText(newsItem?.body || "");
-  const directAddress = cleanLocationText(extractAddressText(newsItem) || "");
+function extractCandidateQueries(item) {
+  const title = cleanLocationText(item?.title || "");
+  const body = cleanLocationText(item?.body || "");
+  const directAddress = cleanLocationText(item?.address_text || "");
   const zone = detectZoneFallback(`${title} ${body} ${directAddress}`);
 
   const queries = [];
@@ -445,9 +392,7 @@ function extractCandidateQueries(newsItem) {
     queries.push(`${directAddress}, Jalisco, Mexico`);
   }
 
-  if (zone?.label) {
-    queries.push(zone.label);
-  }
+  if (zone?.label) queries.push(zone.label);
 
   if (title) {
     queries.push(`${title}, Guadalajara, Jalisco, Mexico`);
@@ -455,8 +400,7 @@ function extractCandidateQueries(newsItem) {
   }
 
   if (body) {
-    const shortened = body.slice(0, 120);
-    queries.push(`${shortened}, Guadalajara, Jalisco, Mexico`);
+    queries.push(`${body.slice(0, 120)}, Guadalajara, Jalisco, Mexico`);
   }
 
   return [...new Set(queries.filter(Boolean))];
@@ -468,14 +412,9 @@ function geocodeResultLooksValid(result, zoneHint) {
   const compText = comps.map((c) => `${c.long_name} ${c.short_name}`).join(" ").toLowerCase();
   const allText = `${formatted} ${compText}`;
 
-  const hasJalisco = allText.includes("jalisco") || allText.includes("jal.");
-  if (!hasJalisco) return false;
+  if (!(allText.includes("jalisco") || allText.includes("jal."))) return false;
 
-  if (zoneHint?.city) {
-    const city = zoneHint.city.toLowerCase();
-    if (allText.includes(city)) return true;
-  }
-
+  if (zoneHint?.city && allText.includes(zoneHint.city.toLowerCase())) return true;
   if (containsAny(allText, ZMG_KEYWORDS)) return true;
 
   return false;
@@ -503,23 +442,17 @@ async function geocodeAddress(query, zoneHint = null) {
     if (!Array.isArray(results) || results.length === 0) return null;
 
     const valid = results.find((r) => geocodeResultLooksValid(r, zoneHint));
-    const first = valid || null;
-    if (!first) return null;
+    if (!valid?.geometry?.location) return null;
 
-    const location = first?.geometry?.location;
-    if (!location) return null;
+    const lat = toNullableNumber(valid.geometry.location.lat);
+    const lng = toNullableNumber(valid.geometry.location.lng);
 
-    const lat = toNullableNumber(location.lat);
-    const lng = toNullableNumber(location.lng);
     if (lat === null || lng === null) return null;
-
-    const formattedAddress = toNullableString(first.formatted_address);
 
     return {
       latitude: lat,
       longitude: lng,
-      address_text: formattedAddress || query,
-      raw: first,
+      address_text: toNullableString(valid.formatted_address) || query,
     };
   } catch (error) {
     console.error("Error geocoding:", query, error.message);
@@ -527,10 +460,10 @@ async function geocodeAddress(query, zoneHint = null) {
   }
 }
 
-async function resolveLocationForNews(newsItem) {
-  const existingLat = extractLatitude(newsItem);
-  const existingLng = extractLongitude(newsItem);
-  const existingAddress = extractAddressText(newsItem);
+async function resolveLocationForNews(item) {
+  const existingLat = item.latitude;
+  const existingLng = item.longitude;
+  const existingAddress = item.address_text;
 
   if (existingLat !== null && existingLng !== null) {
     return {
@@ -543,9 +476,9 @@ async function resolveLocationForNews(newsItem) {
     };
   }
 
-  const fullText = `${newsItem?.title || ""} ${newsItem?.body || ""} ${existingAddress || ""}`;
+  const fullText = `${item?.title || ""} ${item?.body || ""} ${existingAddress || ""}`;
   const zone = detectZoneFallback(fullText);
-  const candidateQueries = extractCandidateQueries(newsItem);
+  const candidateQueries = extractCandidateQueries(item);
 
   for (const query of candidateQueries) {
     const geo = await geocodeAddress(query, zone);
@@ -553,7 +486,7 @@ async function resolveLocationForNews(newsItem) {
       return {
         latitude: geo.latitude,
         longitude: geo.longitude,
-        address_text: geo.address_text || existingAddress || (zone ? zone.label : null),
+        address_text: geo.address_text || existingAddress || zone?.label || null,
         city: zone?.city || "Guadalajara",
         state: zone?.state || "Jalisco",
         source: "geocoding",
@@ -583,9 +516,6 @@ async function resolveLocationForNews(newsItem) {
   };
 }
 
-// =============================
-// Fuentes
-// =============================
 async function fetchGNewsWithQueries(queries) {
   const allResults = [];
   const queryStats = [];
@@ -594,10 +524,12 @@ async function fetchGNewsWithQueries(queries) {
     try {
       const response = await axios.get(JAVA_GNEWS_URL, {
         params: { query },
-        timeout: 15000,
+        timeout: 20000,
       });
 
-      const noticias = normalizeNewsResponse(response.data);
+      const noticias = normalizeNewsResponse(response.data)
+        .map(normalizeScraperItem)
+        .filter(Boolean);
 
       console.log("GNews query:", query);
       console.log("GNews raw preview:", safePreview(response.data));
@@ -611,7 +543,7 @@ async function fetchGNewsWithQueries(queries) {
         count: noticias.length,
       });
 
-      await sleep(1800);
+      await sleep(1200);
     } catch (error) {
       console.error("Error GNews:", query, error.message);
       queryStats.push({
@@ -620,7 +552,7 @@ async function fetchGNewsWithQueries(queries) {
         count: 0,
         error: error.message,
       });
-      await sleep(2500);
+      await sleep(1800);
     }
   }
 
@@ -629,8 +561,13 @@ async function fetchGNewsWithQueries(queries) {
 
 async function fetchGuardiaNocturna() {
   try {
-    const response = await axios.get(JAVA_GUARDIA_URL, { timeout: 12000 });
-    const noticias = normalizeNewsResponse(response.data);
+    const response = await axios.get(JAVA_GUARDIA_URL, {
+      timeout: 25000,
+    });
+
+    const noticias = normalizeNewsResponse(response.data)
+      .map(normalizeScraperItem)
+      .filter(Boolean);
 
     console.log("Guardia raw preview:", safePreview(response.data));
     console.log("Guardia normalized count:", noticias.length);
@@ -671,9 +608,6 @@ async function fetchAllNewsFromJava() {
   };
 }
 
-// =============================
-// DB helpers
-// =============================
 async function expireOldAIReports() {
   await pool.query(`
     UPDATE ai_reports
@@ -703,8 +637,7 @@ async function shouldSkipExternalSync() {
     return { skip: false, lastSyncAt: null, reason: "Fecha invalida" };
   }
 
-  const diffMs = Date.now() - lastSyncAt.getTime();
-  const diffMinutes = diffMs / (1000 * 60);
+  const diffMinutes = (Date.now() - lastSyncAt.getTime()) / (1000 * 60);
 
   if (diffMinutes < MIN_SYNC_INTERVAL_MINUTES) {
     return {
@@ -741,15 +674,12 @@ async function getStoredActiveAIReports(limit = DEFAULT_REPORT_LIMIT) {
   return result.rows;
 }
 
-// =============================
-// Seleccion
-// =============================
 function selectBestDayWindow(newsItems) {
   const windows = [4, 7, 15];
 
   for (const days of windows) {
     const filtered = newsItems.filter((n) => {
-      const fecha = parseDate(n.lastUpdated);
+      const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);
       return Number.isFinite(diffDias) && diffDias >= 0 && diffDias <= days;
     });
@@ -762,9 +692,6 @@ function selectBestDayWindow(newsItems) {
   return { days: 15, filtered: newsItems };
 }
 
-// =============================
-// Sync principal
-// =============================
 async function syncAIReports(req, res) {
   try {
     await expireOldAIReports();
@@ -791,15 +718,16 @@ async function syncAIReports(req, res) {
     const { noticias, queryStats } = await fetchAllNewsFromJava();
 
     const noticiasValidas = noticias.filter((n) => {
-      if (!n?.url) return false;
+      if (!n?.source_url) return false;
+      if (!n?.title && !n?.body) return false;
 
-      const joinedText = `${n.title || ""} ${n.body || ""}`;
-      const category = normalizeCategory(n.type, joinedText);
+      const text = `${n.title || ""} ${n.body || ""}`;
+      const category = normalizeCategory(n.raw_category, text);
 
-      if (!isUsefulCategory(category, joinedText)) return false;
-      if (!looksLikeRegionalNews(n)) return false;
+      if (!isUsefulCategory(category, text)) return false;
+      if (!looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
 
-      const fecha = parseDate(n.lastUpdated);
+      const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);
 
       return Number.isFinite(diffDias) && diffDias >= 0;
@@ -811,8 +739,8 @@ async function syncAIReports(req, res) {
     const seen = new Set();
 
     for (const n of filtered) {
-      if (!n?.url || seen.has(n.url)) continue;
-      seen.add(n.url);
+      if (!n?.source_url || seen.has(n.source_url)) continue;
+      seen.add(n.source_url);
       uniqueByUrl.push(n);
     }
 
@@ -822,26 +750,24 @@ async function syncAIReports(req, res) {
     let geocoded = 0;
     let fallbackLocated = 0;
     let withoutCoords = 0;
-
     const errors = [];
 
     for (const n of uniqueByUrl) {
       try {
-        const joinedText = `${n.title || ""} ${n.body || ""}`;
-        const category = normalizeCategory(n.type, joinedText);
-        const fecha = parseDate(n.lastUpdated);
+        const text = `${n.title || ""} ${n.body || ""}`;
+        const category = normalizeCategory(n.raw_category, text);
+        const fecha = parseDate(n.published_at);
 
         if (!fecha) {
           failed++;
           errors.push({
-            url: n.url,
+            url: n.source_url,
             reason: "Fecha invalida",
-            lastUpdated: n.lastUpdated,
+            published_at: n.published_at,
           });
           continue;
         }
 
-        const imageUrl = extractImageUrl(n);
         const location = await resolveLocationForNews(n);
 
         if (location.source === "geocoding") geocoded++;
@@ -852,6 +778,7 @@ async function syncAIReports(req, res) {
           `
           INSERT INTO ai_reports
           (
+            external_id,
             title,
             summary,
             body,
@@ -873,12 +800,13 @@ async function syncAIReports(req, res) {
           )
           VALUES
           (
-            $1, $2, $3, $4, $5, $6, $7, $8,
-            $9, $10, $11, $12, $13,
-            $14, NOW(), NOW() + INTERVAL '${AI_REPORT_VISIBLE_HOURS} hours', TRUE, $15
+            $1, $2, $3, $4, $5, $6, $7, $8, $9,
+            $10, $11, $12, $13, $14,
+            $15, NOW(), NOW() + INTERVAL '${AI_REPORT_VISIBLE_HOURS} hours', TRUE, $16
           )
           ON CONFLICT (source_url)
           DO UPDATE SET
+            external_id = EXCLUDED.external_id,
             title = EXCLUDED.title,
             summary = EXCLUDED.summary,
             body = EXCLUDED.body,
@@ -899,22 +827,24 @@ async function syncAIReports(req, res) {
           RETURNING (xmax = 0) AS inserted_flag
           `,
           [
-            n.title || null,
-            n.body || null,
-            n.body || null,
+            n.external_id,
+            n.title,
+            n.summary,
+            n.body,
             category,
-            n.confidence || null,
-            n.source || null,
-            n.url,
-            imageUrl,
+            n.confidence,
+            n.source_name,
+            n.source_url,
+            n.image_url,
             location.city || "Guadalajara",
             location.state || "Jalisco",
-            location.address_text || null,
+            location.address_text,
             location.latitude,
             location.longitude,
             fecha,
             JSON.stringify({
-              ...n,
+              ...n.original,
+              normalized: n,
               location_source: location.source,
             }),
           ]
@@ -927,7 +857,7 @@ async function syncAIReports(req, res) {
         failed++;
         console.error("Error insertando noticia:", err.message);
         errors.push({
-          url: n?.url || null,
+          url: n?.source_url || null,
           reason: err.message,
           title: n?.title || null,
         });
@@ -968,9 +898,6 @@ async function syncAIReports(req, res) {
   }
 }
 
-// =============================
-// GET activos
-// =============================
 async function getActiveAIReports(req, res) {
   try {
     const limit = clampLimit(req.query.limit, DEFAULT_REPORT_LIMIT);
