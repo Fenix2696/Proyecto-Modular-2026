@@ -29,29 +29,22 @@ const ZMG_KEYWORDS = [
   "tlaquepaque",
   "san pedro tlaquepaque",
   "tlajomulco",
-  "tlajomulco de zúñiga",
   "tlajomulco de zuniga",
-  "tonalá",
+  "tlajomulco de zuniga",
   "tonala",
-  "tetlán",
   "tetlan",
   "insurgentes",
   "obrera",
-  "periférico",
   "periferico",
-  "lópez mateos",
   "lopez mateos",
   "mariano otero",
-  "colón",
   "colon",
   "basilio vadillo",
   "la penal",
   "oblatos",
-  "huentitán",
   "huentitan",
   "jalisco",
   "el salto",
-  "juanacatlán",
   "juanacatlan",
   "tonaltecas",
   "miravalle",
@@ -61,16 +54,8 @@ const ZMG_KEYWORDS = [
 
 const ZONE_FALLBACKS = [
   {
-    key: "tetlán",
-    label: "Tetlán, Guadalajara, Jalisco, Mexico",
-    city: "Guadalajara",
-    state: "Jalisco",
-    lat: 20.6691,
-    lng: -103.2994,
-  },
-  {
     key: "tetlan",
-    label: "Tetlán, Guadalajara, Jalisco, Mexico",
+    label: "Tetlan, Guadalajara, Jalisco, Mexico",
     city: "Guadalajara",
     state: "Jalisco",
     lat: 20.6691,
@@ -101,16 +86,8 @@ const ZONE_FALLBACKS = [
     lng: -103.3148,
   },
   {
-    key: "periférico sur",
-    label: "Periférico Sur, Tlaquepaque, Jalisco, Mexico",
-    city: "Tlaquepaque",
-    state: "Jalisco",
-    lat: 20.6071,
-    lng: -103.401,
-  },
-  {
     key: "periferico sur",
-    label: "Periférico Sur, Tlaquepaque, Jalisco, Mexico",
+    label: "Periferico Sur, Tlaquepaque, Jalisco, Mexico",
     city: "Tlaquepaque",
     state: "Jalisco",
     lat: 20.6071,
@@ -134,24 +111,16 @@ const ZONE_FALLBACKS = [
   },
   {
     key: "tlajomulco",
-    label: "Tlajomulco de Zúñiga, Jalisco, Mexico",
+    label: "Tlajomulco de Zuniga, Jalisco, Mexico",
     city: "Tlajomulco",
     state: "Jalisco",
     lat: 20.4737,
     lng: -103.4479,
   },
   {
-    key: "tonalá",
-    label: "Tonalá, Jalisco, Mexico",
-    city: "Tonalá",
-    state: "Jalisco",
-    lat: 20.6246,
-    lng: -103.2424,
-  },
-  {
     key: "tonala",
-    label: "Tonalá, Jalisco, Mexico",
-    city: "Tonalá",
+    label: "Tonala, Jalisco, Mexico",
+    city: "Tonala",
     state: "Jalisco",
     lat: 20.6246,
     lng: -103.2424,
@@ -269,6 +238,20 @@ function cleanLocationText(text) {
     .trim();
 }
 
+function normalizeNewsResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") return [data];
+  return [];
+}
+
+function safePreview(data, maxLength = 500) {
+  try {
+    return JSON.stringify(data).slice(0, maxLength);
+  } catch (error) {
+    return "[No se pudo serializar respuesta]";
+  }
+}
+
 // =============================
 // Categorias
 // =============================
@@ -291,7 +274,6 @@ function normalizeCategory(cat, text = "") {
     t.includes("bomberos") ||
     t.includes("rescate") ||
     t.includes("explosion") ||
-    t.includes("explosión") ||
     t.includes("fuga de gas")
   ) {
     return "emergencia";
@@ -305,11 +287,8 @@ function normalizeCategory(cat, text = "") {
     t.includes("volcadura") ||
     t.includes("carambola") ||
     t.includes("caos vial") ||
-    t.includes("tráfico") ||
     t.includes("trafico") ||
-    t.includes("colisión") ||
     t.includes("colision") ||
-    t.includes("impactó") ||
     t.includes("impacto") ||
     t.includes("moto") ||
     t.includes("motocicleta")
@@ -321,7 +300,6 @@ function normalizeCategory(cat, text = "") {
     c.includes("asalto") ||
     t.includes("asalto") ||
     t.includes("asaltaron") ||
-    t.includes("asaltó") ||
     t.includes("asalto a mano armada")
   ) {
     return "asalto";
@@ -330,9 +308,7 @@ function normalizeCategory(cat, text = "") {
   if (
     c.includes("robo") ||
     t.includes("robo") ||
-    t.includes("robó") ||
     t.includes("robo de auto") ||
-    t.includes("robo de vehículo") ||
     t.includes("robo de vehiculo") ||
     t.includes("despojo")
   ) {
@@ -346,14 +322,12 @@ function normalizeCategory(cat, text = "") {
     t.includes("ataque armado") ||
     t.includes("homicidio") ||
     t.includes("ejecutado") ||
-    t.includes("ejecución") ||
     t.includes("ejecucion") ||
     t.includes("disparos") ||
     t.includes("arma blanca") ||
-    t.includes("apuñalado") ||
+    t.includes("apunalado") ||
     t.includes("lesionado a balazos") ||
     t.includes("herido de bala") ||
-    t.includes("agresión") ||
     t.includes("agresion") ||
     t.includes("fallece tras resistirse")
   ) {
@@ -361,10 +335,8 @@ function normalizeCategory(cat, text = "") {
   }
 
   if (
-    t.includes("extorsión") ||
     t.includes("extorsion") ||
     t.includes("secuestro") ||
-    t.includes("privación ilegal") ||
     t.includes("privacion ilegal") ||
     t.includes("narcomenudeo") ||
     t.includes("delito") ||
@@ -372,7 +344,6 @@ function normalizeCategory(cat, text = "") {
     t.includes("detenidos") ||
     t.includes("capturado") ||
     t.includes("cateo") ||
-    t.includes("fiscalía") ||
     t.includes("fiscalia") ||
     t.includes("droga")
   ) {
@@ -382,7 +353,7 @@ function normalizeCategory(cat, text = "") {
   if (
     c.includes("vandalismo") ||
     t.includes("vandalismo") ||
-    t.includes("daños") ||
+    t.includes("danos") ||
     t.includes("destrozos") ||
     t.includes("pintas") ||
     t.includes("grafiti")
@@ -409,7 +380,6 @@ function isUsefulCategory(category, text = "") {
     "choque",
     "accidente",
     "volcadura",
-    "tráfico",
     "trafico",
     "caos vial",
     "incendio",
@@ -417,7 +387,6 @@ function isUsefulCategory(category, text = "") {
     "bomberos",
     "homicidio",
     "arma blanca",
-    "extorsión",
     "extorsion",
     "secuestro",
     "detenido",
@@ -628,7 +597,12 @@ async function fetchGNewsWithQueries(queries) {
         timeout: 15000,
       });
 
-      const noticias = Array.isArray(response.data) ? response.data : [];
+      const noticias = normalizeNewsResponse(response.data);
+
+      console.log("GNews query:", query);
+      console.log("GNews raw preview:", safePreview(response.data));
+      console.log("GNews normalized count:", noticias.length);
+
       allResults.push(...noticias);
 
       queryStats.push({
@@ -655,8 +629,11 @@ async function fetchGNewsWithQueries(queries) {
 
 async function fetchGuardiaNocturna() {
   try {
-    const response = await axios.get(JAVA_GUARDIA_URL, { timeout: 20000 });
-    const noticias = Array.isArray(response.data) ? response.data : [];
+    const response = await axios.get(JAVA_GUARDIA_URL, { timeout: 12000 });
+    const noticias = normalizeNewsResponse(response.data);
+
+    console.log("Guardia raw preview:", safePreview(response.data));
+    console.log("Guardia normalized count:", noticias.length);
 
     return {
       allResults: noticias,
@@ -960,7 +937,7 @@ async function syncAIReports(req, res) {
     await expireOldAIReports();
     const storedRows = await getStoredActiveAIReports(DEFAULT_REPORT_LIMIT);
 
-    res.json({
+    return res.json({
       success: true,
       message: "Noticias sincronizadas",
       usedCache: false,
@@ -983,7 +960,7 @@ async function syncAIReports(req, res) {
     });
   } catch (error) {
     console.error("Error IA sync:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error al obtener noticias IA",
       detail: error.message,
@@ -999,7 +976,7 @@ async function getActiveAIReports(req, res) {
     const limit = clampLimit(req.query.limit, DEFAULT_REPORT_LIMIT);
     const rows = await getStoredActiveAIReports(limit);
 
-    res.json({
+    return res.json({
       success: true,
       limit,
       count: rows.length,
@@ -1007,7 +984,7 @@ async function getActiveAIReports(req, res) {
     });
   } catch (error) {
     console.error("Error obteniendo AI reports:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error al obtener reportes IA",
     });
