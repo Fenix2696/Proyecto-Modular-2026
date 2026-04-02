@@ -2,43 +2,59 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { OAuth2Client } = require("google-auth-library");
+
 const pool = require("../config/database");
 const transporter = require("../config/mailer");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-function signToken(user) {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role || "user",
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+function generarToken(payload) {
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+}
+
+function normalizarUsuario(user) {
+  return {
+    id: user.id,
+    name: user.name || "",
+    email: user.email,
+    role: user.role || "user",
+    username: user.username || "",
+    phone: user.phone || "",
+    full_name: user.full_name || "",
+    has_photo: !!user.photo_data,
+    photo_path: user.photo_path || null,
+  };
 }
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const {
+      name,
+      email,
+      password,
+      username = null,
+      phone = null,
+      full_name = null,
+    } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Todos los campos son obligatorios",
+        message: "Nombre, correo y contrasena son obligatorios",
       });
     }
 
-    const existingUser = await pool.query(
-      "SELECT id FROM users WHERE email = $1 LIMIT 1",
-      [email]
+    const emailLimpio = String(email).trim().toLowerCase();
+
+    const existe = await pool.query(
+      `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+      [emailLimpio]
     );
 
-    if (existingUser.rows.length > 0) {
+    if (existe.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        message: "El usuario ya existe",
+        message: "El correo ya esta registrado",
       });
     }
 
@@ -46,27 +62,43 @@ exports.register = async (req, res) => {
 
     const result = await pool.query(
       `
-      INSERT INTO users (name, email, password, role)
-      VALUES ($1, $2, $3, 'user')
-      RETURNING id, name, email, role, photo_url
+      INSERT INTO users (
+        name,
+        email,
+        password,
+        role,
+        username,
+        phone,
+        full_name,
+        is_active,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, 'user', $4, $5, $6, true, NOW(), NOW())
+      RETURNING id, name, email, role, username, phone, full_name, photo_path, photo_data
       `,
-      [name, email, hashedPassword]
+      [name, emailLimpio, hashedPassword, username, phone, full_name]
     );
 
     const user = result.rows[0];
-    const token = signToken(user);
+    const token = generarToken({
+      id: user.id,
+      email: user.email,
+      role: user.role || "user",
+    });
 
     return res.status(201).json({
       success: true,
       message: "Usuario registrado correctamente",
       token,
-      user,
+      user: normalizarUsuario(user),
     });
   } catch (error) {
-    console.error("register error:", error);
+    console.error("Error en register:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al registrar usuario",
+      message: "Error interno al registrar usuario",
+      error: error.message,
     });
   }
 };
@@ -78,18 +110,31 @@ exports.login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email y contrasena son obligatorios",
+        message: "Correo y contrasena son obligatorios",
       });
     }
 
+    const emailLimpio = String(email).trim().toLowerCase();
+
     const result = await pool.query(
       `
-      SELECT id, name, email, password, role, photo_url
+      SELECT
+        id,
+        name,
+        email,
+        password,
+        role,
+        username,
+        phone,
+        full_name,
+        photo_path,
+        photo_data,
+        is_active
       FROM users
       WHERE email = $1
       LIMIT 1
       `,
-      [email]
+      [emailLimpio]
     );
 
     if (result.rows.length === 0) {
@@ -100,34 +145,163 @@ exports.login = async (req, res) => {
     }
 
     const user = result.rows[0];
-    const validPassword = await bcrypt.compare(password, user.password || "");
 
-    if (!validPassword) {
+    if (user.is_active === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Tu cuenta esta desactivada",
+      });
+    }
+
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        message: "Esta cuenta no tiene contrasena local. Usa Google o recupera tu contrasena.",
+      });
+    }
+
+    const passwordValida = await bcrypt.compare(password, user.password);
+
+    if (!passwordValida) {
       return res.status(401).json({
         success: false,
         message: "Credenciales invalidas",
       });
     }
 
-    const token = signToken(user);
+    const token = generarToken({
+      id: user.id,
+      email: user.email,
+      role: user.role || "user",
+    });
 
     return res.json({
       success: true,
-      message: "Login exitoso",
+      message: "Inicio de sesion exitoso",
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        photo_url: user.photo_url || null,
-      },
+      user: normalizarUsuario(user),
     });
   } catch (error) {
-    console.error("login error:", error);
+    console.error("Error en login:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al iniciar sesion",
+      message: "Error interno al iniciar sesion",
+      error: error.message,
+    });
+  }
+};
+
+exports.oauthGoogle = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: "No se recibio el token de Google",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Google token invalido",
+      });
+    }
+
+    const email = String(payload.email).trim().toLowerCase();
+    const nombreGoogle = payload.name || payload.given_name || "Usuario Google";
+
+    let result = await pool.query(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        username,
+        phone,
+        full_name,
+        photo_path,
+        photo_data,
+        is_active
+      FROM users
+      WHERE email = $1
+      LIMIT 1
+      `,
+      [email]
+    );
+
+    let user;
+
+    if (result.rows.length === 0) {
+      const insertResult = await pool.query(
+        `
+        INSERT INTO users (
+          name,
+          email,
+          password,
+          role,
+          username,
+          phone,
+          full_name,
+          is_active,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, 'user', NULL, NULL, $1, true, NOW(), NOW())
+        RETURNING
+          id,
+          name,
+          email,
+          role,
+          username,
+          phone,
+          full_name,
+          photo_path,
+          photo_data,
+          is_active
+        `,
+        [nombreGoogle, email, ""]
+      );
+
+      user = insertResult.rows[0];
+    } else {
+      user = result.rows[0];
+
+      if (user.is_active === false) {
+        return res.status(403).json({
+          success: false,
+          message: "Tu cuenta esta desactivada",
+        });
+      }
+    }
+
+    const token = generarToken({
+      id: user.id,
+      email: user.email,
+      role: user.role || "user",
+    });
+
+    return res.json({
+      success: true,
+      message: "Inicio de sesion con Google exitoso",
+      token,
+      user: normalizarUsuario(user),
+    });
+  } catch (error) {
+    console.error("Error en oauthGoogle:", error);
+    return res.status(401).json({
+      success: false,
+      message: "Google token invalido o no autorizado",
+      error: error.message,
     });
   }
 };
@@ -139,13 +313,15 @@ exports.forgotPassword = async (req, res) => {
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "El email es obligatorio",
+        message: "El correo es obligatorio",
       });
     }
 
+    const emailLimpio = String(email).trim().toLowerCase();
+
     const result = await pool.query(
-      "SELECT id, name, email FROM users WHERE email = $1 LIMIT 1",
-      [email]
+      `SELECT id, name, email FROM users WHERE email = $1 LIMIT 1`,
+      [emailLimpio]
     );
 
     if (result.rows.length === 0) {
@@ -157,36 +333,42 @@ exports.forgotPassword = async (req, res) => {
 
     const user = result.rows[0];
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpires = new Date(Date.now() + 1000 * 60 * 30);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
 
     await pool.query(
       `
       UPDATE users
-      SET reset_token = $1, reset_token_expires = $2
+      SET
+        reset_password_token = $1,
+        reset_password_expires = $2,
+        updated_at = NOW()
       WHERE id = $3
       `,
-      [resetToken, resetTokenExpires, user.id]
+      [resetToken, expiresAt, user.id]
     );
 
-    const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:5173";
-    const resetLink = `${appBaseUrl}/reset-password?token=${resetToken}`;
+    const baseUrl =
+      process.env.APP_BASE_URL ||
+      "http://localhost:5173";
+
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `"Radar Ciudadano" <${process.env.EMAIL_USER}>`,
       to: user.email,
-      subject: "Recuperacion de contrasena - Radar Ciudadano",
+      subject: "Recuperacion de contrasena",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Recuperacion de contrasena</h2>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; color: #ffffff; padding: 32px; border-radius: 16px;">
+          <h2 style="margin-top: 0;">Recuperacion de contrasena</h2>
           <p>Hola ${user.name || "usuario"},</p>
           <p>Recibimos una solicitud para restablecer tu contrasena.</p>
           <p>
-            <a href="${resetLink}" style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;">
+            <a href="${resetUrl}" style="display:inline-block; background:#6366f1; color:#fff; text-decoration:none; padding:14px 22px; border-radius:10px; font-weight:bold;">
               Restablecer contrasena
             </a>
           </p>
           <p>Este enlace expirara en 30 minutos.</p>
-          <p>Si no solicitaste esto, ignora este correo.</p>
+          <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
         </div>
       `,
     });
@@ -196,29 +378,23 @@ exports.forgotPassword = async (req, res) => {
       message: "Si el correo existe, se envio un enlace de recuperacion",
     });
   } catch (error) {
-    console.error("forgotPassword error:", error);
+    console.error("Error en forgotPassword:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al procesar la recuperacion",
+      message: "Error al procesar la recuperacion de contrasena",
+      error: error.message,
     });
   }
 };
 
 exports.resetPassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, password } = req.body;
 
-    if (!token || !newPassword) {
+    if (!token || !password) {
       return res.status(400).json({
         success: false,
         message: "Token y nueva contrasena son obligatorios",
-      });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "La contrasena debe tener al menos 6 caracteres",
       });
     }
 
@@ -226,8 +402,9 @@ exports.resetPassword = async (req, res) => {
       `
       SELECT id
       FROM users
-      WHERE reset_token = $1
-        AND reset_token_expires > NOW()
+      WHERE
+        reset_password_token = $1
+        AND reset_password_expires > NOW()
       LIMIT 1
       `,
       [token]
@@ -236,19 +413,21 @@ exports.resetPassword = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Token invalido o expirado",
+        message: "El token es invalido o ya expiro",
       });
     }
 
     const user = result.rows[0];
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     await pool.query(
       `
       UPDATE users
-      SET password = $1,
-          reset_token = NULL,
-          reset_token_expires = NULL
+      SET
+        password = $1,
+        reset_password_token = NULL,
+        reset_password_expires = NULL,
+        updated_at = NOW()
       WHERE id = $2
       `,
       [hashedPassword, user.id]
@@ -259,21 +438,39 @@ exports.resetPassword = async (req, res) => {
       message: "Contrasena actualizada correctamente",
     });
   } catch (error) {
-    console.error("resetPassword error:", error);
+    console.error("Error en resetPassword:", error);
     return res.status(500).json({
       success: false,
       message: "Error al restablecer la contrasena",
+      error: error.message,
     });
   }
 };
 
-exports.getProfile = async (req, res) => {
+exports.me = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "No autorizado",
+      });
+    }
 
     const result = await pool.query(
       `
-      SELECT id, name, email, role, photo_url
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        username,
+        phone,
+        full_name,
+        photo_path,
+        photo_data,
+        is_active
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -290,207 +487,14 @@ exports.getProfile = async (req, res) => {
 
     return res.json({
       success: true,
-      user: result.rows[0],
+      user: normalizarUsuario(result.rows[0]),
     });
   } catch (error) {
-    console.error("getProfile error:", error);
+    console.error("Error en me:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al obtener perfil",
-    });
-  }
-};
-
-exports.updateProfile = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { name, email, photo_url } = req.body;
-
-    const result = await pool.query(
-      `
-      UPDATE users
-      SET
-        name = COALESCE($1, name),
-        email = COALESCE($2, email),
-        photo_url = COALESCE($3, photo_url)
-      WHERE id = $4
-      RETURNING id, name, email, role, photo_url
-      `,
-      [name, email, photo_url, userId]
-    );
-
-    return res.json({
-      success: true,
-      message: "Perfil actualizado correctamente",
-      user: result.rows[0],
-    });
-  } catch (error) {
-    console.error("updateProfile error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error al actualizar perfil",
-    });
-  }
-};
-
-exports.changePassword = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Debes enviar la contrasena actual y la nueva",
-      });
-    }
-
-    const result = await pool.query(
-      "SELECT id, password FROM users WHERE id = $1 LIMIT 1",
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Usuario no encontrado",
-      });
-    }
-
-    const user = result.rows[0];
-    const validPassword = await bcrypt.compare(currentPassword, user.password || "");
-
-    if (!validPassword) {
-      return res.status(401).json({
-        success: false,
-        message: "La contrasena actual es incorrecta",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await pool.query(
-      "UPDATE users SET password = $1 WHERE id = $2",
-      [hashedPassword, userId]
-    );
-
-    return res.json({
-      success: true,
-      message: "Contrasena actualizada correctamente",
-    });
-  } catch (error) {
-    console.error("changePassword error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error al cambiar contrasena",
-    });
-  }
-};
-
-exports.oauthGoogle = async (req, res) => {
-  try {
-    const { idToken } = req.body;
-
-    if (!idToken) {
-      return res.status(400).json({
-        success: false,
-        message: "Falta idToken",
-      });
-    }
-
-    if (!process.env.GOOGLE_CLIENT_ID) {
-      return res.status(500).json({
-        success: false,
-        message: "GOOGLE_CLIENT_ID no configurado en backend",
-      });
-    }
-
-    console.log("GOOGLE_CLIENT_ID backend:", process.env.GOOGLE_CLIENT_ID);
-
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-
-    console.log("Google payload:", payload);
-
-    if (!payload) {
-      return res.status(401).json({
-        success: false,
-        message: "Payload de Google invalido",
-      });
-    }
-
-    const email = payload.email;
-    const name =
-      payload.name ||
-      payload.given_name ||
-      (email ? email.split("@")[0] : "Usuario Google");
-    const photo = payload.picture || null;
-
-    if (!email) {
-      return res.status(401).json({
-        success: false,
-        message: "Google no regreso email",
-      });
-    }
-
-    const existingUser = await pool.query(
-      `
-      SELECT id, name, email, role, photo_url
-      FROM users
-      WHERE email = $1
-      LIMIT 1
-      `,
-      [email]
-    );
-
-    let user;
-
-    if (existingUser.rows.length > 0) {
-      const updatedUser = await pool.query(
-        `
-        UPDATE users
-        SET
-          name = COALESCE($1, name),
-          photo_url = COALESCE($2, photo_url)
-        WHERE email = $3
-        RETURNING id, name, email, role, photo_url
-        `,
-        [name, photo, email]
-      );
-
-      user = updatedUser.rows[0];
-    } else {
-      const createdUser = await pool.query(
-        `
-        INSERT INTO users (name, email, password, role, photo_url)
-        VALUES ($1, $2, '', 'user', $3)
-        RETURNING id, name, email, role, photo_url
-        `,
-        [name, email, photo]
-      );
-
-      user = createdUser.rows[0];
-    }
-
-    const token = signToken(user);
-
-    return res.json({
-      success: true,
-      message: "Login con Google exitoso",
-      token,
-      user,
-    });
-  } catch (error) {
-    console.error("oauthGoogle error completo:", error);
-
-    return res.status(401).json({
-      success: false,
-      message: "Google token invalido",
-      debug: error?.message || "Sin detalle",
+      message: "Error al obtener el usuario",
+      error: error.message,
     });
   }
 };
