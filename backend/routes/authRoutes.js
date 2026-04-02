@@ -4,16 +4,20 @@ const router = express.Router();
 const authController = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 
-router.post("/login", authController.login);
+// Registro
 router.post("/register", authController.register);
 
-// Recuperacion de password (publico)
+// Login normal
+router.post("/login", authController.login);
+
+// Login con Google
+router.post("/oauth/google", authController.oauthGoogle);
+
+// Recuperacion de contrasena
 router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
 
-router.get("/profile", authMiddleware, authController.getProfile);
-router.put("/profile", authMiddleware, authController.updateProfile);
-router.put("/password", authMiddleware, authController.changePassword);
-router.post("/oauth/google", authController.oauthGoogle);
+// Usuario autenticado actual
+router.get("/me", authMiddleware, authController.me);
 
 module.exports = router;
