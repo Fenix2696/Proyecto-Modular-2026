@@ -18,3 +18,7 @@ out/
 AI/src/main/python/ai/.venv/
 AI/src/main/python/ai/__pycache__/
 *.pyc
+
+node_modules/
+.env
+dist/
