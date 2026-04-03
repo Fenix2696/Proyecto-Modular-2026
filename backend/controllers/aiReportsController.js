@@ -562,7 +562,7 @@ async function fetchGNewsWithQueries(queries) {
 async function fetchGuardiaNocturna() {
   try {
     const response = await axios.get(JAVA_GUARDIA_URL, {
-      timeout: 25000,
+      timeout: 45000,
     });
 
     const noticias = normalizeNewsResponse(response.data)
@@ -724,13 +724,19 @@ async function syncAIReports(req, res) {
       const text = `${n.title || ""} ${n.body || ""}`;
       const category = normalizeCategory(n.raw_category, text);
 
-      if (!isUsefulCategory(category, text)) return false;
-      if (!looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
+      // Si viene de Guardia Nocturna, ser mas permisivos
+      const isGuardia = String(n.source_name || "").toLowerCase().includes("guardia nocturna");
+
+      if (!isGuardia) {
+        if (!isUsefulCategory(category, text)) return false;
+        if (!looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
+      }
 
       const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);
 
-      return Number.isFinite(diffDias) && diffDias >= 0;
+      // permitir noticias de hasta 45 dias mientras estabilizamos el flujo
+      return Number.isFinite(diffDias) && diffDias >= 0 && diffDias <= 45;
     });
 
     const { days, filtered } = selectBestDayWindow(noticiasValidas);
