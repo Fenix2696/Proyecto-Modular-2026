@@ -27,6 +27,10 @@ import java.util.Optional;
 @Controller("/WebSearch")
 public class ScrapCaller {
 
+    private static final int MAX_GNEWS_RESULTS = 8;
+    private static final int MAX_GUARDIA_RESULTS = 12;
+    private static final int MAX_ITEMS_TO_CLASSIFY = 12;
+
     @Inject
     JsonMapper jsonMapper;
 
@@ -59,9 +63,10 @@ public class ScrapCaller {
     public List<ClassifiedNews> getGuardiaNocturna() {
         try {
             List<NewsResult> news = GuardiaNocturnaScraper.fetch();
+            news = limitNews(news, MAX_GUARDIA_RESULTS);
             return classifyNews(news);
         } catch (Exception e) {
-            System.out.println("Error Guardia Nocturna: " + e.getMessage());
+            System.out.println("Error Guardia Nocturna endpoint: " + e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -75,6 +80,8 @@ public class ScrapCaller {
             GNewsResponse gNewsResponse = jsonMapper.readValue(result, GNewsResponse.class);
 
             List<NewsResult> newsList = mapGNewsToNewsResults(gNewsResponse);
+            newsList = limitNews(newsList, MAX_GNEWS_RESULTS);
+
             classifiedNews = classifyNews(newsList);
 
         } catch (IOException e) {
@@ -94,6 +101,8 @@ public class ScrapCaller {
         }
 
         for (GNewsArticle article : response.getArticles()) {
+            if (article == null) continue;
+
             NewsResult item = new NewsResult();
 
             item.setTitle(article.getTitle());
@@ -103,8 +112,9 @@ public class ScrapCaller {
             );
             item.setUrl(article.getUrl());
             item.setLastUpdated(article.getPublishedAt());
+            item.setImgSrc(article.getImage());
 
-            if (article.getSource() != null) {
+            if (article.getSource() != null && article.getSource().getName() != null) {
                 item.setSource(article.getSource().getName());
             } else {
                 item.setSource("GNews");
@@ -116,17 +126,33 @@ public class ScrapCaller {
         return mapped;
     }
 
+    private List<NewsResult> limitNews(List<NewsResult> newsList, int max) {
+        if (newsList == null || newsList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        if (newsList.size() <= max) {
+            return newsList;
+        }
+
+        return new ArrayList<>(newsList.subList(0, max));
+    }
+
     private List<ClassifiedNews> classifyNews(List<NewsResult> newsList) {
         List<ClassifiedNews> classifiedNews = new ArrayList<>();
 
-        newsList.forEach(newsResult -> {
+        if (newsList == null || newsList.isEmpty()) {
+            return classifiedNews;
+        }
+
+        List<NewsResult> limitedNews = limitNews(newsList, MAX_ITEMS_TO_CLASSIFY);
+
+        for (NewsResult newsResult : limitedNews) {
             ClassifiedNews resultItem = new ClassifiedNews();
 
             String title = safeText(newsResult.getTitle());
             String snippet = safeText(newsResult.getSnippet());
-            String queryBody = "%s, %s".formatted(title, snippet);
-
-            AIClassificationRequest request = new AIClassificationRequest(queryBody);
+            String queryBody = (title + ", " + snippet).trim();
 
             resultItem.setTitle(newsResult.getTitle());
             resultItem.setBody(newsResult.getSnippet());
@@ -134,10 +160,18 @@ public class ScrapCaller {
             resultItem.setLastUpdated(newsResult.getLastUpdated());
             resultItem.setUrl(newsResult.getUrl());
 
+            if (queryBody.isBlank()) {
+                resultItem.setType("Otro");
+                resultItem.setConfidence(0.20);
+                classifiedNews.add(resultItem);
+                continue;
+            }
+
             try {
+                AIClassificationRequest request = new AIClassificationRequest(queryBody);
                 AIClassificationResponse aiResponse = aiClient.classify(request);
 
-                if (aiResponse != null) {
+                if (aiResponse != null && aiResponse.top_category() != null) {
                     resultItem.setType(aiResponse.top_category());
                     resultItem.setConfidence(aiResponse.confidence());
                 } else {
@@ -145,7 +179,7 @@ public class ScrapCaller {
                 }
 
             } catch (HttpClientResponseException e) {
-                System.out.println("Detalles del error de IA: " + e.getResponse().getBody(String.class));
+                System.out.println("Detalles del error de IA: " + e.getResponse().getBody(String.class).orElse("sin body"));
                 applyFallbackCategory(resultItem, queryBody);
             } catch (Exception e) {
                 System.out.println("Error clasificando noticia: " + e.getMessage());
@@ -153,7 +187,7 @@ public class ScrapCaller {
             }
 
             classifiedNews.add(resultItem);
-        });
+        }
 
         return classifiedNews;
     }
@@ -214,7 +248,8 @@ public class ScrapCaller {
                         t.contains("homicidio") ||
                         t.contains("disparos") ||
                         t.contains("violencia") ||
-                        t.contains("ataque armado")
+                        t.contains("ataque armado") ||
+                        t.contains("trata de personas")
         ) {
             resultItem.setType("Violencia");
             resultItem.setConfidence(0.50);
