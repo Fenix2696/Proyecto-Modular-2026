@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import FiltersPanel from "../panels/FiltersPanel";
 import DirectionsPanel from "../panels/DirectionsPanel";
 import { TYPE_LABEL, TYPE_ICON } from "../utils/incidentTypes";
-import { getActiveAIReports, syncAIReports } from "../../../services/aiReports";
+import { syncAIReports } from "../../../services/aiReports";
 
 function safeTimeAgo(getTimeAgo, value) {
   if (!value) return null;
@@ -50,11 +50,11 @@ function categoryMeta(category) {
     case "emergencia":
       return { label: "Emergencia", emoji: "🚒", color: "#10b981" };
     case "delito":
-      return { label: "Delito", emoji: "🕵️", color: "#a78bfa" };
+      return { label: "Delito", emoji: "🚔", color: "#a78bfa" };
     case "vandalismo":
       return { label: "Vandalismo", emoji: "🏚️", color: "#94a3b8" };
     default:
-      return { label: category || "Otro", emoji: "📰", color: "#64748b" };
+      return { label: category || "Otro", emoji: "📍", color: "#64748b" };
   }
 }
 
@@ -126,8 +126,10 @@ export default function DashboardPanel({
   onClearDirections,
   getTimeAgo,
   onStartRouteAndFocusMap,
+
+  aiReports = [],
+  onReloadAIReports,
 }) {
-  const [aiReports, setAiReports] = useState([]);
   const [loadingAI, setLoadingAI] = useState(false);
   const [syncingAI, setSyncingAI] = useState(false);
   const [aiError, setAiError] = useState("");
@@ -138,12 +140,11 @@ export default function DashboardPanel({
       setLoadingAI(true);
       setAiError("");
 
-      const response = await getActiveAIReports(50);
-      const rows = response?.data || [];
-      setAiReports(Array.isArray(rows) ? rows : []);
+      if (typeof onReloadAIReports === "function") {
+        await onReloadAIReports(50);
+      }
     } catch (error) {
       console.error("Error cargando noticias IA:", error);
-      setAiReports([]);
       setAiError("No se pudieron cargar las noticias de IA.");
     } finally {
       setLoadingAI(false);
@@ -255,14 +256,7 @@ export default function DashboardPanel({
               </div>
 
               <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                <button
-                  className="rc-secondary-btn"
-                  type="button"
-                  onClick={() => handleSyncAI(false)}
-                  disabled={syncingAI}
-                >
-                  {syncingAI ? "Sincronizando..." : "Actualizar noticias"}
-                </button>
+
 
                 <button
                   className="rc-secondary-btn"
@@ -270,17 +264,10 @@ export default function DashboardPanel({
                   onClick={() => handleSyncAI(true)}
                   disabled={syncingAI}
                 >
-                  {syncingAI ? "Forzando..." : "Forzar sync"}
+                  {syncingAI ? "Cargando..." : "Actualizar noticias"}
                 </button>
 
-                <button
-                  className="rc-secondary-btn"
-                  type="button"
-                  onClick={loadAIReports}
-                  disabled={loadingAI}
-                >
-                  {loadingAI ? "Cargando..." : "Recargar lista"}
-                </button>
+
               </div>
             </div>
 

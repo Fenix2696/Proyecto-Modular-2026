@@ -110,6 +110,18 @@ const ZONE_FALLBACKS = [
   },
 ];
 
+const MUNICIPAL_FALLBACKS = {
+  guadalajara: { city: "Guadalajara", state: "Jalisco", lat: 20.6597, lng: -103.3496 },
+  zapopan: { city: "Zapopan", state: "Jalisco", lat: 20.7236, lng: -103.3848 },
+  tlaquepaque: { city: "Tlaquepaque", state: "Jalisco", lat: 20.6409, lng: -103.2933 },
+  "san pedro tlaquepaque": { city: "Tlaquepaque", state: "Jalisco", lat: 20.6409, lng: -103.2933 },
+  tlajomulco: { city: "Tlajomulco", state: "Jalisco", lat: 20.4737, lng: -103.4479 },
+  "tlajomulco de zuniga": { city: "Tlajomulco", state: "Jalisco", lat: 20.4737, lng: -103.4479 },
+  tonala: { city: "Tonala", state: "Jalisco", lat: 20.6246, lng: -103.2424 },
+  "el salto": { city: "El Salto", state: "Jalisco", lat: 20.5184, lng: -103.1815 },
+  juanacatlan: { city: "Juanacatlan", state: "Jalisco", lat: 20.5108, lng: -103.1662 },
+};
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -200,13 +212,8 @@ function cleanLocationText(text) {
 
 function normalizeNewsResponse(data) {
   if (Array.isArray(data)) return data;
-
-  // Caso real de GNews: { articles: [...] }
   if (data && Array.isArray(data.articles)) return data.articles;
-
-  // Caso fallback: objeto individual
   if (data && typeof data === "object") return [data];
-
   return [];
 }
 
@@ -248,8 +255,7 @@ function normalizeScraperItem(item) {
       toNullableString(item.category) ||
       toNullableString(item.type) ||
       null,
-    confidence:
-      toNullableNumber(item.confidence),
+    confidence: toNullableNumber(item.confidence),
     published_at:
       toNullableString(item.published_at) ||
       toNullableString(item.publishedAt) ||
@@ -429,6 +435,70 @@ function detectZoneFallback(text) {
   return ZONE_FALLBACKS.find((z) => t.includes(z.key)) || null;
 }
 
+function detectMunicipalFallback(text = "", addressText = "") {
+  const t = `${text} ${addressText}`.toLowerCase();
+
+  for (const key of Object.keys(MUNICIPAL_FALLBACKS)) {
+    if (t.includes(key)) {
+      return MUNICIPAL_FALLBACKS[key];
+    }
+  }
+
+  return null;
+}
+
+function seededHash(str) {
+  let h = 0;
+  const text = String(str || "");
+  for (let i = 0; i < text.length; i++) {
+    h = (h * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+function createDeterministicDispersedPoint(baseLat, baseLng, seedText, radiusMeters = 900) {
+  const hashA = seededHash(`${seedText}|a`);
+  const hashB = seededHash(`${seedText}|b`);
+
+  const angle = (hashA / 4294967295) * Math.PI * 2;
+  const distance = 150 + (hashB / 4294967295) * (radiusMeters - 150);
+
+  const deltaLat = (distance * Math.cos(angle)) / 111320;
+  const deltaLng = (distance * Math.sin(angle)) / (111320 * Math.cos((baseLat * Math.PI) / 180));
+
+  return {
+    latitude: Number((baseLat + deltaLat).toFixed(6)),
+    longitude: Number((baseLng + deltaLng).toFixed(6)),
+  };
+}
+
+function buildMunicipalFallbackLocation(item, municipal) {
+  if (!municipal) return null;
+
+  const seedText = [
+    item?.source_url || "",
+    item?.title || "",
+    item?.published_at || "",
+    municipal.city || "",
+  ].join("|");
+
+  const point = createDeterministicDispersedPoint(
+    municipal.lat,
+    municipal.lng,
+    seedText,
+    1000
+  );
+
+  return {
+    latitude: point.latitude,
+    longitude: point.longitude,
+    address_text: item?.address_text || `${municipal.city}, ${municipal.state}, Mexico`,
+    city: municipal.city,
+    state: municipal.state,
+    source: "fallback-municipality-dispersed",
+  };
+}
+
 function extractCandidateQueries(item) {
   const title = cleanLocationText(item?.title || "");
   const body = cleanLocationText(item?.body || "");
@@ -514,31 +584,32 @@ async function resolveLocationForNews(item) {
   const existingLat = item.latitude;
   const existingLng = item.longitude;
   const existingAddress = item.address_text;
+  const fullText = `${item?.title || ""} ${item?.body || ""} ${existingAddress || ""}`;
 
   if (existingLat !== null && existingLng !== null) {
     return {
       latitude: existingLat,
       longitude: existingLng,
       address_text: existingAddress,
-      city: null,
+      city: detectMunicipalFallback(fullText, existingAddress)?.city || null,
       state: "Jalisco",
       source: "payload",
     };
   }
 
-  const fullText = `${item?.title || ""} ${item?.body || ""} ${existingAddress || ""}`;
   const zone = detectZoneFallback(fullText);
   const candidateQueries = extractCandidateQueries(item);
 
   for (const query of candidateQueries) {
     const geo = await geocodeAddress(query, zone);
     if (geo) {
+      const municipal = detectMunicipalFallback(fullText, geo.address_text || existingAddress || "");
       return {
         latitude: geo.latitude,
         longitude: geo.longitude,
         address_text: geo.address_text || existingAddress || zone?.label || null,
-        city: zone?.city || "Guadalajara",
-        state: zone?.state || "Jalisco",
+        city: municipal?.city || zone?.city || "Guadalajara",
+        state: municipal?.state || zone?.state || "Jalisco",
         source: "geocoding",
       };
     }
@@ -546,6 +617,17 @@ async function resolveLocationForNews(item) {
   }
 
   if (zone) {
+    const municipalPoint = buildMunicipalFallbackLocation(item, {
+      city: zone.city,
+      state: zone.state,
+      lat: zone.lat,
+      lng: zone.lng,
+    });
+
+    if (municipalPoint) {
+      return municipalPoint;
+    }
+
     return {
       latitude: zone.lat,
       longitude: zone.lng,
@@ -556,12 +638,19 @@ async function resolveLocationForNews(item) {
     };
   }
 
+  const municipal = detectMunicipalFallback(fullText, existingAddress || "");
+  const municipalPoint = buildMunicipalFallbackLocation(item, municipal);
+
+  if (municipalPoint) {
+    return municipalPoint;
+  }
+
   return {
     latitude: null,
     longitude: null,
     address_text: existingAddress || null,
-    city: "Guadalajara",
-    state: "Jalisco",
+    city: municipal?.city || "Guadalajara",
+    state: municipal?.state || "Jalisco",
     source: "none",
   };
 }
@@ -773,8 +862,6 @@ async function syncAIReports(req, res) {
 
       const text = `${n.title || ""} ${n.body || ""}`;
       const category = normalizeCategory(n.raw_category, text);
-
-      // Si viene de Guardia Nocturna, ser mas permisivos
       const isGuardia = String(n.source_name || "").toLowerCase().includes("guardia nocturna");
 
       if (!isGuardia) {
@@ -785,7 +872,6 @@ async function syncAIReports(req, res) {
       const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);
 
-      // permitir noticias de hasta 45 dias mientras estabilizamos el flujo
       return Number.isFinite(diffDias) && diffDias >= 0 && diffDias <= 45;
     });
 
@@ -827,8 +913,15 @@ async function syncAIReports(req, res) {
         const location = await resolveLocationForNews(n);
 
         if (location.source === "geocoding") geocoded++;
-        else if (location.source === "fallback-zone" || location.source === "payload") fallbackLocated++;
-        else withoutCoords++;
+        else if (
+          location.source === "fallback-zone" ||
+          location.source === "payload" ||
+          location.source === "fallback-municipality-dispersed"
+        ) {
+          fallbackLocated++;
+        } else {
+          withoutCoords++;
+        }
 
         const result = await pool.query(
           `

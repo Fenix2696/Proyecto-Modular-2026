@@ -411,18 +411,14 @@ export default function Dashboard() {
 
   const loadAIReports = async (limit = 50) => {
     try {
-      const res = await getActiveAIReports(limit);
-      const rows = res?.data || [];
-      const clean = Array.isArray(rows)
-        ? rows.filter(
-            (r) =>
-              Number.isFinite(Number(r.latitude)) &&
-              Number.isFinite(Number(r.longitude))
-          )
-        : [];
-      setAiReports(clean);
-    } catch {
+      const response = await getActiveAIReports(limit);
+      const rows = response?.data || [];
+      setAiReports(Array.isArray(rows) ? rows : []);
+      return Array.isArray(rows) ? rows : [];
+    } catch (error) {
+      console.error("Error cargando noticias IA:", error);
       setAiReports([]);
+      return [];
     }
   };
 
