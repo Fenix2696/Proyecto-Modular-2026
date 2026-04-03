@@ -29,7 +29,7 @@ public class ScrapCaller {
 
     private static final int MAX_GNEWS_RESULTS = 8;
     private static final int MAX_GUARDIA_RESULTS = 15;
-    private static final int MAX_ITEMS_TO_CLASSIFY = 12;
+    private static final int MAX_ITEMS_TO_CLASSIFY = 20;
 
     @Inject
     JsonMapper jsonMapper;
