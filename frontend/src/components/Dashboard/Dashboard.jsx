@@ -871,6 +871,8 @@ export default function Dashboard() {
               setMapZoom((z) => Math.max(z, 16));
             }}
             filteredIncidents={filteredIncidents}
+            aiReports={aiReports}
+            onReloadAIReports={loadAIReports}
             onFocusIncident={focusIncident}
             getTimeAgo={getTimeAgo}
             filters={filters}
