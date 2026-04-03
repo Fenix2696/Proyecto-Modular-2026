@@ -135,13 +135,13 @@ export default function DashboardPanel({
   const [aiError, setAiError] = useState("");
   const [aiMessage, setAiMessage] = useState("");
 
-  const loadAIReports = async () => {
+  const loadAIReports = async (limit = 50) => {
     try {
       setLoadingAI(true);
       setAiError("");
 
       if (typeof onReloadAIReports === "function") {
-        await onReloadAIReports(50);
+        await onReloadAIReports(limit);
       }
     } catch (error) {
       console.error("Error cargando noticias IA:", error);
@@ -161,17 +161,22 @@ export default function DashboardPanel({
 
       if (response?.usedCache) {
         setAiMessage(
-          `Usando cache local. Ultimo sync reciente. Reportes activos: ${response?.cachedCount ?? 0}`
+          `Usando cache local. Reportes activos: ${response?.cachedCount ?? 0}. ${response?.reason || ""}`.trim()
         );
       } else {
         setAiMessage(
-          `Sync completado. Insertados: ${response?.inserted ?? 0}, actualizados: ${response?.updated ?? 0}, geolocalizados: ${response?.geocoded ?? 0}`
+          [
+            `Sync completado.`,
+            `Insertados: ${response?.inserted ?? 0}`,
+            `Actualizados: ${response?.updated ?? 0}`,
+            `Geocodificados: ${response?.geocoded ?? 0}`,
+            `Fallback: ${response?.fallbackLocated ?? 0}`,
+            `Sin coords: ${response?.withoutCoords ?? 0}`,
+          ].join(" ")
         );
       }
 
-      setTimeout(async () => {
-        await loadAIReports();
-      }, 1500);
+      await loadAIReports(50);
     } catch (error) {
       console.error("Error sincronizando noticias IA:", error);
       setAiError("No se pudieron sincronizar las noticias.");
@@ -182,7 +187,7 @@ export default function DashboardPanel({
 
   useEffect(() => {
     if (activePanel !== "news" && activePanel !== "stats") return;
-    loadAIReports();
+    loadAIReports(50);
   }, [activePanel]);
 
   const sortedAIReports = useMemo(() => {
@@ -258,18 +263,14 @@ export default function DashboardPanel({
               </div>
 
               <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-
-
                 <button
                   className="rc-secondary-btn"
                   type="button"
                   onClick={() => handleSyncAI(true)}
                   disabled={syncingAI}
                 >
-                  {syncingAI ? "Cargando..." : "Actualizar noticias"}
+                  {syncingAI ? "Sincronizando..." : "Forzar sync"}
                 </button>
-
-
               </div>
             </div>
 

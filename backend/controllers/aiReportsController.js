@@ -26,26 +26,42 @@ const ZMG_KEYWORDS = [
   "san pedro tlaquepaque",
   "tlajomulco",
   "tlajomulco de zuniga",
+  "tlajomulco de zúñiga",
   "tonala",
+  "tonalá",
   "jalisco",
   "el salto",
   "juanacatlan",
+  "juanacatlán",
   "zmg",
   "oblatos",
   "tetlan",
+  "tetlán",
   "insurgentes",
   "obrera",
   "miravalle",
   "huentitan",
+  "huentitán",
   "periferico",
+  "periférico",
   "lopez mateos",
+  "lópez mateos",
   "mariano otero",
   "colon",
+  "colón",
 ];
 
 const ZONE_FALLBACKS = [
   {
     key: "tetlan",
+    label: "Tetlan, Guadalajara, Jalisco, Mexico",
+    city: "Guadalajara",
+    state: "Jalisco",
+    lat: 20.6691,
+    lng: -103.2994,
+  },
+  {
+    key: "tetlán",
     label: "Tetlan, Guadalajara, Jalisco, Mexico",
     city: "Guadalajara",
     state: "Jalisco",
@@ -69,6 +85,30 @@ const ZONE_FALLBACKS = [
     lng: -103.3568,
   },
   {
+    key: "miravalle",
+    label: "Miravalle, Guadalajara, Jalisco, Mexico",
+    city: "Guadalajara",
+    state: "Jalisco",
+    lat: 20.6187,
+    lng: -103.3555,
+  },
+  {
+    key: "huentitan",
+    label: "Huentitan, Guadalajara, Jalisco, Mexico",
+    city: "Guadalajara",
+    state: "Jalisco",
+    lat: 20.7315,
+    lng: -103.3234,
+  },
+  {
+    key: "huentitán",
+    label: "Huentitan, Guadalajara, Jalisco, Mexico",
+    city: "Guadalajara",
+    state: "Jalisco",
+    lat: 20.7315,
+    lng: -103.3234,
+  },
+  {
     key: "zapopan",
     label: "Zapopan, Jalisco, Mexico",
     city: "Zapopan",
@@ -85,7 +125,31 @@ const ZONE_FALLBACKS = [
     lng: -103.2933,
   },
   {
+    key: "san pedro tlaquepaque",
+    label: "San Pedro Tlaquepaque, Jalisco, Mexico",
+    city: "Tlaquepaque",
+    state: "Jalisco",
+    lat: 20.6409,
+    lng: -103.2933,
+  },
+  {
     key: "tlajomulco",
+    label: "Tlajomulco de Zuniga, Jalisco, Mexico",
+    city: "Tlajomulco",
+    state: "Jalisco",
+    lat: 20.4737,
+    lng: -103.4479,
+  },
+  {
+    key: "tlajomulco de zuniga",
+    label: "Tlajomulco de Zuniga, Jalisco, Mexico",
+    city: "Tlajomulco",
+    state: "Jalisco",
+    lat: 20.4737,
+    lng: -103.4479,
+  },
+  {
+    key: "tlajomulco de zúñiga",
     label: "Tlajomulco de Zuniga, Jalisco, Mexico",
     city: "Tlajomulco",
     state: "Jalisco",
@@ -99,6 +163,38 @@ const ZONE_FALLBACKS = [
     state: "Jalisco",
     lat: 20.6246,
     lng: -103.2424,
+  },
+  {
+    key: "tonalá",
+    label: "Tonala, Jalisco, Mexico",
+    city: "Tonala",
+    state: "Jalisco",
+    lat: 20.6246,
+    lng: -103.2424,
+  },
+  {
+    key: "el salto",
+    label: "El Salto, Jalisco, Mexico",
+    city: "El Salto",
+    state: "Jalisco",
+    lat: 20.5184,
+    lng: -103.1815,
+  },
+  {
+    key: "juanacatlan",
+    label: "Juanacatlan, Jalisco, Mexico",
+    city: "Juanacatlan",
+    state: "Jalisco",
+    lat: 20.5108,
+    lng: -103.1662,
+  },
+  {
+    key: "juanacatlán",
+    label: "Juanacatlan, Jalisco, Mexico",
+    city: "Juanacatlan",
+    state: "Jalisco",
+    lat: 20.5108,
+    lng: -103.1662,
   },
   {
     key: "guadalajara",
@@ -117,9 +213,12 @@ const MUNICIPAL_FALLBACKS = {
   "san pedro tlaquepaque": { city: "Tlaquepaque", state: "Jalisco", lat: 20.6409, lng: -103.2933 },
   tlajomulco: { city: "Tlajomulco", state: "Jalisco", lat: 20.4737, lng: -103.4479 },
   "tlajomulco de zuniga": { city: "Tlajomulco", state: "Jalisco", lat: 20.4737, lng: -103.4479 },
+  "tlajomulco de zúñiga": { city: "Tlajomulco", state: "Jalisco", lat: 20.4737, lng: -103.4479 },
   tonala: { city: "Tonala", state: "Jalisco", lat: 20.6246, lng: -103.2424 },
+  "tonalá": { city: "Tonala", state: "Jalisco", lat: 20.6246, lng: -103.2424 },
   "el salto": { city: "El Salto", state: "Jalisco", lat: 20.5184, lng: -103.1815 },
   juanacatlan: { city: "Juanacatlan", state: "Jalisco", lat: 20.5108, lng: -103.1662 },
+  "juanacatlán": { city: "Juanacatlan", state: "Jalisco", lat: 20.5108, lng: -103.1662 },
 };
 
 function sleep(ms) {
@@ -286,6 +385,7 @@ function normalizeCategory(cat, text = "") {
     t.includes("bomberos") ||
     t.includes("rescate") ||
     t.includes("explosion") ||
+    t.includes("explosión") ||
     t.includes("fuga de gas")
   ) {
     return "emergencia";
@@ -300,7 +400,9 @@ function normalizeCategory(cat, text = "") {
     t.includes("carambola") ||
     t.includes("caos vial") ||
     t.includes("trafico") ||
+    t.includes("tráfico") ||
     t.includes("colision") ||
+    t.includes("colisión") ||
     t.includes("impacto") ||
     t.includes("moto") ||
     t.includes("motocicleta")
@@ -336,21 +438,25 @@ function normalizeCategory(cat, text = "") {
     t.includes("homicidio") ||
     t.includes("ejecutado") ||
     t.includes("ejecucion") ||
+    t.includes("ejecución") ||
     t.includes("disparos") ||
     t.includes("arma blanca") ||
     t.includes("apuñalado") ||
     t.includes("apunalado") ||
     t.includes("lesionado a balazos") ||
     t.includes("herido de bala") ||
-    t.includes("agresion")
+    t.includes("agresion") ||
+    t.includes("agresión")
   ) {
     return "violencia";
   }
 
   if (
     t.includes("extorsion") ||
+    t.includes("extorsión") ||
     t.includes("secuestro") ||
     t.includes("privacion ilegal") ||
+    t.includes("privación ilegal") ||
     t.includes("narcomenudeo") ||
     t.includes("trata de personas") ||
     t.includes("delito") ||
@@ -359,6 +465,7 @@ function normalizeCategory(cat, text = "") {
     t.includes("capturado") ||
     t.includes("cateo") ||
     t.includes("fiscalia") ||
+    t.includes("fiscalía") ||
     t.includes("droga")
   ) {
     return "delito";
@@ -396,11 +503,13 @@ function isUsefulCategory(category, text = "") {
     "accidente",
     "volcadura",
     "trafico",
+    "tráfico",
     "caos vial",
     "incendio",
     "bomberos",
     "homicidio",
     "extorsion",
+    "extorsión",
     "secuestro",
     "detenido",
     "droga",
@@ -420,8 +529,10 @@ function looksLikeRegionalNews(item) {
     "veracruz",
     "cdmx",
     "ciudad de mexico",
+    "ciudad de méxico",
     "monterrey",
     "nuevo leon",
+    "nuevo león",
     "sinaloa",
   ];
 
@@ -435,16 +546,36 @@ function detectZoneFallback(text) {
   return ZONE_FALLBACKS.find((z) => t.includes(z.key)) || null;
 }
 
-function detectMunicipalFallback(text = "", addressText = "") {
-  const t = `${text} ${addressText}`.toLowerCase();
+function extractMunicipalityMention(text = "") {
+  const t = String(text || "").toLowerCase();
 
-  for (const key of Object.keys(MUNICIPAL_FALLBACKS)) {
+  const orderedKeys = Object.keys(MUNICIPAL_FALLBACKS).sort((a, b) => b.length - a.length);
+
+  for (const key of orderedKeys) {
     if (t.includes(key)) {
       return MUNICIPAL_FALLBACKS[key];
     }
   }
 
+  const patterns = [
+    /\ben\s+(guadalajara|zapopan|tlaquepaque|san pedro tlaquepaque|tlajomulco(?: de zuniga| de zúñiga)?|tonala|tonalá|el salto|juanacatlan|juanacatlán)\b/i,
+    /\bde\s+(guadalajara|zapopan|tlaquepaque|san pedro tlaquepaque|tlajomulco(?: de zuniga| de zúñiga)?|tonala|tonalá|el salto|juanacatlan|juanacatlán)\b/i,
+    /\ben el municipio de\s+(guadalajara|zapopan|tlaquepaque|san pedro tlaquepaque|tlajomulco(?: de zuniga| de zúñiga)?|tonala|tonalá|el salto|juanacatlan|juanacatlán)\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = t.match(pattern);
+    if (match && MUNICIPAL_FALLBACKS[match[1]]) {
+      return MUNICIPAL_FALLBACKS[match[1]];
+    }
+  }
+
   return null;
+}
+
+function detectMunicipalFallback(text = "", addressText = "") {
+  const t = `${text} ${addressText}`.toLowerCase();
+  return extractMunicipalityMention(t);
 }
 
 function seededHash(str) {
@@ -464,7 +595,8 @@ function createDeterministicDispersedPoint(baseLat, baseLng, seedText, radiusMet
   const distance = 150 + (hashB / 4294967295) * (radiusMeters - 150);
 
   const deltaLat = (distance * Math.cos(angle)) / 111320;
-  const deltaLng = (distance * Math.sin(angle)) / (111320 * Math.cos((baseLat * Math.PI) / 180));
+  const cosLat = Math.cos((baseLat * Math.PI) / 180) || 0.0001;
+  const deltaLng = (distance * Math.sin(angle)) / (111320 * cosLat);
 
   return {
     latitude: Number((baseLat + deltaLat).toFixed(6)),
@@ -472,7 +604,7 @@ function createDeterministicDispersedPoint(baseLat, baseLng, seedText, radiusMet
   };
 }
 
-function buildMunicipalFallbackLocation(item, municipal) {
+function buildMunicipalFallbackLocation(item, municipal, sourceName = "fallback-municipality-dispersed") {
   if (!municipal) return null;
 
   const seedText = [
@@ -495,7 +627,7 @@ function buildMunicipalFallbackLocation(item, municipal) {
     address_text: item?.address_text || `${municipal.city}, ${municipal.state}, Mexico`,
     city: municipal.city,
     state: municipal.state,
-    source: "fallback-municipality-dispersed",
+    source: sourceName,
   };
 }
 
@@ -503,30 +635,49 @@ function extractCandidateQueries(item) {
   const title = cleanLocationText(item?.title || "");
   const body = cleanLocationText(item?.body || "");
   const directAddress = cleanLocationText(item?.address_text || "");
-  const zone = detectZoneFallback(`${title} ${body} ${directAddress}`);
+  const fullText = `${title} ${body} ${directAddress}`;
+  const zone = detectZoneFallback(fullText);
+  const municipal = detectMunicipalFallback(fullText, directAddress);
 
   const queries = [];
 
   if (directAddress) {
-    queries.push(`${directAddress}, Guadalajara, Jalisco, Mexico`);
+    queries.push(directAddress);
     queries.push(`${directAddress}, Jalisco, Mexico`);
+    if (municipal?.city) {
+      queries.push(`${directAddress}, ${municipal.city}, Jalisco, Mexico`);
+    } else {
+      queries.push(`${directAddress}, Guadalajara, Jalisco, Mexico`);
+    }
   }
 
   if (zone?.label) queries.push(zone.label);
 
+  if (municipal?.city) {
+    queries.push(`${municipal.city}, Jalisco, Mexico`);
+  }
+
   if (title) {
-    queries.push(`${title}, Guadalajara, Jalisco, Mexico`);
     queries.push(`${title}, Jalisco, Mexico`);
+    if (municipal?.city) {
+      queries.push(`${title}, ${municipal.city}, Jalisco, Mexico`);
+    } else {
+      queries.push(`${title}, Guadalajara, Jalisco, Mexico`);
+    }
   }
 
   if (body) {
-    queries.push(`${body.slice(0, 120)}, Guadalajara, Jalisco, Mexico`);
+    const bodySnippet = body.slice(0, 140);
+    queries.push(`${bodySnippet}, Jalisco, Mexico`);
+    if (municipal?.city) {
+      queries.push(`${bodySnippet}, ${municipal.city}, Jalisco, Mexico`);
+    }
   }
 
   return [...new Set(queries.filter(Boolean))];
 }
 
-function geocodeResultLooksValid(result, zoneHint) {
+function geocodeResultLooksValid(result, zoneHint, municipalHint) {
   const formatted = String(result?.formatted_address || "").toLowerCase();
   const comps = Array.isArray(result?.address_components) ? result.address_components : [];
   const compText = comps.map((c) => `${c.long_name} ${c.short_name}`).join(" ").toLowerCase();
@@ -534,13 +685,14 @@ function geocodeResultLooksValid(result, zoneHint) {
 
   if (!(allText.includes("jalisco") || allText.includes("jal."))) return false;
 
+  if (municipalHint?.city && allText.includes(municipalHint.city.toLowerCase())) return true;
   if (zoneHint?.city && allText.includes(zoneHint.city.toLowerCase())) return true;
   if (containsAny(allText, ZMG_KEYWORDS)) return true;
 
   return false;
 }
 
-async function geocodeAddress(query, zoneHint = null) {
+async function geocodeAddress(query, zoneHint = null, municipalHint = null) {
   if (!GOOGLE_MAPS_API_KEY || !query) return null;
 
   try {
@@ -561,7 +713,10 @@ async function geocodeAddress(query, zoneHint = null) {
     const results = response?.data?.results;
     if (!Array.isArray(results) || results.length === 0) return null;
 
-    const valid = results.find((r) => geocodeResultLooksValid(r, zoneHint));
+    const valid =
+      results.find((r) => geocodeResultLooksValid(r, zoneHint, municipalHint)) ||
+      null;
+
     if (!valid?.geometry?.location) return null;
 
     const lat = toNullableNumber(valid.geometry.location.lat);
@@ -586,30 +741,32 @@ async function resolveLocationForNews(item) {
   const existingAddress = item.address_text;
   const fullText = `${item?.title || ""} ${item?.body || ""} ${existingAddress || ""}`;
 
+  const zone = detectZoneFallback(fullText);
+  const municipal = detectMunicipalFallback(fullText, existingAddress || "");
+
   if (existingLat !== null && existingLng !== null) {
     return {
       latitude: existingLat,
       longitude: existingLng,
-      address_text: existingAddress,
-      city: detectMunicipalFallback(fullText, existingAddress)?.city || null,
-      state: "Jalisco",
+      address_text: existingAddress || (municipal ? `${municipal.city}, ${municipal.state}, Mexico` : null),
+      city: municipal?.city || zone?.city || "Guadalajara",
+      state: municipal?.state || zone?.state || "Jalisco",
       source: "payload",
     };
   }
 
-  const zone = detectZoneFallback(fullText);
   const candidateQueries = extractCandidateQueries(item);
 
   for (const query of candidateQueries) {
-    const geo = await geocodeAddress(query, zone);
+    const geo = await geocodeAddress(query, zone, municipal);
     if (geo) {
-      const municipal = detectMunicipalFallback(fullText, geo.address_text || existingAddress || "");
+      const municipalFromGeo = detectMunicipalFallback(fullText, geo.address_text || existingAddress || "");
       return {
         latitude: geo.latitude,
         longitude: geo.longitude,
         address_text: geo.address_text || existingAddress || zone?.label || null,
-        city: municipal?.city || zone?.city || "Guadalajara",
-        state: municipal?.state || zone?.state || "Jalisco",
+        city: municipalFromGeo?.city || municipal?.city || zone?.city || "Guadalajara",
+        state: municipalFromGeo?.state || municipal?.state || zone?.state || "Jalisco",
         source: "geocoding",
       };
     }
@@ -617,15 +774,19 @@ async function resolveLocationForNews(item) {
   }
 
   if (zone) {
-    const municipalPoint = buildMunicipalFallbackLocation(item, {
-      city: zone.city,
-      state: zone.state,
-      lat: zone.lat,
-      lng: zone.lng,
-    });
+    const zonePoint = buildMunicipalFallbackLocation(
+      item,
+      {
+        city: zone.city,
+        state: zone.state,
+        lat: zone.lat,
+        lng: zone.lng,
+      },
+      "fallback-zone-dispersed"
+    );
 
-    if (municipalPoint) {
-      return municipalPoint;
+    if (zonePoint) {
+      return zonePoint;
     }
 
     return {
@@ -638,8 +799,7 @@ async function resolveLocationForNews(item) {
     };
   }
 
-  const municipal = detectMunicipalFallback(fullText, existingAddress || "");
-  const municipalPoint = buildMunicipalFallbackLocation(item, municipal);
+  const municipalPoint = buildMunicipalFallbackLocation(item, municipal, "fallback-municipality-dispersed");
 
   if (municipalPoint) {
     return municipalPoint;
@@ -648,7 +808,7 @@ async function resolveLocationForNews(item) {
   return {
     latitude: null,
     longitude: null,
-    address_text: existingAddress || null,
+    address_text: existingAddress || (municipal ? `${municipal.city}, ${municipal.state}, Mexico` : null),
     city: municipal?.city || "Guadalajara",
     state: municipal?.state || "Jalisco",
     source: "none",
@@ -757,7 +917,7 @@ async function expireOldAIReports() {
 
 async function getLastAISyncInfo() {
   const result = await pool.query(`
-    SELECT MAX(detected_at) AS last_sync_at
+    SELECT MAX(updated_at) AS last_sync_at
     FROM ai_reports
   `);
 
@@ -891,6 +1051,7 @@ async function syncAIReports(req, res) {
     let failed = 0;
     let geocoded = 0;
     let fallbackLocated = 0;
+    let payloadLocated = 0;
     let withoutCoords = 0;
     const errors = [];
 
@@ -912,10 +1073,13 @@ async function syncAIReports(req, res) {
 
         const location = await resolveLocationForNews(n);
 
-        if (location.source === "geocoding") geocoded++;
-        else if (
+        if (location.source === "geocoding") {
+          geocoded++;
+        } else if (location.source === "payload") {
+          payloadLocated++;
+        } else if (
           location.source === "fallback-zone" ||
-          location.source === "payload" ||
+          location.source === "fallback-zone-dispersed" ||
           location.source === "fallback-municipality-dispersed"
         ) {
           fallbackLocated++;
@@ -1030,6 +1194,7 @@ async function syncAIReports(req, res) {
       updated,
       failed,
       geocoded,
+      payloadLocated,
       fallbackLocated,
       withoutCoords,
       cachedCount: storedRows.length,
