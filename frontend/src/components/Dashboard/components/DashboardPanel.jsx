@@ -169,7 +169,9 @@ export default function DashboardPanel({
         );
       }
 
-      await loadAIReports();
+      setTimeout(async () => {
+        await loadAIReports();
+      }, 1500);
     } catch (error) {
       console.error("Error sincronizando noticias IA:", error);
       setAiError("No se pudieron sincronizar las noticias.");

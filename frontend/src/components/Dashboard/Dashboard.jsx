@@ -413,8 +413,12 @@ export default function Dashboard() {
     try {
       const response = await getActiveAIReports(limit);
       const rows = response?.data || [];
-      setAiReports(Array.isArray(rows) ? rows : []);
-      return Array.isArray(rows) ? rows : [];
+
+      const activos = rows.filter(r => r.is_active);
+
+      setAiReports(activos);
+
+      return activos;
     } catch (error) {
       console.error("Error cargando noticias IA:", error);
       setAiReports([]);
@@ -917,7 +921,7 @@ export default function Dashboard() {
                 center={mapCenter}
                 zoom={mapZoom}
                 incidents={filteredIncidents}
-                aiReports={aiReports}
+                aiReports={[...aiReports]}
                 mapMode={mapMode}
                 onChangeMapMode={setMapMode}
                 userLocation={userLocation}
