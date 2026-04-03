@@ -265,24 +265,58 @@ function normalizeCategory(cat, text = "") {
   const c = String(cat || "").toLowerCase();
   const t = String(text || "").toLowerCase();
 
-  if (t.includes("cristalazo")) return "cristalazo";
+  if (
+    t.includes("cristalazo") ||
+    t.includes("rompieron el vidrio") ||
+    t.includes("rompieron los cristales")
+  ) {
+    return "cristalazo";
+  }
+
+  if (
+    t.includes("incendio") ||
+    t.includes("forestal") ||
+    t.includes("humo") ||
+    t.includes("bomberos") ||
+    t.includes("rescate") ||
+    t.includes("explosion") ||
+    t.includes("fuga de gas")
+  ) {
+    return "emergencia";
+  }
 
   if (
     c.includes("accidente") ||
     c.includes("choque") ||
-    t.includes("accidente") ||
     t.includes("choque") ||
+    t.includes("accidente") ||
     t.includes("volcadura") ||
-    t.includes("carambola")
+    t.includes("carambola") ||
+    t.includes("caos vial") ||
+    t.includes("trafico") ||
+    t.includes("colision") ||
+    t.includes("impacto") ||
+    t.includes("moto") ||
+    t.includes("motocicleta")
   ) {
     return "choque";
   }
 
-  if (c.includes("asalto") || t.includes("asalto")) return "asalto";
+  if (
+    c.includes("asalto") ||
+    t.includes("asalto") ||
+    t.includes("asaltaron") ||
+    t.includes("asalto a mano armada")
+  ) {
+    return "asalto";
+  }
 
   if (
     c.includes("robo") ||
     t.includes("robo") ||
+    t.includes("robo de auto") ||
+    t.includes("robo de vehiculo") ||
+    t.includes("robo de vehículo") ||
     t.includes("despojo")
   ) {
     return "robo";
@@ -292,33 +326,49 @@ function normalizeCategory(cat, text = "") {
     c.includes("violencia") ||
     t.includes("violencia") ||
     t.includes("balacera") ||
-    t.includes("homicidio") ||
     t.includes("ataque armado") ||
-    t.includes("disparos")
+    t.includes("homicidio") ||
+    t.includes("ejecutado") ||
+    t.includes("ejecucion") ||
+    t.includes("disparos") ||
+    t.includes("arma blanca") ||
+    t.includes("apuñalado") ||
+    t.includes("apunalado") ||
+    t.includes("lesionado a balazos") ||
+    t.includes("herido de bala") ||
+    t.includes("agresion")
   ) {
     return "violencia";
   }
 
   if (
-    t.includes("incendio") ||
-    t.includes("bomberos") ||
-    t.includes("explosion") ||
-    t.includes("rescate")
-  ) {
-    return "emergencia";
-  }
-
-  if (
     t.includes("extorsion") ||
     t.includes("secuestro") ||
+    t.includes("privacion ilegal") ||
+    t.includes("narcomenudeo") ||
+    t.includes("trata de personas") ||
+    t.includes("delito") ||
     t.includes("detenido") ||
-    t.includes("droga") ||
-    t.includes("trata de personas")
+    t.includes("detenidos") ||
+    t.includes("capturado") ||
+    t.includes("cateo") ||
+    t.includes("fiscalia") ||
+    t.includes("droga")
   ) {
     return "delito";
   }
 
-  if (t.includes("vandalismo") || t.includes("destrozos")) return "vandalismo";
+  if (
+    c.includes("vandalismo") ||
+    t.includes("vandalismo") ||
+    t.includes("danos") ||
+    t.includes("daños") ||
+    t.includes("destrozos") ||
+    t.includes("pintas") ||
+    t.includes("grafiti")
+  ) {
+    return "vandalismo";
+  }
 
   return "otro";
 }
