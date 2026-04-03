@@ -28,7 +28,7 @@ import java.util.Optional;
 public class ScrapCaller {
 
     private static final int MAX_GNEWS_RESULTS = 8;
-    private static final int MAX_GUARDIA_RESULTS = 12;
+    private static final int MAX_GUARDIA_RESULTS = 15;
     private static final int MAX_ITEMS_TO_CLASSIFY = 12;
 
     @Inject
@@ -63,8 +63,28 @@ public class ScrapCaller {
     public List<ClassifiedNews> getGuardiaNocturna() {
         try {
             List<NewsResult> news = GuardiaNocturnaScraper.fetch();
-            news = limitNews(news, MAX_GUARDIA_RESULTS);
-            return classifyNews(news);
+            news = limitNews(news, 8);
+
+            List<ClassifiedNews> result = new ArrayList<>();
+
+            for (NewsResult item : news) {
+                ClassifiedNews out = new ClassifiedNews();
+                out.setTitle(item.getTitle());
+                out.setBody(item.getSnippet());
+                out.setSource(item.getSource());
+                out.setLastUpdated(item.getLastUpdated());
+                out.setUrl(item.getUrl());
+
+                // sin llamar a la IA aqui
+                out.setType("Otro");
+                out.setConfidence(0.20);
+
+                result.add(out);
+            }
+
+            System.out.println("Guardia Nocturna endpoint returned: " + result.size());
+            return result;
+
         } catch (Exception e) {
             System.out.println("Error Guardia Nocturna endpoint: " + e.getMessage());
             return new ArrayList<>();
