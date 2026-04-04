@@ -2,9 +2,10 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from
 import { useEffect, useRef } from "react";
 
 import Dashboard from "./components/Dashboard/Dashboard";
-import Login from "./components/Auth/Login"; // ajusta ruta si es diferente
+import Login from "./components/Auth/Login";
+import Register from "./components/Auth/Register";
 
-const INACTIVITY_TIME = 5 * 60 * 1000; // 10 minutos
+const INACTIVITY_TIME = 10 * 60 * 1000;
 
 function SessionHandler() {
   const navigate = useNavigate();
@@ -19,10 +20,12 @@ function SessionHandler() {
     timeoutRef.current = setTimeout(() => {
       const token = localStorage.getItem("token");
 
-      // solo cerrar si está logueado
-      if (token) {
-        console.log("Sesion expirada por inactividad");
-
+      // No cerrar si está en login o register
+      if (
+        token &&
+        location.pathname !== "/login" &&
+        location.pathname !== "/register"
+      ) {
         localStorage.clear();
         navigate("/login", { replace: true });
       }
@@ -30,16 +33,10 @@ function SessionHandler() {
   };
 
   useEffect(() => {
-    const events = [
-      "mousemove",
-      "mousedown",
-      "keydown",
-      "touchstart",
-      "scroll"
-    ];
+    const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
 
     events.forEach((event) => {
-      window.addEventListener(event, resetTimer);
+      window.addEventListener(event, resetTimer, { passive: true });
     });
 
     resetTimer();
@@ -59,11 +56,11 @@ function SessionHandler() {
 export default function App() {
   return (
     <Router>
-
       <SessionHandler />
 
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/" element={<Dashboard />} />
       </Routes>
     </Router>
