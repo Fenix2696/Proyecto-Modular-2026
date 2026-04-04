@@ -82,7 +82,7 @@ function ForgotPassword() {
                   className={`input-radar ${err ? "input-error" : ""}`}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || msg}
                   placeholder="tu@email.com"
                   autoComplete="email"
                 />
@@ -99,7 +99,7 @@ function ForgotPassword() {
               <Link to="/register">Crear cuenta</Link>
             </div>
 
-            <div className="register-link-radar" style={{ margingintop: 8 }}>
+            <div className="register-link-radar" style={{ marginTop: 8 }}>
 
             </div>
           </div>

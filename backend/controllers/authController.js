@@ -26,6 +26,48 @@ function normalizarUsuario(user) {
   };
 }
 
+function validarPasswordSegura(password) {
+  return (
+    typeof password === "string" &&
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password) &&
+    !/\s/.test(password)
+  );
+}
+
+exports.checkUsername = async (req, res) => {
+  try {
+    const { username } = req.query;
+
+    if (!username || !String(username).trim()) {
+      return res.json({ success: true, exists: false });
+    }
+
+    const usernameLimpio = String(username).trim().toLowerCase();
+
+    const result = await pool.query(
+      `SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1`,
+      [usernameLimpio]
+    );
+
+    return res.json({
+      success: true,
+      exists: result.rows.length > 0,
+    });
+  } catch (error) {
+    console.error("Error checkUsername:", error);
+    return res.status(500).json({
+      success: false,
+      exists: false,
+      message: "Error al verificar nombre de usuario",
+      error: error.message,
+    });
+  }
+};
+
 exports.register = async (req, res) => {
   try {
     const {
@@ -44,18 +86,40 @@ exports.register = async (req, res) => {
       });
     }
 
-    const emailLimpio = String(email).trim().toLowerCase();
+    if (!validarPasswordSegura(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "La contrasena no cumple con los requisitos de seguridad",
+      });
+    }
 
-    const existe = await pool.query(
-      `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+    const emailLimpio = String(email).trim().toLowerCase();
+    const usernameLimpio = username ? String(username).trim().toLowerCase() : null;
+
+    const existeCorreo = await pool.query(
+      `SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
       [emailLimpio]
     );
 
-    if (existe.rows.length > 0) {
+    if (existeCorreo.rows.length > 0) {
       return res.status(409).json({
         success: false,
         message: "El correo ya esta registrado",
       });
+    }
+
+    if (usernameLimpio) {
+      const existeUsername = await pool.query(
+        `SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1`,
+        [usernameLimpio]
+      );
+
+      if (existeUsername.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: "El nombre de usuario ya esta en uso",
+        });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -77,7 +141,7 @@ exports.register = async (req, res) => {
       VALUES ($1, $2, $3, 'user', $4, $5, $6, true, NOW(), NOW())
       RETURNING id, name, email, role, username, phone, full_name, photo_path, photo_data
       `,
-      [name, emailLimpio, hashedPassword, username, phone, full_name]
+      [name, emailLimpio, hashedPassword, usernameLimpio, phone, full_name]
     );
 
     const user = result.rows[0];
@@ -105,16 +169,18 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, email, password } = req.body;
 
-    if (!email || !password) {
+    const loginValue = String(identifier || email || "").trim();
+
+    if (!loginValue || !password) {
       return res.status(400).json({
         success: false,
-        message: "Correo y contrasena son obligatorios",
+        message: "Correo o nombre de usuario y contrasena son obligatorios",
       });
     }
 
-    const emailLimpio = String(email).trim().toLowerCase();
+    const loginValueLower = loginValue.toLowerCase();
 
     const result = await pool.query(
       `
@@ -131,10 +197,11 @@ exports.login = async (req, res) => {
         photo_data,
         is_active
       FROM users
-      WHERE email = $1
+      WHERE LOWER(email) = LOWER($1)
+         OR LOWER(username) = LOWER($1)
       LIMIT 1
       `,
-      [emailLimpio]
+      [loginValueLower]
     );
 
     if (result.rows.length === 0) {
@@ -239,10 +306,10 @@ exports.oauthGoogle = async (req, res) => {
       [email]
     );
 
-    let user;
+    let user = result.rows[0];
 
-    if (result.rows.length === 0) {
-      const insertResult = await pool.query(
+    if (!user) {
+      const inserted = await pool.query(
         `
         INSERT INTO users (
           name,
@@ -256,7 +323,7 @@ exports.oauthGoogle = async (req, res) => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, 'user', NULL, NULL, $1, true, NOW(), NOW())
+        VALUES ($1, $2, NULL, 'user', NULL, NULL, $3, true, NOW(), NOW())
         RETURNING
           id,
           name,
@@ -269,19 +336,17 @@ exports.oauthGoogle = async (req, res) => {
           photo_data,
           is_active
         `,
-        [nombreGoogle, email, ""]
+        [nombreGoogle, email, nombreGoogle]
       );
 
-      user = insertResult.rows[0];
-    } else {
-      user = result.rows[0];
+      user = inserted.rows[0];
+    }
 
-      if (user.is_active === false) {
-        return res.status(403).json({
-          success: false,
-          message: "Tu cuenta esta desactivada",
-        });
-      }
+    if (user.is_active === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Tu cuenta esta desactivada",
+      });
     }
 
     const token = generarToken({
@@ -298,9 +363,9 @@ exports.oauthGoogle = async (req, res) => {
     });
   } catch (error) {
     console.error("Error en oauthGoogle:", error);
-    return res.status(401).json({
+    return res.status(500).json({
       success: false,
-      message: "Google token invalido o no autorizado",
+      message: "Error interno al autenticar con Google",
       error: error.message,
     });
   }
@@ -327,61 +392,64 @@ exports.forgotPassword = async (req, res) => {
     if (result.rows.length === 0) {
       return res.json({
         success: true,
-        message: "Si el correo existe, se envio un enlace de recuperacion",
+        message: "Si el correo existe, se enviaron instrucciones de recuperacion",
       });
     }
 
     const user = result.rows[0];
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
 
     await pool.query(
       `
       UPDATE users
-      SET
-        reset_password_token = $1,
-        reset_password_expires = $2,
-        updated_at = NOW()
+      SET reset_token = $1,
+          reset_token_expires = $2,
+          updated_at = NOW()
       WHERE id = $3
       `,
-      [resetToken, expiresAt, user.id]
+      [token, expiresAt, user.id]
     );
 
-    const baseUrl =
-      process.env.APP_BASE_URL ||
-      "http://localhost:5173";
-
-    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+    const frontendBase = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+    const resetLink = `${frontendBase}/reset-password?token=${token}`;
 
     await transporter.sendMail({
-      from: `"Radar Ciudadano" <${process.env.EMAIL_USER}>`,
+      from: process.env.EMAIL_USER,
       to: user.email,
-      subject: "Recuperacion de contrasena",
+      subject: "Recuperacion de contrasena - Radar Ciudadano",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; color: #ffffff; padding: 32px; border-radius: 16px;">
-          <h2 style="margin-top: 0;">Recuperacion de contrasena</h2>
-          <p>Hola ${user.name || "usuario"},</p>
-          <p>Recibimos una solicitud para restablecer tu contrasena.</p>
-          <p>
-            <a href="${resetUrl}" style="display:inline-block; background:#6366f1; color:#fff; text-decoration:none; padding:14px 22px; border-radius:10px; font-weight:bold;">
-              Restablecer contrasena
-            </a>
-          </p>
-          <p>Este enlace expirara en 30 minutos.</p>
-          <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+        <div style="font-family: Arial, sans-serif; background:#f8fafc; padding:24px;">
+          <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:18px; overflow:hidden; border:1px solid #e2e8f0;">
+            <div style="padding:24px; background:linear-gradient(90deg,#7390ff,#5e36db); color:#ffffff;">
+              <h2 style="margin:0;">Radar Ciudadano</h2>
+              <p style="margin:8px 0 0;">Recuperacion de contrasena</p>
+            </div>
+            <div style="padding:24px; color:#334155;">
+              <p>Hola ${user.name || "usuario"},</p>
+              <p>Recibimos una solicitud para restablecer tu contrasena.</p>
+              <p>
+                <a href="${resetLink}" style="display:inline-block; padding:12px 18px; background:#5e36db; color:#ffffff; text-decoration:none; border-radius:12px; font-weight:700;">
+                  Restablecer contrasena
+                </a>
+              </p>
+              <p>Este enlace expirara en 30 minutos.</p>
+              <p>Si tu no solicitaste este cambio, ignora este mensaje.</p>
+            </div>
+          </div>
         </div>
       `,
     });
 
     return res.json({
       success: true,
-      message: "Si el correo existe, se envio un enlace de recuperacion",
+      message: "Si el correo existe, se enviaron instrucciones de recuperacion",
     });
   } catch (error) {
     console.error("Error en forgotPassword:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al procesar la recuperacion de contrasena",
+      message: "Error al procesar recuperacion de contrasena",
       error: error.message,
     });
   }
@@ -394,7 +462,14 @@ exports.resetPassword = async (req, res) => {
     if (!token || !password) {
       return res.status(400).json({
         success: false,
-        message: "Token y nueva contrasena son obligatorios",
+        message: "Token y contrasena son obligatorios",
+      });
+    }
+
+    if (!validarPasswordSegura(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "La contrasena no cumple con los requisitos de seguridad",
       });
     }
 
@@ -402,9 +477,9 @@ exports.resetPassword = async (req, res) => {
       `
       SELECT id
       FROM users
-      WHERE
-        reset_password_token = $1
-        AND reset_password_expires > NOW()
+      WHERE reset_token = $1
+        AND reset_token_expires IS NOT NULL
+        AND reset_token_expires > NOW()
       LIMIT 1
       `,
       [token]
@@ -413,24 +488,23 @@ exports.resetPassword = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "El token es invalido o ya expiro",
+        message: "El enlace de recuperacion es invalido o ya expiro",
       });
     }
 
-    const user = result.rows[0];
+    const userId = result.rows[0].id;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await pool.query(
       `
       UPDATE users
-      SET
-        password = $1,
-        reset_password_token = NULL,
-        reset_password_expires = NULL,
-        updated_at = NOW()
+      SET password = $1,
+          reset_token = NULL,
+          reset_token_expires = NULL,
+          updated_at = NOW()
       WHERE id = $2
       `,
-      [hashedPassword, user.id]
+      [hashedPassword, userId]
     );
 
     return res.json({
@@ -441,7 +515,7 @@ exports.resetPassword = async (req, res) => {
     console.error("Error en resetPassword:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al restablecer la contrasena",
+      message: "Error al restablecer contrasena",
       error: error.message,
     });
   }
@@ -449,15 +523,6 @@ exports.resetPassword = async (req, res) => {
 
 exports.me = async (req, res) => {
   try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "No autorizado",
-      });
-    }
-
     const result = await pool.query(
       `
       SELECT
@@ -475,7 +540,7 @@ exports.me = async (req, res) => {
       WHERE id = $1
       LIMIT 1
       `,
-      [userId]
+      [req.user.id]
     );
 
     if (result.rows.length === 0) {
@@ -485,15 +550,24 @@ exports.me = async (req, res) => {
       });
     }
 
+    const user = result.rows[0];
+
+    if (user.is_active === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Tu cuenta esta desactivada",
+      });
+    }
+
     return res.json({
       success: true,
-      user: normalizarUsuario(result.rows[0]),
+      user: normalizarUsuario(user),
     });
   } catch (error) {
     console.error("Error en me:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al obtener el usuario",
+      message: "Error interno al obtener usuario",
       error: error.message,
     });
   }

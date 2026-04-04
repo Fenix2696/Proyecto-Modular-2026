@@ -4,13 +4,17 @@ import { useEffect, useRef } from "react";
 import Dashboard from "./components/Dashboard/Dashboard";
 import Login from "./components/Auth/Login";
 import Register from "./components/Auth/Register";
+import ForgotPassword from "./components/Auth/ForgotPassword";
+import ResetPassword from "./components/Auth/ResetPassword";
 
-const INACTIVITY_TIME = 10 * 60 * 1000;
+const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos
 
 function SessionHandler() {
   const navigate = useNavigate();
   const location = useLocation();
   const timeoutRef = useRef(null);
+
+  const publicRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
 
   const resetTimer = () => {
     if (timeoutRef.current) {
@@ -19,13 +23,9 @@ function SessionHandler() {
 
     timeoutRef.current = setTimeout(() => {
       const token = localStorage.getItem("token");
+      const isPublicRoute = publicRoutes.includes(location.pathname);
 
-      // No cerrar si está en login o register
-      if (
-        token &&
-        location.pathname !== "/login" &&
-        location.pathname !== "/register"
-      ) {
+      if (token && !isPublicRoute) {
         localStorage.clear();
         navigate("/login", { replace: true });
       }
@@ -61,6 +61,9 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
         <Route path="/" element={<Dashboard />} />
       </Routes>
     </Router>

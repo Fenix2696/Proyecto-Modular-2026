@@ -12,6 +12,8 @@ router.post("/login", authController.login);
 
 // Login con Google
 router.post("/oauth/google", authController.oauthGoogle);
+// Username
+router.get("/check-username", authController.checkUsername);
 
 // Recuperacion de contrasena
 router.post("/forgot-password", authController.forgotPassword);

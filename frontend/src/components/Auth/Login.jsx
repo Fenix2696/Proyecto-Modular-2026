@@ -11,7 +11,7 @@ function Login() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    email: "",
+    identifier: "",
     password: "",
   });
   const [errors, setErrors] = useState({});
@@ -20,11 +20,6 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [leaving, setLeaving] = useState(false);
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,10 +46,8 @@ function Login() {
 
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = "El email es requerido";
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = "Email invalido";
+    if (!formData.identifier) {
+      newErrors.identifier = "El correo o nombre de usuario es requerido";
     }
 
     if (!formData.password) {
@@ -71,7 +64,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await loginUser(formData.email, formData.password);
+      const response = await loginUser(formData.identifier, formData.password);
 
       if (!response?.token) {
         throw new Error("No se recibio token de autenticacion");
@@ -82,7 +75,10 @@ function Login() {
       if (response?.user) {
         localStorage.setItem("user", JSON.stringify(response.user));
       } else {
-        localStorage.setItem("user", JSON.stringify({ email: formData.email }));
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ identifier: formData.identifier })
+        );
       }
 
       if (rememberMe) {
@@ -287,19 +283,19 @@ function Login() {
 
             <form onSubmit={handleSubmit} className="login-form-radar">
               <div className="input-group-radar">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="identifier">Correo o nombre de usuario</label>
                 <input
                   type="text"
-                  id="email"
-                  name="email"
-                  className={`input-radar ${errors.email ? "input-error" : ""}`}
-                  placeholder="tu@email.com"
-                  value={formData.email}
+                  id="identifier"
+                  name="identifier"
+                  className={`input-radar ${errors.identifier ? "input-error" : ""}`}
+                  placeholder="tu correo o usuario"
+                  value={formData.identifier}
                   onChange={handleChange}
                   disabled={loading}
-                  autoComplete="email"
+                  autoComplete="username"
                 />
-                {errors.email && <span className="error-msg">{errors.email}</span>}
+                {errors.identifier && <span className="error-msg">{errors.identifier}</span>}
               </div>
 
               <div className="input-group-radar">

@@ -10,11 +10,11 @@ async function parseJsonSafe(res) {
   return data;
 }
 
-export async function loginUser(email, password) {
+export async function loginUser(identifier, password) {
   const res = await fetch(`${AUTH_URL}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, password }),
   });
   return parseJsonSafe(res);
 }
@@ -28,6 +28,13 @@ export async function registerUser(payload) {
   return parseJsonSafe(res);
 }
 
+export async function checkUsername(username) {
+  const res = await fetch(
+    `${AUTH_URL}/check-username?username=${encodeURIComponent(username)}`
+  );
+  return parseJsonSafe(res);
+}
+
 export async function forgotPassword(email) {
   const res = await fetch(`${AUTH_URL}/forgot-password`, {
     method: "POST",
@@ -37,11 +44,11 @@ export async function forgotPassword(email) {
   return parseJsonSafe(res);
 }
 
-export async function resetPassword(token, newPassword) {
+export async function resetPassword(token, password) {
   const res = await fetch(`${AUTH_URL}/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, newPassword }),
+    body: JSON.stringify({ token, password }),
   });
   return parseJsonSafe(res);
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import zxcvbn from "zxcvbn";
 import "./Login.css";
@@ -65,8 +65,13 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameExists, setUsernameExists] = useState(false);
+  const [usernameChecked, setUsernameChecked] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const usernameCheckTimeout = useRef(null);
 
   const reglasPassword = useMemo(() => validarPassword(form.password), [form.password]);
   const passwordStrength = useMemo(() => zxcvbn(form.password || ""), [form.password]);
@@ -80,12 +85,67 @@ export default function Register() {
 
   const telefonoValido = /^\d{10}$/.test(form.phone.trim());
 
+  useEffect(() => {
+    return () => {
+      if (usernameCheckTimeout.current) {
+        clearTimeout(usernameCheckTimeout.current);
+      }
+    };
+  }, []);
+
+  const checkUsername = async (username) => {
+    const usernameLimpio = String(username || "").trim();
+
+    if (!usernameLimpio) {
+      setCheckingUsername(false);
+      setUsernameExists(false);
+      setUsernameChecked(false);
+      return;
+    }
+
+    try {
+      setCheckingUsername(true);
+
+      const response = await fetch(
+        `${API_URL}/auth/check-username?username=${encodeURIComponent(usernameLimpio)}`
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      setUsernameExists(!!data?.exists);
+      setUsernameChecked(true);
+    } catch (err) {
+      console.error("Error verificando username:", err);
+      setUsernameExists(false);
+      setUsernameChecked(false);
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name === "phone") {
       const soloNumeros = value.replace(/\D/g, "").slice(0, 10);
       setForm((prev) => ({ ...prev, [name]: soloNumeros }));
+      return;
+    }
+
+    if (name === "username") {
+      setForm((prev) => ({ ...prev, [name]: value }));
+
+      setUsernameChecked(false);
+      setUsernameExists(false);
+
+      if (usernameCheckTimeout.current) {
+        clearTimeout(usernameCheckTimeout.current);
+      }
+
+      usernameCheckTimeout.current = setTimeout(() => {
+        checkUsername(value);
+      }, 450);
+
       return;
     }
 
@@ -119,8 +179,18 @@ export default function Register() {
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (!passwordsCoinciden) {
       setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    if (checkingUsername) {
+      setError("Espera a que termine la verificacion del nombre de usuario.");
+      return;
+    }
+
+    if (usernameExists) {
+      setError("El nombre de usuario ya esta en uso.");
       return;
     }
 
@@ -183,6 +253,70 @@ export default function Register() {
               autoComplete="email"
               placeholder="correo@ejemplo.com"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="name">Nombre completo</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={form.name}
+              onChange={handleChange}
+              autoComplete="name"
+              placeholder="Tu nombre completo"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="username">Nombre de usuario</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              value={form.username}
+              onChange={handleChange}
+              autoComplete="username"
+              placeholder="Tu usuario"
+            />
+
+            {form.username.trim().length > 0 && (
+              <div
+                className={`confirm-password-msg ${
+                  checkingUsername
+                    ? ""
+                    : usernameChecked && !usernameExists
+                    ? "ok"
+                    : usernameExists
+                    ? "error"
+                    : ""
+                }`}
+              >
+                {checkingUsername && "Verificando nombre de usuario..."}
+                {!checkingUsername && usernameChecked && !usernameExists && "Nombre de usuario disponible"}
+                {!checkingUsername && usernameExists && "Ese nombre de usuario ya existe"}
+              </div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="phone">Telefono</label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={handleChange}
+              autoComplete="tel"
+              placeholder="3331234567"
+              maxLength={10}
+            />
+            {form.phone.length > 0 && !telefonoValido && (
+              <div className="confirm-password-msg error">
+                El telefono debe tener 10 digitos
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -278,59 +412,13 @@ export default function Register() {
             )}
           </div>
 
-          <div className="form-group">
-            <label htmlFor="name">Nombre completo</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              value={form.name}
-              onChange={handleChange}
-              autoComplete="name"
-              placeholder="Tu nombre completo"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="username">Nombre de usuario</label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              value={form.username}
-              onChange={handleChange}
-              autoComplete="username"
-              placeholder="Tu usuario"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="phone">Telefono</label>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              inputMode="numeric"
-              value={form.phone}
-              onChange={handleChange}
-              autoComplete="tel"
-              placeholder="3331234567"
-              maxLength={10}
-            />
-            {form.phone.length > 0 && !telefonoValido && (
-              <div className="confirm-password-msg error">
-                El telefono debe tener 10 digitos
-              </div>
-            )}
-          </div>
-
           {error && <div className="register-alert error">{error}</div>}
           {success && <div className="register-alert success">{success}</div>}
 
           <button
             type="submit"
             className="register-submit"
-            disabled={loading}
+            disabled={loading || checkingUsername}
           >
             {loading ? "Creando cuenta..." : "Crear cuenta"}
           </button>
