@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Login.css";
 import { loginUser, loginWithGoogle } from "../../services/auth";
@@ -9,6 +9,7 @@ import communityIcon from "../../assets/feature-icons/comunidad.png";
 
 function Login() {
   const navigate = useNavigate();
+  const googleBtnRef = useRef(null);
 
   const [formData, setFormData] = useState({
     identifier: "",
@@ -106,55 +107,87 @@ function Login() {
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-    if (!clientId) return;
-    if (!window.google?.accounts?.id) return;
+    if (!clientId) {
+      console.warn("Falta VITE_GOOGLE_CLIENT_ID");
+      return;
+    }
 
-    const btn = document.getElementById("googleBtn");
-    if (!btn) return;
+    const initGoogle = () => {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) {
+        return false;
+      }
 
-    btn.innerHTML = "";
+      googleBtnRef.current.innerHTML = "";
 
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: async (resp) => {
-        try {
-          const idToken = resp?.credential;
-          if (!idToken) throw new Error("No se recibio credential de Google");
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (resp) => {
+          try {
+            const idToken = resp?.credential;
+            if (!idToken) {
+              throw new Error("No se recibio credential de Google");
+            }
 
-          setLoading(true);
-          setErrors({});
+            setLoading(true);
+            setErrors({});
 
-          const response = await loginWithGoogle(idToken);
+            const response = await loginWithGoogle(idToken);
 
-          localStorage.setItem("token", response.token);
-          localStorage.setItem("user", JSON.stringify(response.user));
+            if (!response?.token) {
+              throw new Error("No se recibio token de autenticacion");
+            }
 
-          if (rememberMe) localStorage.setItem("rememberMe", "true");
-          else localStorage.removeItem("rememberMe");
+            localStorage.setItem("token", response.token);
+            localStorage.setItem("user", JSON.stringify(response.user || {}));
 
-          setLoginSuccess(true);
-          setLoading(false);
+            if (rememberMe) {
+              localStorage.setItem("rememberMe", "true");
+            } else {
+              localStorage.removeItem("rememberMe");
+            }
 
-          setTimeout(() => {
-            goToDashboard();
-          }, 420);
-        } catch (error) {
-          setErrors({ general: error.message || "Error con Google" });
-          setLoading(false);
-        }
-      },
-    });
+            setLoginSuccess(true);
+            setLoading(false);
 
-    window.google.accounts.id.renderButton(btn, {
-      type: "standard",
-      theme: "outline",
-      size: "large",
-      text: "continue_with",
-      shape: "pill",
-      width: btn.offsetWidth || 360,
-      logo_alignment: "left",
-    });
-  }, [navigate, rememberMe]);
+            setTimeout(() => {
+              goToDashboard();
+            }, 420);
+          } catch (error) {
+            setErrors({
+              general: error.message || "Error al iniciar sesion con Google",
+            });
+            setLoading(false);
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        width: 360,
+        logo_alignment: "left",
+      });
+
+      return true;
+    };
+
+    if (initGoogle()) return;
+
+    const interval = setInterval(() => {
+      if (initGoogle()) {
+        clearInterval(interval);
+      }
+    }, 250);
+
+    setTimeout(() => clearInterval(interval), 10000);
+
+    return () => clearInterval(interval);
+  }, [rememberMe, navigate]);
 
   const handleSocialLogin = (provider) => {
     alert(`Login con ${provider} - Funcionalidad por implementar`);
@@ -263,13 +296,13 @@ function Login() {
         <section className="radar-form-section">
           <div className="form-box-radar">
             <div className="form-header-radar">
-              <h2>Iniciar Sesion</h2>
-              <p>Accede a tu cuenta para reportar incidentes</p>
+              <h2>Iniciar sesion</h2>
+              <p>Ingresa con tu cuenta para continuar</p>
             </div>
 
             {errors.general && (
               <div className="alert-error">
-                <span>⚠️</span>
+                <span>!</span>
                 {errors.general}
               </div>
             )}
@@ -277,7 +310,7 @@ function Login() {
             {loginSuccess && (
               <div className="alert-success">
                 <span>✓</span>
-                ¡Login exitoso! Redirigiendo...
+                Inicio de sesion exitoso
               </div>
             )}
 
@@ -285,90 +318,82 @@ function Login() {
               <div className="input-group-radar">
                 <label htmlFor="identifier">Correo o nombre de usuario</label>
                 <input
-                  type="text"
                   id="identifier"
                   name="identifier"
+                  type="text"
                   className={`input-radar ${errors.identifier ? "input-error" : ""}`}
-                  placeholder="tu correo o usuario"
                   value={formData.identifier}
                   onChange={handleChange}
-                  disabled={loading}
+                  placeholder="Correo o nombre de usuario"
                   autoComplete="username"
+                  disabled={loading}
                 />
                 {errors.identifier && <span className="error-msg">{errors.identifier}</span>}
               </div>
 
               <div className="input-group-radar">
                 <label htmlFor="password">Contrasena</label>
-                <div className="input-with-icon">
+                <div className="password-input-wrapper">
                   <input
-                    type={showPassword ? "text" : "password"}
                     id="password"
                     name="password"
+                    type={showPassword ? "text" : "password"}
                     className={`input-radar ${errors.password ? "input-error" : ""}`}
-                    placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
-                    disabled={loading}
+                    placeholder="Tu contrasena"
                     autoComplete="current-password"
+                    disabled={loading}
                   />
                   <button
                     type="button"
-                    className="toggle-password"
+                    className="password-toggle-btn"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                    disabled={loading}
                   >
-                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                    {showPassword ? "Ocultar" : "Mostrar"}
                   </button>
                 </div>
                 {errors.password && <span className="error-msg">{errors.password}</span>}
               </div>
 
-              <div className="form-options-radar">
-                <label className="checkbox-label">
+              <div className="login-options-radar">
+                <label className="remember-me-radar">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={loading}
                   />
-                  <span>Recuerdame</span>
+                  <span>Recordarme</span>
                 </label>
 
-                <Link to="/forgot-password" className="link-forgot">
-                  ¿Olvidaste tu contrasena?
+                <Link className="forgot-link-radar" to="/forgot-password">
+                  Olvidaste tu contrasena
                 </Link>
               </div>
 
-              <button
-                type="submit"
-                className={`btn-login-radar ${loginSuccess ? "success" : ""}`}
-                disabled={loading || loginSuccess}
-              >
-                {loading ? "Iniciando sesion..." : loginSuccess ? "✓ Exito" : "Iniciar Sesion"}
+              <button type="submit" className="btn-login-radar" disabled={loading}>
+                {loading ? "Ingresando..." : "Iniciar sesion"}
               </button>
             </form>
 
-            <div className="divider-radar">o continua con</div>
+            <div className="divider-radar">
+              <span>o continua con</span>
+            </div>
 
-            <div className="social-buttons-radar">
-              <div className="btn-social google-host">
-                <div id="googleBtn" className="google-btn-slot"></div>
-              </div>
-
-              <button
-                type="button"
-                className="btn-social apple"
-                onClick={() => handleSocialLogin("Apple")}
-              >
-                <svg viewBox="0 0 24 24" className="social-svg" aria-hidden="true">
-                  <path d="M17.05 20.28c-.98.95-2.05.80-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.20.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.80 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.40 1.80-3.12 1.87-2.38 5.98.48 7.13-.57 1.50-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.50-3.74 4.25z" />
-                </svg>
-                Continuar con Apple
-              </button>
+            <div className="social-login-radar">
+              <div
+                id="googleBtn"
+                ref={googleBtnRef}
+                className="google-login-mount"
+                style={{ width: "100%" }}
+              />
             </div>
 
             <div className="register-link-radar">
-              ¿No tienes cuenta? <Link to="/register">Registrate</Link>
+              <span>No tienes cuenta? </span>
+              <Link to="/register">Crear cuenta</Link>
             </div>
           </div>
         </section>
