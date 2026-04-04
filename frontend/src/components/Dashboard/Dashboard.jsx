@@ -744,15 +744,10 @@ export default function Dashboard() {
     destLatLngRef.current = null;
     setDestIsMyLocation(false);
 
-    if (userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng)) {
-      setFollowMe(true);
-      setMapCenter([userLocation.lat, userLocation.lng]);
-      setMapZoom(16);
-    } else {
-      setFollowMe(false);
-      setMapCenter([20.6597, -103.3496]);
-      setMapZoom(13);
-    }
+    // IMPORTANTE:
+    // al salir de la navegacion o limpiar la ruta,
+    // NO reactivar followMe automaticamente
+    setFollowMe(false);
 
     setClearMapToken((prev) => prev + 1);
   };
@@ -764,6 +759,8 @@ export default function Dashboard() {
 
   const handleStopNavigation = () => {
     setNavigationActive(false);
+    setNavigationCurrentStep(null);
+    setFollowMe(false);
   };
 
   const handleNavigationStepChange = (step) => {
@@ -772,6 +769,8 @@ export default function Dashboard() {
 
   const handleNavigationComplete = () => {
     setNavigationActive(false);
+    setNavigationCurrentStep(null);
+    setFollowMe(false);
   };
 
   const handleOriginSelect = async ({ lat, lng, address }) => {

@@ -1094,6 +1094,7 @@ export default function IncidentMapGoogle({
         zoom={mapZoom}
         onClick={onMapClick}
         onDragStart={() => onUserPanMap?.()}
+        onDrag={() => onUserPanMap?.()}
         onZoomChanged={() => onUserPanMap?.()}
         options={options}
         onLoad={handleMapLoad}
