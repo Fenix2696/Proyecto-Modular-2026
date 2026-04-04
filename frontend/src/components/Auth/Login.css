@@ -1195,3 +1195,162 @@
     font-size: 11px;
   }
 }
+
+/* =====================================================
+   REGISTER MOBILE FIX
+   compacta el formulario de registro en telefono
+   ===================================================== */
+@media (max-width: 768px){
+  .register-card{
+    justify-content: flex-start;
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .register-header{
+    margin-bottom: 14px;
+  }
+
+  .register-header h1{
+    font-size: clamp(28px, 7vw, 40px);
+    margin-bottom: 6px;
+  }
+
+  .register-header p{
+    font-size: 14px;
+  }
+
+  .register-form{
+    gap: 12px;
+  }
+
+  .form-group{
+    gap: 8px;
+  }
+
+  .form-group label{
+    margin: 0;
+    font-size: 13px;
+  }
+
+  .form-group input{
+    min-height: 50px;
+    padding: 13px 16px;
+    font-size: 16px;
+    border-radius: 16px;
+  }
+
+  .password-input-wrap input{
+    padding-right: 78px;
+  }
+
+  .toggle-password-btn{
+    right: 10px;
+    min-width: 56px;
+    height: 30px;
+    font-size: 11px;
+    border-radius: 999px;
+  }
+
+  .password-strength-box{
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .password-strength-top{
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  .strength-bar-track{
+    height: 8px;
+    margin-bottom: 8px;
+  }
+
+  .password-rules{
+    gap: 4px;
+  }
+
+  .password-rules li{
+    font-size: 11px;
+    padding-left: 15px;
+  }
+
+  .confirm-password-msg{
+    font-size: 12px;
+    margin-top: 0;
+  }
+
+  .register-alert{
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .register-submit{
+    min-height: 52px;
+    padding: 14px 18px;
+    font-size: 16px;
+    border-radius: 16px;
+  }
+
+  .register-footer{
+    font-size: 14px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 420px){
+  .register-card{
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .register-header{
+    margin-bottom: 12px;
+  }
+
+  .register-header h1{
+    font-size: 26px;
+  }
+
+  .form-group input{
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: 15px;
+  }
+
+  .password-input-wrap input{
+    padding-right: 72px;
+  }
+
+  .toggle-password-btn{
+    min-width: 52px;
+    height: 28px;
+    font-size: 10px;
+  }
+
+  .password-strength-box{
+    padding: 8px 10px;
+  }
+
+  .password-strength-top{
+    font-size: 11px;
+  }
+
+  .strength-bar-track{
+    height: 7px;
+  }
+
+  .password-rules li{
+    font-size: 10px;
+  }
+
+  .register-submit{
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  .register-footer{
+    font-size: 13px;
+  }
+}
