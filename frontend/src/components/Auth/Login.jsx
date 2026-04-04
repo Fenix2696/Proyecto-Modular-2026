@@ -107,15 +107,10 @@ function Login() {
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-    if (!clientId) {
-      console.warn("Falta VITE_GOOGLE_CLIENT_ID");
-      return;
-    }
+    if (!clientId) return;
 
-    const initGoogle = () => {
-      if (!window.google?.accounts?.id || !googleBtnRef.current) {
-        return false;
-      }
+    const initGoogleButton = () => {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
 
       googleBtnRef.current.innerHTML = "";
 
@@ -169,17 +164,17 @@ function Login() {
         size: "large",
         text: "continue_with",
         shape: "pill",
-        width: 360,
+        width: googleBtnRef.current.offsetWidth || 360,
         logo_alignment: "left",
       });
 
       return true;
     };
 
-    if (initGoogle()) return;
+    if (initGoogleButton()) return;
 
     const interval = setInterval(() => {
-      if (initGoogle()) {
+      if (initGoogleButton()) {
         clearInterval(interval);
       }
     }, 250);
@@ -187,7 +182,7 @@ function Login() {
     setTimeout(() => clearInterval(interval), 10000);
 
     return () => clearInterval(interval);
-  }, [rememberMe, navigate]);
+  }, [rememberMe]);
 
   const handleSocialLogin = (provider) => {
     alert(`Login con ${provider} - Funcionalidad por implementar`);
@@ -201,9 +196,19 @@ function Login() {
             <div className="radar-logo-wrapper">
               <div className="logo-circle-outer">
                 <div className="logo-circle-inner">
-                  <svg className="logo-shield" viewBox="0 0 100 100" aria-hidden="true">
+                  <svg
+                    className="logo-shield"
+                    viewBox="0 0 100 100"
+                    aria-hidden="true"
+                  >
                     <defs>
-                      <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <linearGradient
+                        id="shieldGradient"
+                        x1="0%"
+                        y1="0%"
+                        x2="0%"
+                        y2="100%"
+                      >
                         <stop offset="0%" stopColor="#60A5FA" />
                         <stop offset="100%" stopColor="#3B82F6" />
                       </linearGradient>
@@ -268,26 +273,44 @@ function Login() {
             <div className="radar-features-grid">
               <div className="feature-card-radar">
                 <div className="feature-icon-3d">
-                  <img className="feature-illustration" src={geoIcon} alt="Geolocalizacion" />
+                  <img
+                    className="feature-illustration"
+                    src={geoIcon}
+                    alt="Geolocalizacion"
+                  />
                 </div>
                 <h3 className="feature-title">Geolocalizacion</h3>
-                <p className="feature-description">Marca incidentes con precision</p>
+                <p className="feature-description">
+                  Marca incidentes con precision
+                </p>
               </div>
 
               <div className="feature-card-radar">
                 <div className="feature-icon-3d">
-                  <img className="feature-illustration" src={alertIcon} alt="Alertas en tiempo real" />
+                  <img
+                    className="feature-illustration"
+                    src={alertIcon}
+                    alt="Alertas en tiempo real"
+                  />
                 </div>
                 <h3 className="feature-title">Alertas en Tiempo Real</h3>
-                <p className="feature-description">Recibe notificaciones inmediatas</p>
+                <p className="feature-description">
+                  Recibe notificaciones inmediatas
+                </p>
               </div>
 
               <div className="feature-card-radar">
                 <div className="feature-icon-3d">
-                  <img className="feature-illustration" src={communityIcon} alt="Comunidad activa" />
+                  <img
+                    className="feature-illustration"
+                    src={communityIcon}
+                    alt="Comunidad activa"
+                  />
                 </div>
                 <h3 className="feature-title">Comunidad Activa</h3>
-                <p className="feature-description">Colabora con tus vecinos</p>
+                <p className="feature-description">
+                  Colabora con tus vecinos
+                </p>
               </div>
             </div>
           </div>
@@ -296,13 +319,13 @@ function Login() {
         <section className="radar-form-section">
           <div className="form-box-radar">
             <div className="form-header-radar">
-              <h2>Iniciar sesion</h2>
-              <p>Ingresa con tu cuenta para continuar</p>
+              <h2>Iniciar Sesion</h2>
+              <p>Accede a tu cuenta para reportar incidentes</p>
             </div>
 
             {errors.general && (
               <div className="alert-error">
-                <span>!</span>
+                <span>⚠️</span>
                 {errors.general}
               </div>
             )}
@@ -310,7 +333,7 @@ function Login() {
             {loginSuccess && (
               <div className="alert-success">
                 <span>✓</span>
-                Inicio de sesion exitoso
+                ¡Login exitoso! Redirigiendo...
               </div>
             )}
 
@@ -318,82 +341,114 @@ function Login() {
               <div className="input-group-radar">
                 <label htmlFor="identifier">Correo o nombre de usuario</label>
                 <input
+                  type="text"
                   id="identifier"
                   name="identifier"
-                  type="text"
-                  className={`input-radar ${errors.identifier ? "input-error" : ""}`}
+                  className={`input-radar ${
+                    errors.identifier ? "input-error" : ""
+                  }`}
+                  placeholder="tu correo o usuario"
                   value={formData.identifier}
                   onChange={handleChange}
-                  placeholder="Correo o nombre de usuario"
-                  autoComplete="username"
                   disabled={loading}
+                  autoComplete="username"
                 />
-                {errors.identifier && <span className="error-msg">{errors.identifier}</span>}
+                {errors.identifier && (
+                  <span className="error-msg">{errors.identifier}</span>
+                )}
               </div>
 
               <div className="input-group-radar">
                 <label htmlFor="password">Contrasena</label>
-                <div className="password-input-wrapper">
+                <div className="input-with-icon">
                   <input
+                    type={showPassword ? "text" : "password"}
                     id="password"
                     name="password"
-                    type={showPassword ? "text" : "password"}
-                    className={`input-radar ${errors.password ? "input-error" : ""}`}
+                    className={`input-radar ${
+                      errors.password ? "input-error" : ""
+                    }`}
+                    placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Tu contrasena"
-                    autoComplete="current-password"
                     disabled={loading}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
-                    className="password-toggle-btn"
+                    className="toggle-password"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    disabled={loading}
+                    aria-label={
+                      showPassword
+                        ? "Ocultar contrasena"
+                        : "Mostrar contrasena"
+                    }
                   >
-                    {showPassword ? "Ocultar" : "Mostrar"}
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
                 </div>
-                {errors.password && <span className="error-msg">{errors.password}</span>}
+                {errors.password && (
+                  <span className="error-msg">{errors.password}</span>
+                )}
               </div>
 
-              <div className="login-options-radar">
-                <label className="remember-me-radar">
+              <div className="form-options-radar">
+                <label className="checkbox-label">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    disabled={loading}
                   />
-                  <span>Recordarme</span>
+                  <span>Recuerdame</span>
                 </label>
 
-                <Link className="forgot-link-radar" to="/forgot-password">
-                  Olvidaste tu contrasena
+                <Link to="/forgot-password" className="link-forgot">
+                  ¿Olvidaste tu contrasena?
                 </Link>
               </div>
 
-              <button type="submit" className="btn-login-radar" disabled={loading}>
-                {loading ? "Ingresando..." : "Iniciar sesion"}
+              <button
+                type="submit"
+                className={`btn-login-radar ${loginSuccess ? "success" : ""}`}
+                disabled={loading || loginSuccess}
+              >
+                {loading
+                  ? "Iniciando sesion..."
+                  : loginSuccess
+                  ? "✓ Exito"
+                  : "Iniciar Sesion"}
               </button>
             </form>
 
-            <div className="divider-radar">
-              <span>o continua con</span>
-            </div>
+            <div className="divider-radar">o continua con</div>
 
-            <div className="social-login-radar">
-              <div
-                id="googleBtn"
-                ref={googleBtnRef}
-                className="google-login-mount"
-                style={{ width: "100%" }}
-              />
+            <div className="social-buttons-radar">
+              <div className="btn-social google-host">
+                <div
+                  id="googleBtn"
+                  ref={googleBtnRef}
+                  className="google-btn-slot"
+                ></div>
+              </div>
+
+              <button
+                type="button"
+                className="btn-social apple"
+                onClick={() => handleSocialLogin("Apple")}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="social-svg"
+                  aria-hidden="true"
+                >
+                  <path d="M17.05 20.28c-.98.95-2.05.80-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.20.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.80 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.40 1.80-3.12 1.87-2.38 5.98.48 7.13-.57 1.50-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.50-3.74 4.25z" />
+                </svg>
+                Continuar con Apple
+              </button>
             </div>
 
             <div className="register-link-radar">
-              <span>No tienes cuenta? </span>
-              <Link to="/register">Crear cuenta</Link>
+              ¿No tienes cuenta? <Link to="/register">Registrate</Link>
             </div>
           </div>
         </section>
