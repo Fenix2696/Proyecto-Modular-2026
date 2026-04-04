@@ -726,12 +726,15 @@
   }
 
   .form-options-radar{
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .link-forgot{
-    justify-self: start;
-    text-align: left;
+    align-self: flex-end;
+    text-align: right;
+    width: 100%;
   }
 }
 
