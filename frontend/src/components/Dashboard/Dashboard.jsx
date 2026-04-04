@@ -194,6 +194,18 @@ function mapModeToRoutesApi(modeKey) {
   return "DRIVE";
 }
 
+function mapAiCategoryToType(category) {
+  const c = String(category || "").toLowerCase();
+
+  if (c === "asalto" || c === "robo") return "robbery";
+  if (c === "choque") return "accident";
+  if (c === "emergencia" || c === "violencia") return "emergency";
+  if (c === "cristalazo" || c === "delito") return "theft";
+  if (c === "vandalismo") return "vandalism";
+
+  return "theft";
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
@@ -439,7 +451,10 @@ export default function Dashboard() {
       const rows = response?.data || [];
 
       const activos = rows.filter(
-        (r) => r.is_active === true || r.is_active === undefined || r.is_active === null
+        (r) =>
+          r.is_active === true ||
+          r.is_active === undefined ||
+          r.is_active === null
       );
 
       setAiReports(activos.length ? activos : rows);
@@ -477,20 +492,80 @@ export default function Dashboard() {
     });
   }, [incidents, incidentQuery, filters]);
 
+  const aiRouteIncidents = useMemo(() => {
+    const q = (incidentQuery || "").trim().toLowerCase();
+
+    return (aiReports || [])
+      .map((r) => {
+        const lat = Number(r.lat ?? r.latitude);
+        const lng = Number(r.lng ?? r.longitude);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+        const type = mapAiCategoryToType(r.category);
+        const timestampValue =
+          r.published_at ||
+          r.publishedAt ||
+          r.date ||
+          r.created_at ||
+          r.createdAt ||
+          r.updated_at ||
+          r.updatedAt;
+
+        const timestamp = timestampValue ? new Date(timestampValue) : new Date();
+
+        return {
+          id: `ai-${r.id}`,
+          type,
+          lat,
+          lng,
+          title: r.title || "Reporte IA",
+          description: r.summary || r.description || r.title || "Reporte IA",
+          address: r.address || r.location || "",
+          timestamp,
+          source: "ai",
+          category: r.category || "otro",
+          source_name: r.source_name || "IA",
+        };
+      })
+      .filter((i) => {
+        if (!i) return false;
+        if (!filters[i.type]) return false;
+        if (!inTimeRange(i.timestamp, filters.timeRange)) return false;
+        if (!q) return true;
+
+        const t = (i.title || "").toLowerCase();
+        const d = (i.description || "").toLowerCase();
+        const a = (i.address || "").toLowerCase();
+        const typeText = (TYPE_SEARCH_TEXT[i.type] || i.type || "").toLowerCase();
+
+        return (
+          t.includes(q) ||
+          d.includes(q) ||
+          a.includes(q) ||
+          typeText.includes(q)
+        );
+      });
+  }, [aiReports, incidentQuery, filters]);
+
+  const allRouteIncidents = useMemo(() => {
+    return [...filteredIncidents, ...aiRouteIncidents];
+  }, [filteredIncidents, aiRouteIncidents]);
+
   const stats = useMemo(() => {
     const base = {
-      total: filteredIncidents.length,
+      total: allRouteIncidents.length,
       robbery: 0,
       accident: 0,
       emergency: 0,
       theft: 0,
       vandalism: 0,
     };
-    for (const i of filteredIncidents) {
+    for (const i of allRouteIncidents) {
       if (base[i.type] !== undefined) base[i.type] += 1;
     }
     return base;
-  }, [filteredIncidents]);
+  }, [allRouteIncidents]);
 
   const handleCenterToMe = () => {
     if (!userLocation) return;
@@ -636,7 +711,7 @@ export default function Dashboard() {
       });
     });
 
-    const info = toRoutesInfo(res, filteredIncidents, modeKey);
+    const info = toRoutesInfo(res, allRouteIncidents, modeKey);
 
     let bestIdx = 0;
     let bestScore = Infinity;
