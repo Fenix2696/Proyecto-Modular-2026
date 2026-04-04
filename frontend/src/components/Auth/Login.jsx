@@ -41,7 +41,7 @@ function Login() {
   const goToDashboard = () => {
     setLeaving(true);
     setTimeout(() => {
-      navigate("/map", { replace: true });
+      navigate("/", { replace: true });
     }, 280);
   };
 

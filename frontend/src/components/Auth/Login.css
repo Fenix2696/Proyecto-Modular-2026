@@ -1354,3 +1354,66 @@
     font-size: 13px;
   }
 }
+
+/* =====================================================
+   REGISTER SCROLL FIX
+   ===================================================== */
+
+.register-page{
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.register-card{
+  overflow: visible;
+}
+
+.register-form{
+  overflow: visible;
+}
+
+@media (max-width: 768px){
+  .register-page{
+    min-height: 100dvh;
+    height: auto;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .register-card{
+    min-height: auto;
+    justify-content: flex-start;
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .register-form{
+    padding-bottom: 26px;
+  }
+
+  /* scroll mas discreto */
+  .register-page::-webkit-scrollbar{
+    width: 6px;
+  }
+
+  .register-page::-webkit-scrollbar-thumb{
+    background: rgba(255,255,255,0.20);
+    border-radius: 999px;
+  }
+}
+
+@media (max-width: 420px){
+  .register-page{
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .register-card{
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
+
+  .register-form{
+    padding-bottom: 34px;
+  }
+}
