@@ -1507,7 +1507,7 @@ export default function IncidentMapGoogle({
           setHeatPanelOpen(false);
           setShowLegend((v) => !v);
         }}
-        title="Tipos de puntos"
+        title="Tipos de Reportes"
       >
         🤖
       </button>

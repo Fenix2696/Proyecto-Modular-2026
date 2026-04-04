@@ -11,12 +11,10 @@ const MIN_SYNC_INTERVAL_MINUTES = 20;
 const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
 
+// Reducidas para bajar el riesgo de 429
 const PRIMARY_SEARCH_QUERIES = [
   "Guadalajara inseguridad",
   "Guadalajara accidente vial",
-  "Zapopan inseguridad",
-  "Tlajomulco violencia",
-  "Jalisco delito",
 ];
 
 const ZMG_KEYWORDS = [
@@ -815,6 +813,11 @@ async function resolveLocationForNews(item) {
   };
 }
 
+function looksLikeRateLimitError(message = "") {
+  const m = String(message || "").toLowerCase();
+  return m.includes("429") || m.includes("too many requests");
+}
+
 async function fetchGNewsWithQueries(queries) {
   const allResults = [];
   const queryStats = [];
@@ -842,7 +845,7 @@ async function fetchGNewsWithQueries(queries) {
         count: noticias.length,
       });
 
-      await sleep(1200);
+      await sleep(3000);
     } catch (error) {
       console.error("Error GNews:", query, error.message);
       queryStats.push({
@@ -851,7 +854,7 @@ async function fetchGNewsWithQueries(queries) {
         count: 0,
         error: error.message,
       });
-      await sleep(1800);
+      await sleep(4000);
     }
   }
 
@@ -973,6 +976,26 @@ async function getStoredActiveAIReports(limit = DEFAULT_REPORT_LIMIT) {
   return result.rows;
 }
 
+async function getStoredFallbackAIReports(limit = DEFAULT_REPORT_LIMIT) {
+  const safeLimit = clampLimit(limit);
+
+  const result = await pool.query(
+    `
+    SELECT *
+    FROM ai_reports
+    ORDER BY
+      is_active DESC,
+      published_at DESC NULLS LAST,
+      detected_at DESC,
+      created_at DESC
+    LIMIT $1
+    `,
+    [safeLimit]
+  );
+
+  return result.rows;
+}
+
 function selectBestDayWindow(newsItems) {
   const windows = [4, 7, 15];
 
@@ -991,6 +1014,44 @@ function selectBestDayWindow(newsItems) {
   return { days: 15, filtered: newsItems };
 }
 
+async function buildFallbackResponse({
+  res,
+  forceSync,
+  queryStats = [],
+  message = "Mostrando noticias guardadas en base de datos.",
+  reason = "",
+}) {
+  const activeRows = await getStoredActiveAIReports(DEFAULT_REPORT_LIMIT);
+  const fallbackRows = activeRows.length
+    ? activeRows
+    : await getStoredFallbackAIReports(DEFAULT_REPORT_LIMIT);
+
+  return res.json({
+    success: true,
+    message,
+    reason,
+    usedCache: true,
+    usedDatabaseFallback: true,
+    forceSync,
+    minSyncMinutes: MIN_SYNC_INTERVAL_MINUTES,
+    fetched: 0,
+    valid: 0,
+    selectedWindowDays: 15,
+    uniqueCandidates: 0,
+    inserted: 0,
+    updated: 0,
+    failed: 0,
+    geocoded: 0,
+    payloadLocated: 0,
+    fallbackLocated: 0,
+    withoutCoords: 0,
+    cachedCount: fallbackRows.length,
+    queryStats,
+    sampleErrors: [],
+    data: fallbackRows,
+  });
+}
+
 async function syncAIReports(req, res) {
   try {
     await expireOldAIReports();
@@ -999,22 +1060,42 @@ async function syncAIReports(req, res) {
     const syncCheck = await shouldSkipExternalSync();
 
     if (!forceSync && syncCheck.skip) {
-      const cachedRows = await getStoredActiveAIReports(DEFAULT_REPORT_LIMIT);
+      const activeRows = await getStoredActiveAIReports(DEFAULT_REPORT_LIMIT);
+      const rows = activeRows.length
+        ? activeRows
+        : await getStoredFallbackAIReports(DEFAULT_REPORT_LIMIT);
 
       return res.json({
         success: true,
-        message: "Sync omitido: usando cache local",
+        message: activeRows.length
+          ? "Sync omitido: usando cache local"
+          : "Sync omitido: usando respaldo de base de datos",
         usedCache: true,
+        usedDatabaseFallback: !activeRows.length,
         forceSync: false,
         minSyncMinutes: MIN_SYNC_INTERVAL_MINUTES,
         lastSyncAt: syncCheck.lastSyncAt,
         reason: syncCheck.reason,
-        cachedCount: cachedRows.length,
-        data: cachedRows,
+        cachedCount: rows.length,
+        data: rows,
       });
     }
 
     const { noticias, queryStats } = await fetchAllNewsFromJava();
+
+    if (!Array.isArray(noticias) || noticias.length === 0) {
+      const hasRateLimit = queryStats.some((q) => looksLikeRateLimitError(q.error));
+
+      return buildFallbackResponse({
+        res,
+        forceSync,
+        queryStats,
+        message: hasRateLimit
+          ? "Las fuentes externas alcanzaron su limite. Mostrando noticias guardadas en base de datos."
+          : "No se pudieron obtener noticias externas. Mostrando noticias guardadas en base de datos.",
+        reason: hasRateLimit ? "Rate limit 429 detectado" : "Sin resultados externos",
+      });
+    }
 
     const noticiasValidas = noticias.filter((n) => {
       if (!n?.source_url) return false;
@@ -1035,6 +1116,16 @@ async function syncAIReports(req, res) {
       return Number.isFinite(diffDias) && diffDias >= 0 && diffDias <= 45;
     });
 
+    if (!noticiasValidas.length) {
+      return buildFallbackResponse({
+        res,
+        forceSync,
+        queryStats,
+        message: "Las noticias externas no pasaron los filtros. Mostrando noticias guardadas en base de datos.",
+        reason: "Todas las noticias fueron descartadas por validacion",
+      });
+    }
+
     const { days, filtered } = selectBestDayWindow(noticiasValidas);
 
     const uniqueByUrl = [];
@@ -1044,6 +1135,16 @@ async function syncAIReports(req, res) {
       if (!n?.source_url || seen.has(n.source_url)) continue;
       seen.add(n.source_url);
       uniqueByUrl.push(n);
+    }
+
+    if (!uniqueByUrl.length) {
+      return buildFallbackResponse({
+        res,
+        forceSync,
+        queryStats,
+        message: "No hubo noticias unicas para guardar. Mostrando noticias guardadas en base de datos.",
+        reason: "No hubo candidatos unicos",
+      });
     }
 
     let inserted = 0;
@@ -1178,12 +1279,17 @@ async function syncAIReports(req, res) {
     }
 
     await expireOldAIReports();
-    const storedRows = await getStoredActiveAIReports(DEFAULT_REPORT_LIMIT);
+
+    const activeRows = await getStoredActiveAIReports(DEFAULT_REPORT_LIMIT);
+    const storedRows = activeRows.length
+      ? activeRows
+      : await getStoredFallbackAIReports(DEFAULT_REPORT_LIMIT);
 
     return res.json({
       success: true,
       message: "Noticias sincronizadas",
       usedCache: false,
+      usedDatabaseFallback: !activeRows.length && !!storedRows.length,
       forceSync,
       minSyncMinutes: MIN_SYNC_INTERVAL_MINUTES,
       fetched: noticias.length,
@@ -1204,18 +1310,34 @@ async function syncAIReports(req, res) {
     });
   } catch (error) {
     console.error("Error IA sync:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Error al obtener noticias IA",
-      detail: error.message,
-    });
+
+    try {
+      return buildFallbackResponse({
+        res,
+        forceSync: String(req.query.force || "").toLowerCase() === "true",
+        queryStats: [],
+        message: "Error durante la sincronizacion. Mostrando noticias guardadas en base de datos.",
+        reason: error.message,
+      });
+    } catch {
+      return res.status(500).json({
+        success: false,
+        message: "Error al obtener noticias IA",
+        detail: error.message,
+      });
+    }
   }
 }
 
 async function getActiveAIReports(req, res) {
   try {
     const limit = clampLimit(req.query.limit, DEFAULT_REPORT_LIMIT);
-    const rows = await getStoredActiveAIReports(limit);
+
+    let rows = await getStoredActiveAIReports(limit);
+
+    if (!rows.length) {
+      rows = await getStoredFallbackAIReports(limit);
+    }
 
     return res.json({
       success: true,
