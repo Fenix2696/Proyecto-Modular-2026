@@ -403,8 +403,8 @@ exports.forgotPassword = async (req, res) => {
     await pool.query(
       `
       UPDATE users
-      SET reset_token = $1,
-          reset_token_expires = $2,
+      SET reset_password_token = $1,
+          reset_password_expires = $2,
           updated_at = NOW()
       WHERE id = $3
       `,
@@ -477,9 +477,9 @@ exports.resetPassword = async (req, res) => {
       `
       SELECT id
       FROM users
-      WHERE reset_token = $1
-        AND reset_token_expires IS NOT NULL
-        AND reset_token_expires > NOW()
+      WHERE reset_password_token = $1
+        AND reset_password_expires IS NOT NULL
+        AND reset_password_expires > NOW()
       LIMIT 1
       `,
       [token]
@@ -499,8 +499,8 @@ exports.resetPassword = async (req, res) => {
       `
       UPDATE users
       SET password = $1,
-          reset_token = NULL,
-          reset_token_expires = NULL,
+          reset_password_token = NULL,
+          reset_password_expires = NULL,
           updated_at = NOW()
       WHERE id = $2
       `,
