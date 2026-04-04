@@ -1,43 +1,71 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-
-import Login from "./components/Auth/Login";
-import Register from "./components/Auth/Register";
-import ForgotPassword from "./components/Auth/ForgotPassword";
-import ResetPassword from "./components/Auth/ResetPassword";
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
 
 import Dashboard from "./components/Dashboard/Dashboard";
-import PrivateRoute from "./components/Auth/PrivateRoute";
+import Login from "./components/Auth/Login"; // ajusta ruta si es diferente
 
-import "./App.css";
+const INACTIVITY_TIME = 5 * 60 * 1000; // 10 minutos
 
-function App() {
+function SessionHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const timeoutRef = useRef(null);
+
+  const resetTimer = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      const token = localStorage.getItem("token");
+
+      // solo cerrar si está logueado
+      if (token) {
+        console.log("Sesion expirada por inactividad");
+
+        localStorage.clear();
+        navigate("/login", { replace: true });
+      }
+    }, INACTIVITY_TIME);
+  };
+
+  useEffect(() => {
+    const events = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "scroll"
+    ];
+
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    resetTimer();
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [location.pathname]);
+
+  return null;
+}
+
+export default function App() {
   return (
     <Router>
+
+      <SessionHandler />
+
       <Routes>
-        {/* Default */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-
-        {/* Auth */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-
-        {/* App */}
-        <Route
-          path="/map"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Dashboard />} />
       </Routes>
     </Router>
   );
 }
-
-export default App;
