@@ -7,44 +7,49 @@
   border-right: 1px solid var(--rc-border);
   backdrop-filter: blur(14px);
   box-shadow: var(--rc-shadow-soft);
-  display:flex;
-  flex-direction:column;
-
-  /* ✅ FIX: no recortar dropdowns */
+  display: flex;
+  flex-direction: column;
   overflow: visible;
-
-  /* ✅ para stacking */
   position: relative;
   z-index: 50;
 }
 
 .rc-panel-header{
   padding: 14px 14px;
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--rc-border);
 }
-.rc-panel-title{ font-weight: 900; letter-spacing: -0.2px; }
+
+.rc-panel-title{
+  font-weight: 900;
+  letter-spacing: -0.2px;
+}
 
 /* ✅ FIX REAL: el scroll queda aqui y ahora SI tiene alto */
 .rc-panel-body{
   padding: 14px;
   flex: 1;
   min-height: 0;
-  overflow:auto;
+  overflow: auto;
 }
 
 /* Fields */
-.rc-field{ margin-bottom: 14px; }
+.rc-field{
+  margin-bottom: 14px;
+}
+
 .rc-field label{
-  display:block;
+  display: block;
   font-weight: 800;
   font-size: 12px;
   color: var(--rc-muted);
   margin-bottom: 8px;
 }
-.rc-input, .rc-select{
+
+.rc-input,
+.rc-select{
   width: 100%;
   padding: 12px 12px;
   border-radius: 14px;
@@ -53,23 +58,37 @@
   color: var(--rc-text);
   outline: none;
 }
-.rc-input::placeholder{ color: rgba(255,255,255,0.55); }
-.rc-help{ margin-top: 8px; color: var(--rc-muted); font-size: 12px; }
+
+.rc-input::placeholder{
+  color: rgba(255,255,255,0.55);
+}
+
+.rc-help{
+  margin-top: 8px;
+  color: var(--rc-muted);
+  font-size: 12px;
+}
 
 .rc-check{
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
   gap: 10px;
   padding: 10px 8px;
   border-radius: 14px;
-  cursor:pointer;
+  cursor: pointer;
   border: 1px solid transparent;
 }
+
 .rc-check:hover{
   background: rgba(255,255,255,0.06);
   border-color: rgba(255,255,255,0.10);
 }
-.rc-check input{ width: 18px; height: 18px; accent-color: var(--rc-primary); }
+
+.rc-check input{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--rc-primary);
+}
 
 .rc-secondary-btn{
   width: 100%;
@@ -78,10 +97,13 @@
   border: 1px solid rgba(255,255,255,0.16);
   background: rgba(255,255,255,0.08);
   color: var(--rc-text);
-  cursor:pointer;
+  cursor: pointer;
   font-weight: 800;
 }
-.rc-secondary-btn:hover{ background: rgba(255,255,255,0.12); }
+
+.rc-secondary-btn:hover{
+  background: rgba(255,255,255,0.12);
+}
 
 /* ======================================================
    LAYERS (Capas)
@@ -100,7 +122,7 @@
   padding: 10px;
   cursor: pointer;
   color: var(--rc-text);
-  display:flex;
+  display: flex;
   flex-direction: column;
   gap: 8px;
   align-items: center;
@@ -133,7 +155,7 @@
 }
 
 .rc-layer-hints{
-  display:flex;
+  display: flex;
   flex-direction: column;
   gap: 10px;
 }
@@ -143,7 +165,7 @@
   background: rgba(255,255,255,0.06);
   border-radius: 16px;
   padding: 12px;
-  display:flex;
+  display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
@@ -156,7 +178,6 @@
 
 /* ======================================================
    ✅ MODAL BASE (para ReportModal y visor de imagen)
-   - Evita que quede detras del mapa
 ====================================================== */
 
 .rc-modal-backdrop{
@@ -181,8 +202,8 @@
 }
 
 .rc-modal-head{
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   padding: 14px 14px;
   border-bottom: 1px solid rgba(255,255,255,0.10);
@@ -199,7 +220,7 @@
 }
 
 .rc-modal-actions{
-  display:flex;
+  display: flex;
   gap: 10px;
   padding: 14px;
   border-top: 1px solid rgba(255,255,255,0.10);
@@ -212,9 +233,10 @@
   border: 1px solid rgba(99,102,241,0.35);
   background: rgba(99,102,241,0.22);
   color: rgba(255,255,255,0.95);
-  cursor:pointer;
+  cursor: pointer;
   font-weight: 900;
 }
+
 .rc-primary-btn:hover{
   background: rgba(99,102,241,0.28);
 }
@@ -254,7 +276,7 @@
     top: 72px;
     left: 0;
     width: 100vw;
-    height: calc(100vh - 72px);
+    height: calc(100dvh - 72px);
     max-width: 100vw;
     border-right: none;
     border-top: 1px solid rgba(255,255,255,0.10);
@@ -262,6 +284,7 @@
     z-index: 220;
     box-shadow: 0 24px 60px rgba(0,0,0,0.45);
     animation: rcPanelSlideIn .22s ease;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .rc-panel-header{
@@ -274,6 +297,9 @@
 
   .rc-panel-body{
     padding: 14px 14px 24px;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .rc-mapmode-grid{

@@ -285,14 +285,38 @@ export default function Dashboard() {
 
       const clickedInsideSidebar = !!target.closest(".rc-sidebar");
       const clickedInsidePanel = !!target.closest(".rc-panel");
-      const clickedMenuButton = !!target.closest(".menu-button");
+      const clickedMenuButton =
+        !!target.closest(".menu-button") ||
+        !!target.closest(".rc-menu-btn");
 
-      if (!clickedInsideSidebar && !clickedInsidePanel && !clickedMenuButton) {
-        setSidebarCollapsed(true);
+      // Sugerencias / autocomplete / busquedas recientes / wrappers de busqueda
+      const clickedInsidePac = !!target.closest(".pac-container");
+      const clickedInsideRecent = !!target.closest(".rc-recent-searches");
+      const clickedInsidePlacesWrap = !!target.closest(".rc-places-wrap");
+      const clickedInsideSearch = !!target.closest(".rc-search");
+      const clickedInsideTopbar = !!target.closest(".rc-topbar");
+      const clickedInsideAutocompleteWidget =
+        !!target.closest(".gmp-autocomplete") ||
+        !!target.closest(".gmpx-placeautocomplete");
 
-        if (activePanel !== "none") {
-          setActivePanel("none");
-        }
+      if (
+        clickedInsideSidebar ||
+        clickedInsidePanel ||
+        clickedMenuButton ||
+        clickedInsidePac ||
+        clickedInsideRecent ||
+        clickedInsidePlacesWrap ||
+        clickedInsideSearch ||
+        clickedInsideTopbar ||
+        clickedInsideAutocompleteWidget
+      ) {
+        return;
+      }
+
+      setSidebarCollapsed(true);
+
+      if (activePanel !== "none") {
+        setActivePanel("none");
       }
     };
 
@@ -414,11 +438,13 @@ export default function Dashboard() {
       const response = await getActiveAIReports(limit);
       const rows = response?.data || [];
 
-      const activos = rows.filter(r => r.is_active);
+      const activos = rows.filter(
+        (r) => r.is_active === true || r.is_active === undefined || r.is_active === null
+      );
 
-      setAiReports(activos);
+      setAiReports(activos.length ? activos : rows);
 
-      return activos;
+      return activos.length ? activos : rows;
     } catch (error) {
       console.error("Error cargando noticias IA:", error);
       setAiReports([]);

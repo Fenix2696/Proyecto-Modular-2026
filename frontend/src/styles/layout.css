@@ -6,26 +6,31 @@
 
 /* Layout body */
 .rc-body{
-  height: calc(100vh - var(--rc-header-h));
-  display:flex;
-  overflow:hidden;
+  height: calc(100dvh - var(--rc-header-h));
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
 }
 
 /* Main */
 .rc-main{
   flex: 1;
   position: relative;
-  overflow:hidden;
+  overflow: hidden;
   padding: 14px;
+  min-width: 0;
+  min-height: 0;
 }
+
 .rc-map-wrap{
   height: 100%;
   border-radius: 22px;
-  overflow:hidden;
+  overflow: hidden;
   border: 1px solid rgba(255,255,255,0.14);
   box-shadow: var(--rc-shadow);
   background: rgba(255,255,255,0.06);
 }
+
 .leaflet-container{
   width: 100% !important;
   height: 100% !important;
@@ -36,55 +41,125 @@
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 10px 25px rgba(0,0,0,0.35);
   border: 2px solid rgba(255,255,255,0.7);
 }
-.rc-marker-emoji{ font-size: 18px; }
+
+.rc-marker-emoji{
+  font-size: 18px;
+}
 
 /* Popup */
-.rc-popup{ min-width: 220px; }
-.rc-popup-title{ font-weight: 900; margin-bottom: 6px; color: #0f172a; }
-.rc-popup-desc{ color: rgba(15,23,42,0.75); font-size: 13px; margin-bottom: 10px; }
-.rc-popup-meta{ display:flex; flex-direction:column; gap: 4px; font-size: 12px; color: rgba(15,23,42,0.65); }
+.rc-popup{
+  min-width: 220px;
+}
+
+.rc-popup-title{
+  font-weight: 900;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.rc-popup-desc{
+  color: rgba(15,23,42,0.75);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.rc-popup-meta{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(15,23,42,0.65);
+}
 
 /* Cards list */
-.rc-list{ display:flex; flex-direction:column; gap: 10px; }
+.rc-list{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .rc-card{
   width: 100%;
-  text-align:left;
+  text-align: left;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.06);
   padding: 12px;
   color: var(--rc-text);
-  cursor:pointer;
+  cursor: pointer;
 }
-.rc-card:hover{ background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.18); }
-.rc-card-row{ display:flex; align-items:center; gap: 10px; margin-bottom: 6px; }
+
+.rc-card:hover{
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.18);
+}
+
+.rc-card-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
 .rc-badge{
-  width: 10px; height: 10px; border-radius: 999px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
   background: linear-gradient(135deg, var(--rc-primary), var(--rc-primary-2));
   box-shadow: 0 0 0 6px rgba(102,126,234,0.15);
 }
-.rc-card-title{ font-weight: 900; font-size: 14px; }
-.rc-card-desc{ color: var(--rc-muted); font-size: 13px; line-height: 1.35; margin-bottom: 8px; }
-.rc-card-meta{ display:flex; gap: 10px; color: rgba(255,255,255,0.62); font-size: 12px; }
 
-.rc-stats-vertical{ display:flex; flex-direction:column; gap: 10px; }
+.rc-card-title{
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.rc-card-desc{
+  color: var(--rc-muted);
+  font-size: 13px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.rc-card-meta{
+  display: flex;
+  gap: 10px;
+  color: rgba(255,255,255,0.62);
+  font-size: 12px;
+}
+
+.rc-stats-vertical{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .rc-stat{
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   padding: 12px;
   border-radius: 16px;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
 }
-.rc-stat-label{ color: var(--rc-muted); font-weight: 800; font-size: 12px; }
-.rc-stat-value{ font-weight: 950; font-size: 18px; }
+
+.rc-stat-label{
+  color: var(--rc-muted);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.rc-stat-value{
+  font-weight: 950;
+  font-size: 18px;
+}
 
 /* ======================================================
    TABLET
@@ -101,13 +176,10 @@
 
 /* ======================================================
    MOBILE
-   - ya NO escondemos panel
-   - ya NO escondemos topbar-center
-   - solo ajustamos alturas y mapa
 ====================================================== */
 @media (max-width: 768px){
   .rc-body{
-    height: calc(100vh - 72px);
+    height: calc(100dvh - 72px);
   }
 
   .rc-main{
@@ -115,6 +187,7 @@
   }
 
   .rc-map-wrap{
+    height: 100%;
     border-radius: 0;
     border: none;
     box-shadow: none;

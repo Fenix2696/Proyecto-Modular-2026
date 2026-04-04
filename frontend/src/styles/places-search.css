@@ -3,32 +3,26 @@
 ====================================================== */
 
 .pac-container{
-  background: linear-gradient(
-    180deg,
-    rgba(15,23,42,0.92),
-    rgba(15,23,42,0.88)
-  ) !important;
-
+  background: rgba(15,23,42,0.96) !important;
   border: 1px solid rgba(255,255,255,0.08) !important;
   border-radius: 14px !important;
   margin-top: 15px !important;
-
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
   filter: none !important;
-
-
-
   overflow-y: auto !important;
   scrollbar-width: thin;
   z-index: 1000000 !important;
-
   width: min(360px, calc(100vw - 24px)) !important;
   max-width: min(360px, calc(100vw - 24px)) !important;
   max-height: 32vh !important;
 }
-
+.pac-container,
+.pac-container *{
+  box-shadow: none !important;
+  filter: none !important;
+}
 /* items */
 .pac-item{
   border-top: 1px solid rgba(255,255,255,0.05) !important;
@@ -89,27 +83,27 @@
 ====================================================== */
 @media (max-width: 768px){
   .pac-container{
-    width: min(320px, calc(100vw - 20px)) !important;
-    max-width: min(320px, calc(100vw - 20px)) !important;
-    max-height: 28vh !important;
+    width: min(92vw, 420px) !important;
+    max-width: min(92vw, 420px) !important;
+    max-height: 34dvh !important;
     border-radius: 12px !important;
   }
 
   .pac-item{
-    padding: 10px 12px !important;
+    padding: 12px 12px !important;
   }
 
   .pac-item-query,
   .pac-item span:not(.pac-item-query){
-    font-size: 12.5px !important;
+    font-size: 16px !important;
   }
 }
 
 @media (max-width: 480px){
   .pac-container{
-    width: min(300px, calc(100vw - 16px)) !important;
-    max-width: min(300px, calc(100vw - 16px)) !important;
-    max-height: 24vh !important;
+    width: min(94vw, 400px) !important;
+    max-width: min(94vw, 400px) !important;
+    max-height: 32dvh !important;
   }
 }
 
@@ -124,8 +118,9 @@
 .rc-recent-searches{
   position: absolute;
   top: calc(100% + 8px);
-  left: -25px;
-  width: 200%;
+  left: 0;
+  width: min(92vw, 520px);
+  max-width: calc(100vw - 16px);
   border-radius: 14px;
   background: linear-gradient(
     180deg,
@@ -133,7 +128,6 @@
     rgba(15,23,42,0.88)
   );
   border: 1px solid rgba(255,255,255,0.08);
-
   backdrop-filter: blur(8px);
   z-index: 1000001;
   overflow: hidden;
@@ -143,7 +137,7 @@
   padding: 10px 14px;
   font-size: 12px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 1);
+  color: rgba(255,255,255,1);
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
@@ -195,8 +189,4 @@
 .rc-recent-search-remove:hover{
   background: rgba(255,255,255,0.08);
   color: #ffffff;
-}
-
-.pac-container{
-  transform: translateX(-50px) !important;
 }
