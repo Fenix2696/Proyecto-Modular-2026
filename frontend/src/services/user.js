@@ -1,12 +1,12 @@
 import http from "./http";
 
 export async function getMe() {
-  const { data } = await http.get("/auth/profile");
+  const { data } = await http.get("/auth/me");
   return data;
 }
 
 export async function updateMe(payload) {
-  const { data } = await http.put("/auth/profile", payload);
+  const { data } = await http.put("/auth/me", payload);
   return data;
 }
 
