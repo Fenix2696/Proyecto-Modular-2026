@@ -104,7 +104,7 @@ function ResetPassword() {
 
     setLoading(true);
     try {
-      await resetPassword(token, p1);
+      const res = await resetPassword(token, p1);
       setOk(true);
 
       setTimeout(() => {
@@ -216,7 +216,7 @@ function ResetPassword() {
                 />
 
                 {p2.length > 0 && (
-                  <span className={`error-msg ${passwordsCoinciden ? "" : ""}`}>
+                  <span className={`error-msg ${passwordsCoinciden ? "success-msg" : ""}`}>
                     {passwordsCoinciden
                       ? "Las contrasenas coinciden"
                       : "La confirmacion no coincide"}

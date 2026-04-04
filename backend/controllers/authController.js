@@ -411,12 +411,14 @@ exports.forgotPassword = async (req, res) => {
       [token, expiresAt, user.id]
     );
 
-    const frontendBase = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+    const frontendBase = (
+      process.env.FRONTEND_URL || "http://localhost:5173"
+    ).replace(/\/+$/, "");
     const resetLink = `${frontendBase}/reset-password?token=${token}`;
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
+    const { data, error } = await transporter.emails.send({
+      from: process.env.EMAIL_FROM || "Radar Ciudadano <onboarding@resend.dev>",
+      to: [user.email],
       subject: "Recuperacion de contrasena - Radar Ciudadano",
       html: `
         <div style="font-family: Arial, sans-serif; background:#f8fafc; padding:24px;">
@@ -440,6 +442,10 @@ exports.forgotPassword = async (req, res) => {
         </div>
       `,
     });
+
+    if (error) {
+      throw new Error(error.message || "No se pudo enviar el correo");
+    }
 
     return res.json({
       success: true,
