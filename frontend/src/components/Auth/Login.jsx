@@ -104,42 +104,101 @@ function Login() {
     }
   };
 
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    useEffect(() => {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-    if (!clientId) return;
+      if (!clientId) return;
 
-    const initGoogleButton = () => {
-      if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
+      let cancelled = false;
+      let interval = null;
+      let timeoutId = null;
 
-      googleBtnRef.current.innerHTML = "";
+      const initGoogleButton = () => {
+        if (cancelled) return false;
+        if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
 
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (resp) => {
-          try {
-            const idToken = resp?.credential;
-            if (!idToken) {
-              throw new Error("No se recibio credential de Google");
+        googleBtnRef.current.innerHTML = "";
+
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (resp) => {
+            if (cancelled) return;
+
+            try {
+              const idToken = resp?.credential;
+
+              if (!idToken) {
+                throw new Error("No se recibio credential de Google");
+              }
+
+              setLoading(true);
+              setErrors({});
+
+              const response = await loginWithGoogle(idToken);
+
+              if (!response?.token) {
+                throw new Error("No se recibio token de autenticacion");
+              }
+
+              localStorage.setItem("token", response.token);
+              localStorage.setItem("user", JSON.stringify(response.user || {}));
+
+              if (rememberMe) {
+                localStorage.setItem("rememberMe", "true");
+              } else {
+                localStorage.removeItem("rememberMe");
+              }
+
+              setLoginSuccess(true);
+              setLoading(false);
+
+              setTimeout(() => {
+                if (!cancelled) {
+                  goToDashboard();
+                }
+              }, 420);
+            } catch (error) {
+              setErrors({
+                general: error.message || "Error al iniciar sesion con Google",
+              });
+              setLoading(false);
             }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
 
-            setLoading(true);
-            setErrors({});
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "pill",
+          width: googleBtnRef.current.offsetWidth || 360,
+          logo_alignment: "left",
+        });
 
-            const response = await loginWithGoogle(idToken);
+        return true;
+      };
 
-            if (!response?.token) {
-              throw new Error("No se recibio token de autenticacion");
-            }
+      if (initGoogleButton()) return;
 
-            localStorage.setItem("token", response.token);
-            localStorage.setItem("user", JSON.stringify(response.user || {}));
+      interval = setInterval(() => {
+        if (initGoogleButton()) {
+          clearInterval(interval);
+        }
+      }, 250);
 
-            if (rememberMe) {
-              localStorage.setItem("rememberMe", "true");
-            } else {
-              localStorage.removeItem("rememberMe");
-            }
+      timeoutId = setTimeout(() => {
+        if (interval) clearInterval(interval);
+      }, 10000);
+
+      return () => {
+        cancelled = true;
+        if (interval) clearInterval(interval);
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+    }, [rememberMe]);
 
             setLoginSuccess(true);
             setLoading(false);
