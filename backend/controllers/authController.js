@@ -13,6 +13,14 @@ function generarToken(payload) {
 }
 
 function normalizarUsuario(user) {
+  const externalPhoto =
+    typeof user.photo_path === "string" && /^https?:\/\//i.test(user.photo_path)
+      ? user.photo_path
+      : null;
+  const photoUrl = user.photo_data
+    ? `/api/users/${user.id}/photo`
+    : externalPhoto || null;
+
   return {
     id: user.id,
     name: user.name || "",
@@ -23,6 +31,8 @@ function normalizarUsuario(user) {
     full_name: user.full_name || "",
     has_photo: !!user.photo_data,
     photo_path: user.photo_path || null,
+    photo_url: photoUrl,
+    avatar: photoUrl,
   };
 }
 
@@ -36,6 +46,19 @@ function validarPasswordSegura(password) {
     /[^A-Za-z0-9]/.test(password) &&
     !/\s/.test(password)
   );
+}
+
+function normalizarFotoGoogle(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return null;
+
+  const withProtocol = raw.startsWith("//") ? `https:${raw}` : raw;
+  if (!/^https?:\/\//i.test(withProtocol)) return null;
+
+  // Evita errores por columnas cortas o valores inesperados
+  if (withProtocol.length > 900) return null;
+
+  return withProtocol;
 }
 
 exports.checkUsername = async (req, res) => {
@@ -285,6 +308,7 @@ exports.oauthGoogle = async (req, res) => {
 
     const email = String(payload.email).trim().toLowerCase();
     const nombreGoogle = payload.name || payload.given_name || "Usuario Google";
+    const fotoGoogle = normalizarFotoGoogle(payload.picture);
 
     let result = await pool.query(
       `
@@ -340,6 +364,74 @@ exports.oauthGoogle = async (req, res) => {
       );
 
       user = inserted.rows[0];
+    } else {
+      const synced = await pool.query(
+        `
+        UPDATE users
+        SET
+          name = CASE
+            WHEN (name IS NULL OR BTRIM(name) = '') THEN $1
+            ELSE name
+          END,
+          full_name = CASE
+            WHEN (full_name IS NULL OR BTRIM(full_name) = '') THEN $2
+            ELSE full_name
+          END,
+          updated_at = NOW()
+        WHERE id = $3
+        RETURNING
+          id,
+          name,
+          email,
+          role,
+          username,
+          phone,
+          full_name,
+          photo_path,
+          photo_data,
+          is_active
+        `,
+        [nombreGoogle, nombreGoogle, user.id]
+      );
+
+      if (synced.rows.length > 0) {
+        user = synced.rows[0];
+      }
+    }
+
+    if (
+      fotoGoogle &&
+      !user.photo_data &&
+      (!user.photo_path || String(user.photo_path).trim() === "")
+    ) {
+      try {
+        const photoSync = await pool.query(
+          `
+          UPDATE users
+          SET photo_path = $1,
+              updated_at = NOW()
+          WHERE id = $2
+          RETURNING
+            id,
+            name,
+            email,
+            role,
+            username,
+            phone,
+            full_name,
+            photo_path,
+            photo_data,
+            is_active
+          `,
+          [fotoGoogle, user.id]
+        );
+
+        if (photoSync.rows.length > 0) {
+          user = photoSync.rows[0];
+        }
+      } catch (photoError) {
+        console.warn("No se pudo guardar photo_path de Google:", photoError.message);
+      }
     }
 
     if (user.is_active === false) {
@@ -355,11 +447,16 @@ exports.oauthGoogle = async (req, res) => {
       role: user.role || "user",
     });
 
+    const userNormalizado = normalizarUsuario({
+      ...user,
+      photo_path: user.photo_path || fotoGoogle || null,
+    });
+
     return res.json({
       success: true,
       message: "Inicio de sesion con Google exitoso",
       token,
-      user: normalizarUsuario(user),
+      user: userNormalizado,
     });
   } catch (error) {
     console.error("Error en oauthGoogle:", error);
