@@ -1,13 +1,53 @@
 const express = require("express");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
+
+function collectJsFiles(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectJsFiles(fullPath));
+      continue;
+    }
+    if (entry.isFile() && fullPath.endsWith(".js")) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+function assertNoMergeArtifacts() {
+  const roots = ["controllers", "routes", "middleware", "config"].map((d) =>
+    path.join(__dirname, d)
+  );
+  const files = roots.filter((p) => fs.existsSync(p)).flatMap(collectJsFiles);
+
+  const markerRegex = /(^<<<<<<<|^=======|^>>>>>>>|codex\/[A-Za-z0-9._-]+)/m;
+  for (const filePath of files) {
+    const content = fs.readFileSync(filePath, "utf8");
+    if (markerRegex.test(content)) {
+      throw new Error(
+        `Se detectaron marcas de merge/conflicto en ${path.relative(
+          __dirname,
+          filePath
+        )}. Resuelve conflictos antes de desplegar.`
+      );
+    }
+  }
+}
+
+assertNoMergeArtifacts();
 
 const incidentRoutes = require("./routes/incidentRoutes");
 const authRoutes = require("./routes/authRoutes");
 const usersRoutes = require("./routes/usersRoutes");
 const aiReportsRoutes = require("./routes/aiReportsRoutes");
-
-// ✅ NUEVO: rutas para Routes API v2 (trafico en polilinea)
 const routesTrafficRoutes = require("./routes/routesTrafficRoutes");
 
 const app = express();

@@ -33,3 +33,37 @@ git commit -m "resolve merge conflict in oauthGoogle photo handling"
 ```
 
 Si te vuelve a salir en GitHub, usa **Accept current change** para esa línea específica y luego confirma commit de resolución.
+
+## Resolver conflicto desde GitHub (clic por clic)
+
+1. En tu PR, haz clic en **Resolve conflicts**.
+2. Busca el archivo `backend/controllers/authController.js`.
+3. Ubica el bloque con marcadores:
+   - `<<<<<<<`
+   - `=======`
+   - `>>>>>>>`
+4. En la línea de `fotoGoogle`, selecciona **Accept current change** para conservar:
+
+```js
+const fotoGoogle = normalizarFotoGoogle(payload.picture);
+```
+
+5. Verifica que ya no queden marcadores `<<<<<<<`, `=======`, `>>>>>>>` en el archivo.
+6. Haz clic en **Mark as resolved**.
+7. Haz clic en **Commit merge** (o **Commit conflict resolution**).
+8. Regresa al PR y espera que GitHub recalcule el estado; después debería aparecer el botón para merge.
+
+### Si sigue apareciendo conflicto
+
+- Pulsa **Update branch** en el PR (si está disponible) y repite pasos.
+- Si no aparece, resuelve por terminal y empuja:
+
+```bash
+git checkout work
+git fetch origin
+git merge origin/main
+# resolver conflictos
+git add backend/controllers/authController.js
+git commit -m "resolve conflict in authController oauthGoogle"
+git push
+```

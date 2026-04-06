@@ -308,11 +308,7 @@ exports.oauthGoogle = async (req, res) => {
 
     const email = String(payload.email).trim().toLowerCase();
     const nombreGoogle = payload.name || payload.given_name || "Usuario Google";
- codex/evaluate-project-feedback-3x3zns
     const fotoGoogle = normalizarFotoGoogle(payload.picture);
-=======
-    const fotoGoogle = payload.picture || null;
- main
 
     let result = await pool.query(
       `
@@ -382,20 +378,8 @@ exports.oauthGoogle = async (req, res) => {
             WHEN (full_name IS NULL OR BTRIM(full_name) = '') THEN $2
             ELSE full_name
           END,
- codex/evaluate-project-feedback-3x3zns
           updated_at = NOW()
         WHERE id = $3
-=======
-          photo_path = CASE
-            WHEN photo_data IS NULL
-             AND (photo_path IS NULL OR BTRIM(photo_path) = '')
-             AND $3 IS NOT NULL
-            THEN $3
-            ELSE photo_path
-          END,
-          updated_at = NOW()
-        WHERE id = $4
- main
         RETURNING
           id,
           name,
@@ -408,17 +392,12 @@ exports.oauthGoogle = async (req, res) => {
           photo_data,
           is_active
         `,
- codex/evaluate-project-feedback-3x3zns
         [nombreGoogle, nombreGoogle, user.id]
-=======
-        [nombreGoogle, nombreGoogle, fotoGoogle, user.id]
- main
       );
 
       if (synced.rows.length > 0) {
         user = synced.rows[0];
       }
- codex/evaluate-project-feedback-3x3zns
     }
 
     if (
@@ -454,8 +433,6 @@ exports.oauthGoogle = async (req, res) => {
       } catch (photoError) {
         console.warn("No se pudo guardar photo_path de Google:", photoError.message);
       }
-
- main
     }
 
     if (user.is_active === false) {
