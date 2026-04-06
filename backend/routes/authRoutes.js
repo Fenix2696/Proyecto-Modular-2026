@@ -21,5 +21,7 @@ router.post("/reset-password", authController.resetPassword);
 
 // Usuario autenticado actual
 router.get("/me", authMiddleware, authController.me);
+router.put("/me", authMiddleware, authController.updateMe);
+router.put("/password", authMiddleware, authController.changePassword);
 
 module.exports = router;

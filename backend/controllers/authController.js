@@ -13,6 +13,14 @@ function generarToken(payload) {
 }
 
 function normalizarUsuario(user) {
+  const externalPhoto =
+    typeof user.photo_path === "string" && /^https?:\/\//i.test(user.photo_path)
+      ? user.photo_path
+      : null;
+  const photoUrl = user.photo_data
+    ? `/api/users/${user.id}/photo`
+    : externalPhoto || null;
+
   return {
     id: user.id,
     name: user.name || "",
@@ -23,6 +31,8 @@ function normalizarUsuario(user) {
     full_name: user.full_name || "",
     has_photo: !!user.photo_data,
     photo_path: user.photo_path || null,
+    photo_url: photoUrl,
+    avatar: photoUrl,
   };
 }
 
@@ -36,6 +46,19 @@ function validarPasswordSegura(password) {
     /[^A-Za-z0-9]/.test(password) &&
     !/\s/.test(password)
   );
+}
+
+function normalizarFotoGoogle(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return null;
+
+  const withProtocol = raw.startsWith("//") ? `https:${raw}` : raw;
+  if (!/^https?:\/\//i.test(withProtocol)) return null;
+
+  // Evita errores por columnas cortas o valores inesperados
+  if (withProtocol.length > 900) return null;
+
+  return withProtocol;
 }
 
 exports.checkUsername = async (req, res) => {
@@ -285,6 +308,7 @@ exports.oauthGoogle = async (req, res) => {
 
     const email = String(payload.email).trim().toLowerCase();
     const nombreGoogle = payload.name || payload.given_name || "Usuario Google";
+    const fotoGoogle = normalizarFotoGoogle(payload.picture);
 
     let result = await pool.query(
       `
@@ -340,6 +364,74 @@ exports.oauthGoogle = async (req, res) => {
       );
 
       user = inserted.rows[0];
+    } else {
+      const synced = await pool.query(
+        `
+        UPDATE users
+        SET
+          name = CASE
+            WHEN (name IS NULL OR BTRIM(name) = '') THEN $1
+            ELSE name
+          END,
+          full_name = CASE
+            WHEN (full_name IS NULL OR BTRIM(full_name) = '') THEN $2
+            ELSE full_name
+          END,
+          updated_at = NOW()
+        WHERE id = $3
+        RETURNING
+          id,
+          name,
+          email,
+          role,
+          username,
+          phone,
+          full_name,
+          photo_path,
+          photo_data,
+          is_active
+        `,
+        [nombreGoogle, nombreGoogle, user.id]
+      );
+
+      if (synced.rows.length > 0) {
+        user = synced.rows[0];
+      }
+    }
+
+    if (
+      fotoGoogle &&
+      !user.photo_data &&
+      (!user.photo_path || String(user.photo_path).trim() === "")
+    ) {
+      try {
+        const photoSync = await pool.query(
+          `
+          UPDATE users
+          SET photo_path = $1,
+              updated_at = NOW()
+          WHERE id = $2
+          RETURNING
+            id,
+            name,
+            email,
+            role,
+            username,
+            phone,
+            full_name,
+            photo_path,
+            photo_data,
+            is_active
+          `,
+          [fotoGoogle, user.id]
+        );
+
+        if (photoSync.rows.length > 0) {
+          user = photoSync.rows[0];
+        }
+      } catch (photoError) {
+        console.warn("No se pudo guardar photo_path de Google:", photoError.message);
+      }
     }
 
     if (user.is_active === false) {
@@ -355,11 +447,16 @@ exports.oauthGoogle = async (req, res) => {
       role: user.role || "user",
     });
 
+    const userNormalizado = normalizarUsuario({
+      ...user,
+      photo_path: user.photo_path || fotoGoogle || null,
+    });
+
     return res.json({
       success: true,
       message: "Inicio de sesion con Google exitoso",
       token,
-      user: normalizarUsuario(user),
+      user: userNormalizado,
     });
   } catch (error) {
     console.error("Error en oauthGoogle:", error);
@@ -574,6 +671,161 @@ exports.me = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error interno al obtener usuario",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateMe = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "No autorizado" });
+    }
+
+    const { username, name, phone } = req.body || {};
+    const usernameLimpio = username ? String(username).trim().toLowerCase() : null;
+    const nombreLimpio = name ? String(name).trim() : null;
+    const phoneLimpio = phone ? String(phone).replace(/\D/g, "").slice(0, 10) : null;
+
+    if (phoneLimpio && phoneLimpio.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: "El telefono debe tener 10 digitos",
+      });
+    }
+
+    if (usernameLimpio) {
+      const dup = await pool.query(
+        `
+        SELECT id
+        FROM users
+        WHERE LOWER(username) = LOWER($1)
+          AND id <> $2
+        LIMIT 1
+        `,
+        [usernameLimpio, userId]
+      );
+
+      if (dup.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: "El nombre de usuario ya esta en uso",
+        });
+      }
+    }
+
+    const updated = await pool.query(
+      `
+      UPDATE users
+      SET
+        username = COALESCE($1, username),
+        name = COALESCE($2, name),
+        full_name = COALESCE($3, full_name),
+        phone = COALESCE($4, phone),
+        updated_at = NOW()
+      WHERE id = $5
+      RETURNING
+        id,
+        name,
+        email,
+        role,
+        username,
+        phone,
+        full_name,
+        photo_path,
+        photo_data,
+        is_active
+      `,
+      [usernameLimpio, nombreLimpio, nombreLimpio, phoneLimpio, userId]
+    );
+
+    if (updated.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Perfil actualizado",
+      user: normalizarUsuario(updated.rows[0]),
+    });
+  } catch (error) {
+    console.error("Error en updateMe:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error interno al actualizar perfil",
+      error: error.message,
+    });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "No autorizado" });
+    }
+
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Password actual y nuevo password son obligatorios",
+      });
+    }
+
+    if (!validarPasswordSegura(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: "La contrasena nueva no cumple con los requisitos de seguridad",
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT id, password FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
+    }
+
+    const user = result.rows[0];
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: "Tu cuenta no tiene password local. Usa recuperacion para crear una.",
+      });
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) {
+      return res.status(401).json({
+        success: false,
+        message: "El password actual es incorrecto",
+      });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      `
+      UPDATE users
+      SET password = $1,
+          updated_at = NOW()
+      WHERE id = $2
+      `,
+      [hashed, userId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Password actualizado",
+    });
+  } catch (error) {
+    console.error("Error en changePassword:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error interno al cambiar password",
       error: error.message,
     });
   }
