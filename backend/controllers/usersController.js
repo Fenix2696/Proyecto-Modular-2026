@@ -1,11 +1,33 @@
 const multer = require("multer");
 const pool = require("../config/database");
 
+const ALLOWED_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".heic",
+  ".heif",
+]);
+
+function getFileExtension(name) {
+  const value = String(name || "").toLowerCase();
+  const idx = value.lastIndexOf(".");
+  if (idx < 0) return "";
+  return value.slice(idx);
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: 12 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file && file.mimetype && file.mimetype.startsWith("image/")) return cb(null, true);
+    const mime = String(file?.mimetype || "").toLowerCase();
+    const ext = getFileExtension(file?.originalname);
+
+    if (mime.startsWith("image/")) return cb(null, true);
+    if (!mime && ALLOWED_EXTENSIONS.has(ext)) return cb(null, true);
+
     return cb(new Error("Archivo no es imagen"), false);
   },
 }).single("photo");
@@ -19,6 +41,11 @@ function uploadMyPhoto(req, res) {
   upload(req, res, async (err) => {
     try {
       if (err) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res
+            .status(400)
+            .json({ success: false, message: "La imagen excede el maximo de 12MB" });
+        }
         return res.status(400).json({ success: false, message: err.message || "Error subiendo foto" });
       }
       if (!req.user?.id) {

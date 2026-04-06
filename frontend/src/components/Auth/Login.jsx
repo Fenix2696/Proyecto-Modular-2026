@@ -104,107 +104,58 @@ function Login() {
     }
   };
 
-    useEffect(() => {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-      if (!clientId) return;
+    if (!clientId) return;
 
-      let cancelled = false;
-      let interval = null;
-      let timeoutId = null;
+    let cancelled = false;
+    let interval = null;
+    let timeoutId = null;
 
-      const initGoogleButton = () => {
-        if (cancelled) return false;
-        if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
+    const initGoogleButton = () => {
+      if (cancelled) return false;
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
 
-        googleBtnRef.current.innerHTML = "";
+      googleBtnRef.current.innerHTML = "";
 
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: async (resp) => {
-            if (cancelled) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (resp) => {
+          if (cancelled) return;
 
-            try {
-              const idToken = resp?.credential;
+          try {
+            const idToken = resp?.credential;
 
-              if (!idToken) {
-                throw new Error("No se recibio credential de Google");
-              }
-
-              setLoading(true);
-              setErrors({});
-
-              const response = await loginWithGoogle(idToken);
-
-              if (!response?.token) {
-                throw new Error("No se recibio token de autenticacion");
-              }
-
-              localStorage.setItem("token", response.token);
-              localStorage.setItem("user", JSON.stringify(response.user || {}));
-
-              if (rememberMe) {
-                localStorage.setItem("rememberMe", "true");
-              } else {
-                localStorage.removeItem("rememberMe");
-              }
-
-              setLoginSuccess(true);
-              setLoading(false);
-
-              setTimeout(() => {
-                if (!cancelled) {
-                  goToDashboard();
-                }
-              }, 420);
-            } catch (error) {
-              setErrors({
-                general: error.message || "Error al iniciar sesion con Google",
-              });
-              setLoading(false);
+            if (!idToken) {
+              throw new Error("No se recibio credential de Google");
             }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
 
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          type: "standard",
-          theme: "outline",
-          size: "large",
-          text: "continue_with",
-          shape: "pill",
-          width: googleBtnRef.current.offsetWidth || 360,
-          logo_alignment: "left",
-        });
+            setLoading(true);
+            setErrors({});
 
-        return true;
-      };
+            const response = await loginWithGoogle(idToken);
 
-      if (initGoogleButton()) return;
+            if (!response?.token) {
+              throw new Error("No se recibio token de autenticacion");
+            }
 
-      interval = setInterval(() => {
-        if (initGoogleButton()) {
-          clearInterval(interval);
-        }
-      }, 250);
+            localStorage.setItem("token", response.token);
+            localStorage.setItem("user", JSON.stringify(response.user || {}));
 
-      timeoutId = setTimeout(() => {
-        if (interval) clearInterval(interval);
-      }, 10000);
-
-      return () => {
-        cancelled = true;
-        if (interval) clearInterval(interval);
-        if (timeoutId) clearTimeout(timeoutId);
-      };
-    }, [rememberMe]);
+            if (rememberMe) {
+              localStorage.setItem("rememberMe", "true");
+            } else {
+              localStorage.removeItem("rememberMe");
+            }
 
             setLoginSuccess(true);
             setLoading(false);
 
             setTimeout(() => {
-              goToDashboard();
+              if (!cancelled) {
+                goToDashboard();
+              }
             }, 420);
           } catch (error) {
             setErrors({
@@ -212,6 +163,13 @@ function Login() {
             });
             setLoading(false);
           }
+        },
+        error_callback: () => {
+          setErrors({
+            general:
+              "Google no pudo completar el login. Revisa dominios autorizados y el Client ID.",
+          });
+          setLoading(false);
         },
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -232,15 +190,21 @@ function Login() {
 
     if (initGoogleButton()) return;
 
-    const interval = setInterval(() => {
+    interval = setInterval(() => {
       if (initGoogleButton()) {
         clearInterval(interval);
       }
     }, 250);
 
-    setTimeout(() => clearInterval(interval), 10000);
+    timeoutId = setTimeout(() => {
+      if (interval) clearInterval(interval);
+    }, 10000);
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [rememberMe]);
 
   const handleSocialLogin = (provider) => {
