@@ -676,3 +676,158 @@ exports.me = async (req, res) => {
     });
   }
 };
+
+exports.updateMe = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "No autorizado" });
+    }
+
+    const { username, name, phone } = req.body || {};
+    const usernameLimpio = username ? String(username).trim().toLowerCase() : null;
+    const nombreLimpio = name ? String(name).trim() : null;
+    const phoneLimpio = phone ? String(phone).replace(/\D/g, "").slice(0, 10) : null;
+
+    if (phoneLimpio && phoneLimpio.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: "El telefono debe tener 10 digitos",
+      });
+    }
+
+    if (usernameLimpio) {
+      const dup = await pool.query(
+        `
+        SELECT id
+        FROM users
+        WHERE LOWER(username) = LOWER($1)
+          AND id <> $2
+        LIMIT 1
+        `,
+        [usernameLimpio, userId]
+      );
+
+      if (dup.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: "El nombre de usuario ya esta en uso",
+        });
+      }
+    }
+
+    const updated = await pool.query(
+      `
+      UPDATE users
+      SET
+        username = COALESCE($1, username),
+        name = COALESCE($2, name),
+        full_name = COALESCE($3, full_name),
+        phone = COALESCE($4, phone),
+        updated_at = NOW()
+      WHERE id = $5
+      RETURNING
+        id,
+        name,
+        email,
+        role,
+        username,
+        phone,
+        full_name,
+        photo_path,
+        photo_data,
+        is_active
+      `,
+      [usernameLimpio, nombreLimpio, nombreLimpio, phoneLimpio, userId]
+    );
+
+    if (updated.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Perfil actualizado",
+      user: normalizarUsuario(updated.rows[0]),
+    });
+  } catch (error) {
+    console.error("Error en updateMe:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error interno al actualizar perfil",
+      error: error.message,
+    });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "No autorizado" });
+    }
+
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Password actual y nuevo password son obligatorios",
+      });
+    }
+
+    if (!validarPasswordSegura(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: "La contrasena nueva no cumple con los requisitos de seguridad",
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT id, password FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
+    }
+
+    const user = result.rows[0];
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: "Tu cuenta no tiene password local. Usa recuperacion para crear una.",
+      });
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) {
+      return res.status(401).json({
+        success: false,
+        message: "El password actual es incorrecto",
+      });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      `
+      UPDATE users
+      SET password = $1,
+          updated_at = NOW()
+      WHERE id = $2
+      `,
+      [hashed, userId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Password actualizado",
+    });
+  } catch (error) {
+    console.error("Error en changePassword:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error interno al cambiar password",
+      error: error.message,
+    });
+  }
+};
