@@ -55,9 +55,11 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
   const normalizePhotoUrl = (raw) => {
     const v = (raw || "").trim();
     if (!v) return "";
+    if (/^undefined|null$/i.test(v)) return "";
 
     // ya absoluto
     if (/^https?:\/\//i.test(v)) return v;
+    if (v.startsWith("//")) return `https:${v}`;
 
     // viene como /api/...
     if (v.startsWith("/api/")) return `${apiHost}${v}`;
