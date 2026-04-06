@@ -48,6 +48,19 @@ function validarPasswordSegura(password) {
   );
 }
 
+function normalizarFotoGoogle(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return null;
+
+  const withProtocol = raw.startsWith("//") ? `https:${raw}` : raw;
+  if (!/^https?:\/\//i.test(withProtocol)) return null;
+
+  // Evita errores por columnas cortas o valores inesperados
+  if (withProtocol.length > 900) return null;
+
+  return withProtocol;
+}
+
 exports.checkUsername = async (req, res) => {
   try {
     const { username } = req.query;
@@ -295,7 +308,11 @@ exports.oauthGoogle = async (req, res) => {
 
     const email = String(payload.email).trim().toLowerCase();
     const nombreGoogle = payload.name || payload.given_name || "Usuario Google";
+ codex/evaluate-project-feedback-3x3zns
+    const fotoGoogle = normalizarFotoGoogle(payload.picture);
+=======
     const fotoGoogle = payload.picture || null;
+ main
 
     let result = await pool.query(
       `
@@ -365,6 +382,10 @@ exports.oauthGoogle = async (req, res) => {
             WHEN (full_name IS NULL OR BTRIM(full_name) = '') THEN $2
             ELSE full_name
           END,
+ codex/evaluate-project-feedback-3x3zns
+          updated_at = NOW()
+        WHERE id = $3
+=======
           photo_path = CASE
             WHEN photo_data IS NULL
              AND (photo_path IS NULL OR BTRIM(photo_path) = '')
@@ -374,6 +395,7 @@ exports.oauthGoogle = async (req, res) => {
           END,
           updated_at = NOW()
         WHERE id = $4
+ main
         RETURNING
           id,
           name,
@@ -386,12 +408,54 @@ exports.oauthGoogle = async (req, res) => {
           photo_data,
           is_active
         `,
+ codex/evaluate-project-feedback-3x3zns
+        [nombreGoogle, nombreGoogle, user.id]
+=======
         [nombreGoogle, nombreGoogle, fotoGoogle, user.id]
+ main
       );
 
       if (synced.rows.length > 0) {
         user = synced.rows[0];
       }
+ codex/evaluate-project-feedback-3x3zns
+    }
+
+    if (
+      fotoGoogle &&
+      !user.photo_data &&
+      (!user.photo_path || String(user.photo_path).trim() === "")
+    ) {
+      try {
+        const photoSync = await pool.query(
+          `
+          UPDATE users
+          SET photo_path = $1,
+              updated_at = NOW()
+          WHERE id = $2
+          RETURNING
+            id,
+            name,
+            email,
+            role,
+            username,
+            phone,
+            full_name,
+            photo_path,
+            photo_data,
+            is_active
+          `,
+          [fotoGoogle, user.id]
+        );
+
+        if (photoSync.rows.length > 0) {
+          user = photoSync.rows[0];
+        }
+      } catch (photoError) {
+        console.warn("No se pudo guardar photo_path de Google:", photoError.message);
+      }
+
+ main
     }
 
     if (user.is_active === false) {
@@ -407,11 +471,16 @@ exports.oauthGoogle = async (req, res) => {
       role: user.role || "user",
     });
 
+    const userNormalizado = normalizarUsuario({
+      ...user,
+      photo_path: user.photo_path || fotoGoogle || null,
+    });
+
     return res.json({
       success: true,
       message: "Inicio de sesion con Google exitoso",
       token,
-      user: normalizarUsuario(user),
+      user: userNormalizado,
     });
   } catch (error) {
     console.error("Error en oauthGoogle:", error);
