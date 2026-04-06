@@ -343,11 +343,12 @@ exports.oauthGoogle = async (req, res) => {
           username,
           phone,
           full_name,
+          photo_path,
           is_active,
           created_at,
           updated_at
         )
-        VALUES ($1, $2, NULL, 'user', NULL, NULL, $3, true, NOW(), NOW())
+        VALUES ($1, $2, NULL, 'user', NULL, NULL, $3, $4, true, NOW(), NOW())
         RETURNING
           id,
           name,
@@ -360,7 +361,7 @@ exports.oauthGoogle = async (req, res) => {
           photo_data,
           is_active
         `,
-        [nombreGoogle, email, nombreGoogle]
+        [nombreGoogle, email, nombreGoogle, fotoGoogle]
       );
 
       user = inserted.rows[0];
