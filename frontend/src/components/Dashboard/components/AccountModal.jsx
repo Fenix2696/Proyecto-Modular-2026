@@ -268,7 +268,8 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
   };
 
   // ✅ prioridad: preview local > prop (ya absoluto) > user.photo_url
-  const basePhoto = userPhotoUrl || user?.photo_url || "";
+  const basePhoto =
+    userPhotoUrl || user?.photo_url || user?.avatar || user?.photo_path || "";
   const effectivePhoto = localPreview || normalizePhotoUrl(basePhoto);
 
   return (

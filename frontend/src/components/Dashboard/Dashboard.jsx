@@ -171,7 +171,7 @@ function buildAbsolutePhotoUrl(user, photoTs) {
   const u = user || {};
   const id = u.id || u.user_id || u.userId;
 
-  const raw = (u.photo_url || u.photo || u.avatar || "").trim();
+  const raw = (u.photo_url || u.photo || u.avatar || u.photo_path || "").trim();
   if (raw) {
     if (/^https?:\/\//i.test(raw)) {
       return `${raw}${raw.includes("?") ? "&" : "?"}ts=${photoTs}`;

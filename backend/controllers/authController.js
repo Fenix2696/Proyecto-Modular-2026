@@ -13,6 +13,14 @@ function generarToken(payload) {
 }
 
 function normalizarUsuario(user) {
+  const externalPhoto =
+    typeof user.photo_path === "string" && /^https?:\/\//i.test(user.photo_path)
+      ? user.photo_path
+      : null;
+  const photoUrl = user.photo_data
+    ? `/api/users/${user.id}/photo`
+    : externalPhoto || null;
+
   return {
     id: user.id,
     name: user.name || "",
@@ -23,6 +31,8 @@ function normalizarUsuario(user) {
     full_name: user.full_name || "",
     has_photo: !!user.photo_data,
     photo_path: user.photo_path || null,
+    photo_url: photoUrl,
+    avatar: photoUrl,
   };
 }
 
@@ -285,6 +295,7 @@ exports.oauthGoogle = async (req, res) => {
 
     const email = String(payload.email).trim().toLowerCase();
     const nombreGoogle = payload.name || payload.given_name || "Usuario Google";
+    const fotoGoogle = payload.picture || null;
 
     let result = await pool.query(
       `
@@ -319,11 +330,12 @@ exports.oauthGoogle = async (req, res) => {
           username,
           phone,
           full_name,
+          photo_path,
           is_active,
           created_at,
           updated_at
         )
-        VALUES ($1, $2, NULL, 'user', NULL, NULL, $3, true, NOW(), NOW())
+        VALUES ($1, $2, NULL, 'user', NULL, NULL, $3, $4, true, NOW(), NOW())
         RETURNING
           id,
           name,
@@ -336,10 +348,50 @@ exports.oauthGoogle = async (req, res) => {
           photo_data,
           is_active
         `,
-        [nombreGoogle, email, nombreGoogle]
+        [nombreGoogle, email, nombreGoogle, fotoGoogle]
       );
 
       user = inserted.rows[0];
+    } else {
+      const synced = await pool.query(
+        `
+        UPDATE users
+        SET
+          name = CASE
+            WHEN (name IS NULL OR BTRIM(name) = '') THEN $1
+            ELSE name
+          END,
+          full_name = CASE
+            WHEN (full_name IS NULL OR BTRIM(full_name) = '') THEN $2
+            ELSE full_name
+          END,
+          photo_path = CASE
+            WHEN photo_data IS NULL
+             AND (photo_path IS NULL OR BTRIM(photo_path) = '')
+             AND $3 IS NOT NULL
+            THEN $3
+            ELSE photo_path
+          END,
+          updated_at = NOW()
+        WHERE id = $4
+        RETURNING
+          id,
+          name,
+          email,
+          role,
+          username,
+          phone,
+          full_name,
+          photo_path,
+          photo_data,
+          is_active
+        `,
+        [nombreGoogle, nombreGoogle, fotoGoogle, user.id]
+      );
+
+      if (synced.rows.length > 0) {
+        user = synced.rows[0];
+      }
     }
 
     if (user.is_active === false) {
