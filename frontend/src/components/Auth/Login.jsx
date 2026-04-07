@@ -10,6 +10,7 @@ import communityIcon from "../../assets/feature-icons/comunidad.png";
 function Login() {
   const navigate = useNavigate();
   const googleBtnRef = useRef(null);
+  const rememberMeRef = useRef(false);
 
   const [formData, setFormData] = useState({
     identifier: "",
@@ -21,6 +22,10 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    rememberMeRef.current = rememberMe;
+  }, [rememberMe]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -113,6 +118,27 @@ function Login() {
     let interval = null;
     let timeoutId = null;
 
+    const isInAppBrowser = () => {
+      const ua = String(navigator.userAgent || "").toLowerCase();
+      return /fban|fbav|instagram|line\/|gsa\//.test(ua);
+    };
+
+    const loginGoogleConRetry = async (idToken) => {
+      try {
+        return await loginWithGoogle(idToken);
+      } catch (error) {
+        const msg = String(error?.message || "").toLowerCase();
+        const transient =
+          msg.includes("timeout") ||
+          msg.includes("network") ||
+          msg.includes("fetch") ||
+          msg.includes("500");
+        if (!transient) throw error;
+        await new Promise((r) => setTimeout(r, 350));
+        return loginWithGoogle(idToken);
+      }
+    };
+
     const initGoogleButton = () => {
       if (cancelled) return false;
       if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
@@ -134,7 +160,7 @@ function Login() {
             setLoading(true);
             setErrors({});
 
-            const response = await loginWithGoogle(idToken);
+            const response = await loginGoogleConRetry(idToken);
 
             if (!response?.token) {
               throw new Error("No se recibio token de autenticacion");
@@ -143,7 +169,7 @@ function Login() {
             localStorage.setItem("token", response.token);
             localStorage.setItem("user", JSON.stringify(response.user || {}));
 
-            if (rememberMe) {
+            if (rememberMeRef.current) {
               localStorage.setItem("rememberMe", "true");
             } else {
               localStorage.removeItem("rememberMe");
@@ -171,6 +197,7 @@ function Login() {
           });
           setLoading(false);
         },
+        itp_support: true,
         auto_select: false,
         cancel_on_tap_outside: true,
       });
@@ -184,6 +211,13 @@ function Login() {
         width: googleBtnRef.current.offsetWidth || 360,
         logo_alignment: "left",
       });
+
+      if (isInAppBrowser()) {
+        setErrors({
+          general:
+            "Si Google falla dentro de apps (Instagram/Facebook), abre el enlace en Chrome o Safari.",
+        });
+      }
 
       return true;
     };
@@ -205,7 +239,7 @@ function Login() {
       if (interval) clearInterval(interval);
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [rememberMe]);
+  }, []);
 
   const handleSocialLogin = (provider) => {
     alert(`Login con ${provider} - Funcionalidad por implementar`);
