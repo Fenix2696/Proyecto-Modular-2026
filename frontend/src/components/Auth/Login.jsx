@@ -10,6 +10,7 @@ import communityIcon from "../../assets/feature-icons/comunidad.png";
 function Login() {
   const navigate = useNavigate();
   const googleBtnRef = useRef(null);
+  const rememberMeRef = useRef(false);
 
   const [formData, setFormData] = useState({
     identifier: "",
@@ -21,6 +22,10 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    rememberMeRef.current = rememberMe;
+  }, [rememberMe]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -104,107 +109,79 @@ function Login() {
     }
   };
 
-    useEffect(() => {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-      if (!clientId) return;
+    if (!clientId) return;
 
-      let cancelled = false;
-      let interval = null;
-      let timeoutId = null;
+    let cancelled = false;
+    let interval = null;
+    let timeoutId = null;
 
-      const initGoogleButton = () => {
-        if (cancelled) return false;
-        if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
+    const isInAppBrowser = () => {
+      const ua = String(navigator.userAgent || "").toLowerCase();
+      return /fban|fbav|instagram|line\/|gsa\//.test(ua);
+    };
 
-        googleBtnRef.current.innerHTML = "";
+    const loginGoogleConRetry = async (idToken) => {
+      try {
+        return await loginWithGoogle(idToken);
+      } catch (error) {
+        const msg = String(error?.message || "").toLowerCase();
+        const transient =
+          msg.includes("timeout") ||
+          msg.includes("network") ||
+          msg.includes("fetch") ||
+          msg.includes("500");
+        if (!transient) throw error;
+        await new Promise((r) => setTimeout(r, 350));
+        return loginWithGoogle(idToken);
+      }
+    };
 
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: async (resp) => {
-            if (cancelled) return;
+    const initGoogleButton = () => {
+      if (cancelled) return false;
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
 
-            try {
-              const idToken = resp?.credential;
+      googleBtnRef.current.innerHTML = "";
 
-              if (!idToken) {
-                throw new Error("No se recibio credential de Google");
-              }
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (resp) => {
+          if (cancelled) return;
 
-              setLoading(true);
-              setErrors({});
+          try {
+            const idToken = resp?.credential;
 
-              const response = await loginWithGoogle(idToken);
-
-              if (!response?.token) {
-                throw new Error("No se recibio token de autenticacion");
-              }
-
-              localStorage.setItem("token", response.token);
-              localStorage.setItem("user", JSON.stringify(response.user || {}));
-
-              if (rememberMe) {
-                localStorage.setItem("rememberMe", "true");
-              } else {
-                localStorage.removeItem("rememberMe");
-              }
-
-              setLoginSuccess(true);
-              setLoading(false);
-
-              setTimeout(() => {
-                if (!cancelled) {
-                  goToDashboard();
-                }
-              }, 420);
-            } catch (error) {
-              setErrors({
-                general: error.message || "Error al iniciar sesion con Google",
-              });
-              setLoading(false);
+            if (!idToken) {
+              throw new Error("No se recibio credential de Google");
             }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
 
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          type: "standard",
-          theme: "outline",
-          size: "large",
-          text: "continue_with",
-          shape: "pill",
-          width: googleBtnRef.current.offsetWidth || 360,
-          logo_alignment: "left",
-        });
+            setLoading(true);
+            setErrors({});
 
-        return true;
-      };
+            const response = await loginGoogleConRetry(idToken);
 
-      if (initGoogleButton()) return;
+            if (!response?.token) {
+              throw new Error("No se recibio token de autenticacion");
+            }
 
-      interval = setInterval(() => {
-        if (initGoogleButton()) {
-          clearInterval(interval);
-        }
-      }, 250);
+            localStorage.setItem("token", response.token);
+            localStorage.setItem("user", JSON.stringify(response.user || {}));
 
-      timeoutId = setTimeout(() => {
-        if (interval) clearInterval(interval);
-      }, 10000);
-
-      return () => {
-        cancelled = true;
-        if (interval) clearInterval(interval);
-        if (timeoutId) clearTimeout(timeoutId);
-      };
-    }, [rememberMe]);
+            if (rememberMeRef.current) {
+              localStorage.setItem("rememberMe", "true");
+            } else {
+              localStorage.removeItem("rememberMe");
+            }
 
             setLoginSuccess(true);
             setLoading(false);
 
             setTimeout(() => {
-              goToDashboard();
+              if (!cancelled) {
+                goToDashboard();
+              }
             }, 420);
           } catch (error) {
             setErrors({
@@ -213,6 +190,14 @@ function Login() {
             setLoading(false);
           }
         },
+        error_callback: () => {
+          setErrors({
+            general:
+              "Google no pudo completar el login. Revisa dominios autorizados y el Client ID.",
+          });
+          setLoading(false);
+        },
+        itp_support: true,
         auto_select: false,
         cancel_on_tap_outside: true,
       });
@@ -227,21 +212,34 @@ function Login() {
         logo_alignment: "left",
       });
 
+      if (isInAppBrowser()) {
+        setErrors({
+          general:
+            "Si Google falla dentro de apps (Instagram/Facebook), abre el enlace en Chrome o Safari.",
+        });
+      }
+
       return true;
     };
 
     if (initGoogleButton()) return;
 
-    const interval = setInterval(() => {
+    interval = setInterval(() => {
       if (initGoogleButton()) {
         clearInterval(interval);
       }
     }, 250);
 
-    setTimeout(() => clearInterval(interval), 10000);
+    timeoutId = setTimeout(() => {
+      if (interval) clearInterval(interval);
+    }, 10000);
 
-    return () => clearInterval(interval);
-  }, [rememberMe]);
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
 
   const handleSocialLogin = (provider) => {
     alert(`Login con ${provider} - Funcionalidad por implementar`);

@@ -55,9 +55,11 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
   const normalizePhotoUrl = (raw) => {
     const v = (raw || "").trim();
     if (!v) return "";
+    if (/^undefined|null$/i.test(v)) return "";
 
     // ya absoluto
     if (/^https?:\/\//i.test(v)) return v;
+    if (v.startsWith("//")) return `https:${v}`;
 
     // viene como /api/...
     if (v.startsWith("/api/")) return `${apiHost}${v}`;
@@ -70,6 +72,15 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
   };
 
   const sanitizePhoneInput = (value) => value.replace(/\D/g, "").slice(0, 10);
+
+  const isSupportedImageFile = (file) => {
+    if (!file) return false;
+    const mime = String(file.type || "").toLowerCase();
+    if (mime.startsWith("image/")) return true;
+
+    const name = String(file.name || "").toLowerCase();
+    return /\.(jpg|jpeg|png|webp|gif|heic|heif)$/.test(name);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -145,13 +156,13 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
+    if (!isSupportedImageFile(file)) {
       setToast({ type: "error", title: "Archivo invalido", message: "Selecciona una imagen." });
       return;
     }
 
-    if (file.size > 8 * 1024 * 1024) {
-      setToast({ type: "error", title: "Imagen muy pesada", message: "Maximo 8MB." });
+    if (file.size > 12 * 1024 * 1024) {
+      setToast({ type: "error", title: "Imagen muy pesada", message: "Maximo 12MB." });
       return;
     }
 
@@ -268,7 +279,8 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
   };
 
   // ✅ prioridad: preview local > prop (ya absoluto) > user.photo_url
-  const basePhoto = userPhotoUrl || user?.photo_url || "";
+  const basePhoto =
+    userPhotoUrl || user?.photo_url || user?.avatar || user?.photo_path || "";
   const effectivePhoto = localPreview || normalizePhotoUrl(basePhoto);
 
   return (
