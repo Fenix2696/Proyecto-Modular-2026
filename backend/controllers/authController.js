@@ -61,6 +61,41 @@ function normalizarFotoGoogle(url) {
   return withProtocol;
 }
 
+function normalizarBaseUsername(value) {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._]/g, "");
+  const compact = raw.replace(/[._]{2,}/g, "_").replace(/^[_\.]+|[_\.]+$/g, "");
+  const finalValue = compact.slice(0, 24);
+  if (finalValue.length >= 3) return finalValue;
+  return "usuario";
+}
+
+async function generarUsernameDisponible(base, excludeUserId = null) {
+  const normalizedBase = normalizarBaseUsername(base);
+  let attempt = 0;
+
+  while (attempt < 30) {
+    const suffix = attempt === 0 ? "" : `_${attempt + 1}`;
+    const candidate = `${normalizedBase}${suffix}`.slice(0, 30);
+    const rows = await pool.query(
+      `
+      SELECT id
+      FROM users
+      WHERE LOWER(username) = LOWER($1)
+        AND ($2::int IS NULL OR id <> $2::int)
+      LIMIT 1
+      `,
+      [candidate, excludeUserId]
+    );
+    if (rows.rows.length === 0) return candidate;
+    attempt += 1;
+  }
+
+  return `${normalizedBase}_${Date.now().toString().slice(-4)}`.slice(0, 30);
+}
+
 exports.checkUsername = async (req, res) => {
   try {
     const { username } = req.query;
@@ -309,6 +344,11 @@ exports.oauthGoogle = async (req, res) => {
     const email = String(payload.email).trim().toLowerCase();
     const nombreGoogle = payload.name || payload.given_name || "Usuario Google";
     const fotoGoogle = normalizarFotoGoogle(payload.picture);
+    const usernameBase =
+      payload.given_name ||
+      String(email || "")
+        .split("@")[0]
+        .trim();
 
     let result = await pool.query(
       `
@@ -324,7 +364,7 @@ exports.oauthGoogle = async (req, res) => {
         photo_data,
         is_active
       FROM users
-      WHERE email = $1
+      WHERE LOWER(email) = LOWER($1)
       LIMIT 1
       `,
       [email]
@@ -333,39 +373,76 @@ exports.oauthGoogle = async (req, res) => {
     let user = result.rows[0];
 
     if (!user) {
-      const inserted = await pool.query(
-        `
-        INSERT INTO users (
-          name,
-          email,
-          password,
-          role,
-          username,
-          phone,
-          full_name,
-          photo_path,
-          is_active,
-          created_at,
-          updated_at
-        )
-        VALUES ($1, $2, NULL, 'user', NULL, NULL, $3, $4, true, NOW(), NOW())
-        RETURNING
-          id,
-          name,
-          email,
-          role,
-          username,
-          phone,
-          full_name,
-          photo_path,
-          photo_data,
-          is_active
-        `,
-        [nombreGoogle, email, nombreGoogle, fotoGoogle]
-      );
+      try {
+        const usernameGoogle = await generarUsernameDisponible(usernameBase);
+        const inserted = await pool.query(
+          `
+          INSERT INTO users (
+            name,
+            email,
+            password,
+            role,
+            username,
+            phone,
+            full_name,
+            is_active,
+            created_at,
+            updated_at
+          )
+          VALUES ($1, $2, NULL, 'user', $3, NULL, $4, true, NOW(), NOW())
+          RETURNING
+            id,
+            name,
+            email,
+            role,
+            username,
+            phone,
+            full_name,
+            photo_path,
+            photo_data,
+            is_active
+          `,
+          [nombreGoogle, email, usernameGoogle, nombreGoogle]
+        );
 
-      user = inserted.rows[0];
+        user = inserted.rows[0];
+      } catch (insertError) {
+        if (insertError?.code !== "23505") {
+          throw insertError;
+        }
+
+        const existing = await pool.query(
+          `
+          SELECT
+            id,
+            name,
+            email,
+            role,
+            username,
+            phone,
+            full_name,
+            photo_path,
+            photo_data,
+            is_active
+          FROM users
+          WHERE LOWER(email) = LOWER($1)
+          LIMIT 1
+          `,
+          [email]
+        );
+
+        if (existing.rows.length === 0) {
+          throw insertError;
+        }
+        user = existing.rows[0];
+      }
     } else {
+      const usernameActual = String(user.username || "").trim();
+      let usernameAsignado = null;
+      if (!usernameActual) {
+        usernameAsignado = await generarUsernameDisponible(usernameBase, user.id);
+      }
+
       const synced = await pool.query(
         `
         UPDATE users
@@ -378,8 +455,12 @@ exports.oauthGoogle = async (req, res) => {
             WHEN (full_name IS NULL OR BTRIM(full_name) = '') THEN $2
             ELSE full_name
           END,
+          username = CASE
+            WHEN (username IS NULL OR BTRIM(username) = '') AND $3 IS NOT NULL THEN $3
+            ELSE username
+          END,
           updated_at = NOW()
-        WHERE id = $3
+        WHERE id = $4
         RETURNING
           id,
           name,
@@ -392,7 +473,7 @@ exports.oauthGoogle = async (req, res) => {
           photo_data,
           is_active
         `,
-        [nombreGoogle, nombreGoogle, user.id]
+        [nombreGoogle, nombreGoogle, usernameAsignado, user.id]
       );
 
       if (synced.rows.length > 0) {
