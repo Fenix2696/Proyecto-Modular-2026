@@ -596,9 +596,11 @@ exports.oauthGoogle = async (req, res) => {
     });
   } catch (error) {
     console.error("Error en oauthGoogle:", error);
+    const detail = error?.code || error?.message || "unknown";
     return res.status(500).json({
       success: false,
       message: "Error interno al autenticar con Google",
+      detail,
       error: error.message,
     });
   }

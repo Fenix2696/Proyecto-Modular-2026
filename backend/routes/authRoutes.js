@@ -12,6 +12,12 @@ router.post("/login", authController.login);
 
 // Login con Google
 router.post("/oauth/google", authController.oauthGoogle);
+router.get("/oauth/google", (req, res) => {
+  return res.status(405).json({
+    success: false,
+    message: "Metodo no permitido. Usa POST /api/auth/oauth/google",
+  });
+});
 // Username
 router.get("/check-username", authController.checkUsername);
 
