@@ -429,6 +429,10 @@ exports.oauthGoogle = async (req, res) => {
     if (!user) {
       try {
         const usernameGoogle = await generarUsernameDisponible(usernameBase);
+        const placeholderPassword = await bcrypt.hash(
+          crypto.randomBytes(24).toString("hex"),
+          10
+        );
         const inserted = await pool.query(
           `
           INSERT INTO users (
@@ -443,7 +447,7 @@ exports.oauthGoogle = async (req, res) => {
             created_at,
             updated_at
           )
-          VALUES ($1, $2, NULL, 'user', $3, NULL, $4, true, NOW(), NOW())
+          VALUES ($1, $2, $3, 'user', $4, NULL, $5, true, NOW(), NOW())
           RETURNING
             id,
             name,
@@ -456,7 +460,13 @@ exports.oauthGoogle = async (req, res) => {
             photo_data,
             is_active
           `,
-          [nombreGoogle, email, usernameGoogle, nombreGoogle]
+          [
+            nombreGoogle,
+            email,
+            placeholderPassword,
+            usernameGoogle,
+            nombreGoogle,
+          ]
         );
 
         user = inserted.rows[0];
