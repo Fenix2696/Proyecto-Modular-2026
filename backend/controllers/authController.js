@@ -510,7 +510,7 @@ exports.oauthGoogle = async (req, res) => {
             ELSE full_name
           END,
           username = CASE
-            WHEN (username IS NULL OR BTRIM(username) = '') AND $3 IS NOT NULL THEN $3
+            WHEN (username IS NULL OR BTRIM(username) = '') AND $3::text IS NOT NULL THEN $3::text
             ELSE username
           END,
           updated_at = NOW()
