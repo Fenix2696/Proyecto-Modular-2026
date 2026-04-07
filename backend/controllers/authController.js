@@ -20,6 +20,11 @@ function getGoogleAudiences() {
   return single ? [single] : [];
 }
 
+function envEnabled(name) {
+  const value = String(process.env[name] || "").trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
 function generarToken(payload) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
@@ -355,11 +360,30 @@ exports.oauthGoogle = async (req, res) => {
       });
     } catch (verifyError) {
       console.error("verifyIdToken error:", verifyError?.message || verifyError);
-      return res.status(401).json({
-        success: false,
-        message:
-          "No se pudo validar el token de Google. Verifica Client ID configurado.",
-      });
+      if (envEnabled("GOOGLE_AUTH_RELAX_AUDIENCE")) {
+        try {
+          ticket = await googleClient.verifyIdToken({ idToken });
+          console.warn(
+            "Google token validado en modo relajado (sin audience). Revisa GOOGLE_CLIENT_ID(S)."
+          );
+        } catch (relaxedError) {
+          console.error(
+            "verifyIdToken relaxed error:",
+            relaxedError?.message || relaxedError
+          );
+          return res.status(401).json({
+            success: false,
+            message:
+              "No se pudo validar el token de Google (modo relajado tambien fallo).",
+          });
+        }
+      } else {
+        return res.status(401).json({
+          success: false,
+          message:
+            "No se pudo validar el token de Google. Verifica Client ID configurado.",
+        });
+      }
     }
 
     const payload = ticket.getPayload();
@@ -572,9 +596,11 @@ exports.oauthGoogle = async (req, res) => {
     });
   } catch (error) {
     console.error("Error en oauthGoogle:", error);
+    const detail = error?.code || error?.message || "unknown";
     return res.status(500).json({
       success: false,
       message: "Error interno al autenticar con Google",
+      detail,
       error: error.message,
     });
   }
