@@ -6,7 +6,19 @@ const { OAuth2Client } = require("google-auth-library");
 const pool = require("../config/database");
 const transporter = require("../config/mailer");
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client();
+
+function getGoogleAudiences() {
+  const list = String(process.env.GOOGLE_CLIENT_IDS || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  if (list.length > 0) return list;
+
+  const single = String(process.env.GOOGLE_CLIENT_ID || "").trim();
+  return single ? [single] : [];
+}
 
 function generarToken(payload) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -327,10 +339,28 @@ exports.oauthGoogle = async (req, res) => {
       });
     }
 
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    const audiences = getGoogleAudiences();
+    if (audiences.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: "Google auth no configurado en servidor",
+      });
+    }
+
+    let ticket;
+    try {
+      ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: audiences,
+      });
+    } catch (verifyError) {
+      console.error("verifyIdToken error:", verifyError?.message || verifyError);
+      return res.status(401).json({
+        success: false,
+        message:
+          "No se pudo validar el token de Google. Verifica Client ID configurado.",
+      });
+    }
 
     const payload = ticket.getPayload();
 
