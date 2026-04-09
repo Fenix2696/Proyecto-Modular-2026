@@ -184,6 +184,7 @@
 
   .rc-main{
     padding: 0;
+    min-height: calc(100dvh - 72px);
   }
 
   .rc-map-wrap{
@@ -192,5 +193,15 @@
     border: none;
     box-shadow: none;
     background: transparent;
+  }
+}
+
+@media (max-width: 420px){
+  .rc-body{
+    height: calc(100dvh - 68px);
+  }
+
+  .rc-main{
+    min-height: calc(100dvh - 68px);
   }
 }
