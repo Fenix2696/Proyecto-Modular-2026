@@ -248,6 +248,7 @@ export default function Dashboard() {
   const [directions, setDirections] = useState(null);
   const [routesInfo, setRoutesInfo] = useState([]);
   const [routeIndex, setRouteIndex] = useState(0);
+  const routeIndexRef = useRef(0);
 
   // trafficData (Routes API v2)
   const [trafficData, setTrafficData] = useState(null);
@@ -275,6 +276,10 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const [photoTs, setPhotoTs] = useState(() => Date.now());
   const [clearMapToken, setClearMapToken] = useState(0);
+
+  useEffect(() => {
+    routeIndexRef.current = routeIndex;
+  }, [routeIndex]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -651,7 +656,9 @@ export default function Dashboard() {
     return { lat: Number(p.lat), lng: Number(p.lng) };
   };
 
-  const buildDirections = async (modeKey) => {
+  const buildDirections = async (modeKey, options = {}) => {
+    const { preserveSelectedRoute = false } = options;
+
     await waitForGoogle();
 
     const originLL = getPointLatLng(originIsMyLocation, originLatLngRef);
@@ -731,7 +738,16 @@ export default function Dashboard() {
 
     setDirections(res);
     setRoutesInfo(info);
-    setRouteIndex(bestIdx);
+    setRouteIndex((prev) => {
+      if (preserveSelectedRoute) {
+        const current =
+          Number.isFinite(routeIndexRef.current) ? routeIndexRef.current : prev;
+        if (Number.isFinite(current)) {
+          return Math.min(Math.max(current, 0), res.routes.length - 1);
+        }
+      }
+      return bestIdx;
+    });
   };
 
   const openDirectionsPanel = () => setActivePanel("directions");
@@ -885,7 +901,7 @@ export default function Dashboard() {
 
     (async () => {
       try {
-        await buildDirections(travelMode);
+        await buildDirections(travelMode, { preserveSelectedRoute: true });
       } catch {}
     })();
   }, [travelMode, originIsMyLocation, destIsMyLocation, userLocation]);
