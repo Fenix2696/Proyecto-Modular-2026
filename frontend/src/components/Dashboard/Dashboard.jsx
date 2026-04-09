@@ -405,7 +405,7 @@ export default function Dashboard() {
 
         setUserLocation(next);
 
-        if (followMe) {
+        if (followMe && !navigationActive) {
           setMapCenter([next.lat, next.lng]);
           setMapZoom((z) => Math.max(z, 16));
         }
@@ -418,7 +418,7 @@ export default function Dashboard() {
     );
 
     return () => navigator.geolocation.clearWatch(id);
-  }, [followMe]);
+  }, [followMe, navigationActive]);
 
   const loadProfile = async () => {
     try {
@@ -775,6 +775,9 @@ export default function Dashboard() {
 
   const handleStartNavigation = () => {
     if (!directions?.routes?.length) return;
+    // evita "jitter" de camara en movil por updates de geolocalizacion
+    // el usuario puede recentrar manualmente con el boton "mi ubicacion"
+    setFollowMe(false);
     setNavigationActive(true);
   };
 
@@ -895,6 +898,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (navigationActive) return;
     if (!userLocation && (originIsMyLocation || destIsMyLocation)) return;
     if (!originIsMyLocation && !originLatLngRef.current) return;
     if (!destIsMyLocation && !destLatLngRef.current) return;
@@ -904,7 +908,7 @@ export default function Dashboard() {
         await buildDirections(travelMode, { preserveSelectedRoute: true });
       } catch {}
     })();
-  }, [travelMode, originIsMyLocation, destIsMyLocation, userLocation]);
+  }, [travelMode, originIsMyLocation, destIsMyLocation, userLocation, navigationActive]);
 
   const handleSwap = () => {
     setOriginIsMyLocation((prevOriginMy) => {
