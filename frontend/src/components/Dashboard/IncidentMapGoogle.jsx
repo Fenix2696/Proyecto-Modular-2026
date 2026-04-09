@@ -1053,7 +1053,7 @@ export default function IncidentMapGoogle({
   useEffect(() => {
     if (!mapObj) return;
 
-    if (!navigationActive) {
+    if (!navigationActive || !followMe) {
       try {
         mapObj.setTilt?.(0);
       } catch (_) {}
@@ -1079,7 +1079,7 @@ export default function IncidentMapGoogle({
         mapObj.setTilt?.(45);
       } catch (_) {}
     } catch (_) {}
-  }, [navigationActive, mapObj, userLocation]);
+  }, [navigationActive, followMe, mapObj, userLocation]);
 
   const selectedPosition = useMemo(() => getSelectedLatLng(selected), [selected]);
 
