@@ -579,6 +579,14 @@ export default function Dashboard() {
 
   const handleCenterToMe = () => {
     if (!userLocation) return;
+    // En navegacion: centrar solo bajo demanda (sin auto-follow continuo)
+    if (navigationActive) {
+      setFollowMe(false);
+      setMapCenter([userLocation.lat, userLocation.lng]);
+      setMapZoom((z) => Math.max(z, 16));
+      return;
+    }
+
     setFollowMe(true);
     setMapCenter([userLocation.lat, userLocation.lng]);
     setMapZoom((z) => Math.max(z, 16));
