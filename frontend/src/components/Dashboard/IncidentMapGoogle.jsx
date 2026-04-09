@@ -633,6 +633,7 @@ export default function IncidentMapGoogle({
     }
 
     const hasTrafficOverlay = !!trafficData;
+    const baseRouteOpacity = hasTrafficOverlay ? 0.62 : 0.9;
 
     if (!dirRendererRef.current) {
       dirRendererRef.current = new window.google.maps.DirectionsRenderer({
@@ -640,7 +641,7 @@ export default function IncidentMapGoogle({
         suppressMarkers: true,
         preserveViewport: true,
         polylineOptions: {
-          strokeOpacity: hasTrafficOverlay ? 0 : 0.9,
+          strokeOpacity: baseRouteOpacity,
           strokeWeight: 6,
           strokeColor: "#60a5fa",
         },
@@ -649,7 +650,7 @@ export default function IncidentMapGoogle({
       try {
         dirRendererRef.current.setOptions({
           polylineOptions: {
-            strokeOpacity: hasTrafficOverlay ? 0 : 0.9,
+            strokeOpacity: baseRouteOpacity,
             strokeWeight: 6,
             strokeColor: "#60a5fa",
           },
@@ -1053,7 +1054,7 @@ export default function IncidentMapGoogle({
   useEffect(() => {
     if (!mapObj) return;
 
-    if (!navigationActive) {
+    if (!navigationActive || !followMe) {
       try {
         mapObj.setTilt?.(0);
       } catch (_) {}
@@ -1079,7 +1080,7 @@ export default function IncidentMapGoogle({
         mapObj.setTilt?.(45);
       } catch (_) {}
     } catch (_) {}
-  }, [navigationActive, mapObj, userLocation]);
+  }, [navigationActive, followMe, mapObj, userLocation]);
 
   const selectedPosition = useMemo(() => getSelectedLatLng(selected), [selected]);
 
