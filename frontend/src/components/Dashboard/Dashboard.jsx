@@ -1034,7 +1034,7 @@ export default function Dashboard() {
             onClearDirections={handleClearDirections}
             onStartRouteAndFocusMap={() => {
               handleStartNavigation();
-              setFollowMe(true);
+              setFollowMe(false);
               setActivePanel("none");
               setSidebarCollapsed(true);
             }}
