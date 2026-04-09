@@ -907,7 +907,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (navigationActive) return;
-    if (!userLocation && (originIsMyLocation || destIsMyLocation)) return;
+    const userLocationReady =
+      !!userLocation &&
+      Number.isFinite(userLocation.lat) &&
+      Number.isFinite(userLocation.lng);
+
+    if (!userLocationReady && (originIsMyLocation || destIsMyLocation)) return;
     if (!originIsMyLocation && !originLatLngRef.current) return;
     if (!destIsMyLocation && !destLatLngRef.current) return;
 
@@ -916,7 +921,14 @@ export default function Dashboard() {
         await buildDirections(travelMode, { preserveSelectedRoute: true });
       } catch {}
     })();
-  }, [travelMode, originIsMyLocation, destIsMyLocation, userLocation, navigationActive]);
+  }, [
+    travelMode,
+    originIsMyLocation,
+    destIsMyLocation,
+    // solo dispara cuando cambia disponibilidad (null <-> listo), no en cada tick GPS
+    !!userLocation,
+    navigationActive,
+  ]);
 
   const handleSwap = () => {
     setOriginIsMyLocation((prevOriginMy) => {
