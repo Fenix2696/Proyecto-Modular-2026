@@ -173,3 +173,42 @@
   background: rgba(255,255,255,0.10);
   border-color: rgba(255,255,255,0.16);
 }
+
+@media (max-width: 768px){
+  .rc-filters{
+    gap: 12px;
+  }
+
+  .rc-filters-section{
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .rc-dd-trigger,
+  .rc-filters-item,
+  .rc-filters-reset{
+    min-height: 46px;
+  }
+
+  .rc-filters-check{
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 420px){
+  .rc-filters-section{
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .rc-filters-label{
+    margin-bottom: 8px;
+  }
+
+  .rc-dd-trigger,
+  .rc-dd-item,
+  .rc-filters-text{
+    font-size: 14px;
+  }
+}
