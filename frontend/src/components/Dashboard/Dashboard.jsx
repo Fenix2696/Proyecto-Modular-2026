@@ -925,8 +925,6 @@ export default function Dashboard() {
     travelMode,
     originIsMyLocation,
     destIsMyLocation,
-    // solo dispara cuando cambia disponibilidad (null <-> listo), no en cada tick GPS
-    !!userLocation,
     navigationActive,
   ]);
 
