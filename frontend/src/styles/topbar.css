@@ -357,6 +357,8 @@
 @media (max-width: 520px){
   .rc-topbar{
     padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+    min-height: 68px;
+    gap: 8px;
   }
 
   .rc-pill-btn--report{
@@ -368,5 +370,49 @@
 
   .rc-report-label{
     display: inline;
+  }
+
+  .rc-search{
+    height: 46px;
+    padding: 5px 8px 5px 10px;
+    gap: 8px;
+  }
+
+  .rc-search-icon{
+    width: 30px;
+    height: 30px;
+  }
+
+  .rc-search-clear-btn{
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 420px){
+  .rc-topbar{
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  .rc-pill-btn--report{
+    min-width: 46px;
+    width: 46px;
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  .rc-report-label{
+    display: none;
+  }
+
+  .rc-icon-btn{
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .rc-search input{
+    font-size: 16px;
   }
 }
