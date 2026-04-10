@@ -343,6 +343,7 @@ export default function IncidentMapGoogle({
   const lastEmittedViewportRef = useRef({ lat: null, lng: null, zoom: null });
 
   const dirRendererRef = useRef(null);
+  const lastSelectedMarkerKeyRef = useRef(null);
 
   const trafficPolylinesRef = useRef([]);
   const destMarkerRef = useRef(null);
@@ -906,14 +907,13 @@ export default function IncidentMapGoogle({
     if (heatmapOn) return;
 
     for (const i of cleanIncidents) {
-      const isSel = !selected?.isAIReport && selected?.id === i.id;
       const t = TYPE[i.type] || TYPE.robbery;
 
       const marker = new window.google.maps.Marker({
         map: mapObj,
         position: { lat: i.lat, lng: i.lng },
-        icon: getMarkerIcon(i.type, isSel),
-        zIndex: isSel ? 2000 : t.z,
+        icon: getMarkerIcon(i.type, false),
+        zIndex: t.z,
       });
 
       marker.addListener("click", () => {
@@ -923,9 +923,10 @@ export default function IncidentMapGoogle({
         setShowLegend(false);
       });
 
+      marker.__type = i.type;
       markersRef.current.set(i.id, marker);
     }
-  }, [isLoaded, mapObj, cleanIncidents, selected, heatmapOn]);
+  }, [isLoaded, mapObj, cleanIncidents, heatmapOn]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -937,14 +938,13 @@ export default function IncidentMapGoogle({
     if (heatmapOn) return;
 
     for (const r of cleanAIReports) {
-      const isSel = !!selected?.isAIReport && selected?.id === r.id;
       const meta = getAICategoryMeta(r.category);
 
       const marker = new window.google.maps.Marker({
         map: mapObj,
         position: { lat: r.latitude, lng: r.longitude },
-        icon: getAIReportIcon(r.category, isSel),
-        zIndex: isSel ? 2400 : meta.z,
+        icon: getAIReportIcon(r.category, false),
+        zIndex: meta.z,
       });
 
       marker.addListener("click", () => {
@@ -954,9 +954,62 @@ export default function IncidentMapGoogle({
         setShowLegend(false);
       });
 
+      marker.__category = r.category;
       aiMarkersRef.current.set(`ai-${r.id}`, marker);
     }
-  }, [isLoaded, mapObj, cleanAIReports, selected, heatmapOn]);
+  }, [isLoaded, mapObj, cleanAIReports, heatmapOn]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (heatmapOn) return;
+
+    const prevKey = lastSelectedMarkerKeyRef.current;
+    const nextKey = selected
+      ? selected.isAIReport
+        ? `ai-${selected.id}`
+        : `${selected.id}`
+      : null;
+
+    if (prevKey && prevKey !== nextKey) {
+      if (prevKey.startsWith("ai-")) {
+        const prevAi = aiMarkersRef.current.get(prevKey);
+        if (prevAi) {
+          const prevCategory = String(prevAi.__category || "otro").toLowerCase();
+          const prevMeta = getAICategoryMeta(prevCategory);
+          prevAi.setIcon(getAIReportIcon(prevCategory, false));
+          prevAi.setZIndex(prevMeta.z);
+        }
+      } else {
+        const prev = markersRef.current.get(Number(prevKey));
+        if (prev) {
+          const prevType = prev.__type || "robbery";
+          const prevMeta = TYPE[prevType] || TYPE.robbery;
+          prev.setIcon(getMarkerIcon(prevType, false));
+          prev.setZIndex(prevMeta.z);
+        }
+      }
+    }
+
+    if (nextKey) {
+      if (nextKey.startsWith("ai-")) {
+        const nextAi = aiMarkersRef.current.get(nextKey);
+        if (nextAi) {
+          const nextCategory = String(nextAi.__category || "otro").toLowerCase();
+          nextAi.setIcon(getAIReportIcon(nextCategory, true));
+          nextAi.setZIndex(2400);
+        }
+      } else {
+        const next = markersRef.current.get(Number(nextKey));
+        if (next) {
+          const nextType = next.__type || "robbery";
+          next.setIcon(getMarkerIcon(nextType, true));
+          next.setZIndex(2000);
+        }
+      }
+    }
+
+    lastSelectedMarkerKeyRef.current = nextKey;
+  }, [isLoaded, selected, heatmapOn]);
 
   useEffect(() => {
     if (!navigationActive) {
