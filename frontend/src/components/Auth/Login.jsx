@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Login.css";
 import { loginUser, loginWithGoogle } from "../../services/auth";
@@ -39,12 +39,12 @@ function Login() {
     }
   };
 
-  const goToDashboard = () => {
+  const goToDashboard = useCallback(() => {
     setLeaving(true);
     setTimeout(() => {
       navigate("/", { replace: true });
     }, 280);
-  };
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -239,7 +239,7 @@ function Login() {
       if (interval) clearInterval(interval);
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, []);
+  }, [goToDashboard]);
 
   const handleSocialLogin = (provider) => {
     alert(`Login con ${provider} - Funcionalidad por implementar`);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * PlacesSearch
@@ -33,12 +33,12 @@ export default function PlacesSearch({
   const [showRecent, setShowRecent] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
 
-  const setInputValue = (nextValue) => {
+  const setInputValue = useCallback((nextValue) => {
     onValueChange?.(nextValue);
     onChange?.(nextValue);
-  };
+  }, [onValueChange, onChange]);
 
-  const loadRecentSearches = () => {
+  const loadRecentSearches = useCallback(() => {
     if (!enableRecentSearches) return [];
     try {
       const raw = localStorage.getItem(recentStorageKey);
@@ -47,16 +47,16 @@ export default function PlacesSearch({
     } catch {
       return [];
     }
-  };
+  }, [enableRecentSearches, recentStorageKey]);
 
-  const saveRecentSearches = (items) => {
+  const saveRecentSearches = useCallback((items) => {
     if (!enableRecentSearches) return;
     try {
       localStorage.setItem(recentStorageKey, JSON.stringify(items));
-    } catch {}
-  };
+    } catch { /* no-op */ }
+  }, [enableRecentSearches, recentStorageKey]);
 
-  const pushRecentSearch = (text) => {
+  const pushRecentSearch = useCallback((text) => {
     if (!enableRecentSearches) return;
     const clean = String(text || "").trim();
     if (!clean) return;
@@ -70,14 +70,14 @@ export default function PlacesSearch({
       saveRecentSearches(next);
       return next;
     });
-  };
+  }, [enableRecentSearches, maxRecentSearches, saveRecentSearches]);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
     onEnterRef.current = onEnter;
     setInputValueRef.current = setInputValue;
     pushRecentSearchRef.current = pushRecentSearch;
-  }, [onSelect, onEnter, onValueChange, onChange, enableRecentSearches, maxRecentSearches]);
+  }, [onSelect, onEnter, setInputValue, pushRecentSearch]);
 
   const removeRecentSearch = (text) => {
     const next = recentSearches.filter((item) => item !== text);
@@ -88,7 +88,7 @@ export default function PlacesSearch({
   useEffect(() => {
     if (!enableRecentSearches) return;
     setRecentSearches(loadRecentSearches());
-  }, [enableRecentSearches]);
+  }, [enableRecentSearches, loadRecentSearches]);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -118,7 +118,7 @@ export default function PlacesSearch({
     if (typeof LegacyAutocomplete !== "function") return;
 
     const ac = new LegacyAutocomplete(input, {
-      fields: ["formatted_address", "geometry", "name"],
+      fields: ["formatted_address", "geometry", "name", "place_id"],
       componentRestrictions: { country: "mx" },
     });
 
@@ -165,7 +165,70 @@ export default function PlacesSearch({
       }
     };
 
-    const onPlaceChanged = () => {
+    const resolvePlaceLocation = async (place, fallbackAddress) => {
+      const loc = place?.geometry?.location;
+      const lat = loc?.lat?.();
+      const lng = loc?.lng?.();
+
+      if (typeof lat === "number" && typeof lng === "number") {
+        return { lat, lng };
+      }
+
+      const Geocoder = window.google?.maps?.Geocoder;
+      if (typeof Geocoder !== "function") return null;
+
+      const geocoder = new Geocoder();
+
+      if (place?.place_id) {
+        try {
+          const byPlaceId = await new Promise((resolve, reject) => {
+            geocoder.geocode({ placeId: place.place_id }, (results, status) => {
+              if (status === "OK" && Array.isArray(results) && results.length) {
+                resolve(results[0]);
+              } else {
+                reject(new Error(status || "GEOCODER_PLACE_ID_ERROR"));
+              }
+            });
+          });
+
+          const pLoc = byPlaceId?.geometry?.location;
+          const pLat = pLoc?.lat?.();
+          const pLng = pLoc?.lng?.();
+          if (typeof pLat === "number" && typeof pLng === "number") {
+            return { lat: pLat, lng: pLng };
+          }
+        } catch { /* no-op */ }
+      }
+
+      const text = String(fallbackAddress || "").trim();
+      if (!text) return null;
+
+      try {
+        const byAddress = await new Promise((resolve, reject) => {
+          geocoder.geocode(
+            { address: text, region: "mx" },
+            (results, status) => {
+              if (status === "OK" && Array.isArray(results) && results.length) {
+                resolve(results[0]);
+              } else {
+                reject(new Error(status || "GEOCODER_ADDRESS_ERROR"));
+              }
+            }
+          );
+        });
+
+        const aLoc = byAddress?.geometry?.location;
+        const aLat = aLoc?.lat?.();
+        const aLng = aLoc?.lng?.();
+        if (typeof aLat === "number" && typeof aLng === "number") {
+          return { lat: aLat, lng: aLng };
+        }
+      } catch { /* no-op */ }
+
+      return null;
+    };
+
+    const onPlaceChanged = async () => {
       const place = ac.getPlace();
       const address = place?.formatted_address || place?.name || input.value || "";
 
@@ -178,16 +241,15 @@ export default function PlacesSearch({
       pushRecentSearchRef.current?.(address);
       setShowRecent(false);
 
-      const loc = place?.geometry?.location;
-      const lat = loc?.lat?.();
-      const lng = loc?.lng?.();
+      const resolvedLocation = await resolvePlaceLocation(place, address);
 
-      if (
-        onSelectRef.current &&
-        typeof lat === "number" &&
-        typeof lng === "number"
-      ) {
-        onSelectRef.current({ lat, lng, address, place });
+      if (onSelectRef.current && resolvedLocation) {
+        onSelectRef.current({
+          lat: resolvedLocation.lat,
+          lng: resolvedLocation.lng,
+          address,
+          place,
+        });
       } else if (address) {
         // Fallback: algunas respuestas de Autocomplete llegan sin geometry
         // en el primer click/tap. Forzamos flujo por texto para no pedir
@@ -197,7 +259,7 @@ export default function PlacesSearch({
 
       try {
         input.blur();
-      } catch {}
+      } catch { /* no-op */ }
     };
 
     const handleInputFocus = () => {
@@ -218,7 +280,7 @@ export default function PlacesSearch({
       input.removeEventListener("input", handleInputInput);
       try {
         placeChangedListener?.remove?.();
-      } catch {}
+      } catch { /* no-op */ }
       acRef.current = null;
     };
   }, [
@@ -249,7 +311,7 @@ export default function PlacesSearch({
 
     try {
       inputRef.current?.blur();
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   const hasInputValue = String(value || "").trim().length > 0;
@@ -263,7 +325,7 @@ export default function PlacesSearch({
         inputRef.current.value = "";
         inputRef.current.focus();
       }
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   return (
@@ -301,7 +363,7 @@ export default function PlacesSearch({
               e.stopPropagation();
               try {
                 e.currentTarget.blur();
-              } catch {}
+              } catch { /* no-op */ }
               return;
             }
 
@@ -318,7 +380,7 @@ export default function PlacesSearch({
 
             try {
               e.currentTarget.blur();
-            } catch {}
+            } catch { /* no-op */ }
           }}
         />
 
