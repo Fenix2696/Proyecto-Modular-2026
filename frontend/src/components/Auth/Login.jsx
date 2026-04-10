@@ -153,67 +153,71 @@ function Login() {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
 
       googleBtnRef.current.innerHTML = "";
+      const gsiState = (window.__radarGsiState = window.__radarGsiState || {});
+      if (!gsiState.initialized || gsiState.clientId !== clientId) {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (resp) => {
+            if (cancelled) return;
+            if (googleLoginInFlightRef.current) return;
 
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (resp) => {
-          if (cancelled) return;
-          if (googleLoginInFlightRef.current) return;
+            try {
+              const idToken = resp?.credential;
 
-          try {
-            const idToken = resp?.credential;
-
-            if (!idToken) {
-              throw new Error("No se recibio credential de Google");
-            }
-
-            googleLoginInFlightRef.current = true;
-            setLoading(true);
-            setErrors({});
-
-            const response = await withTimeout(loginGoogleConRetry(idToken));
-
-            if (!response?.token) {
-              throw new Error("No se recibio token de autenticacion");
-            }
-
-            localStorage.setItem("token", response.token);
-            localStorage.setItem("user", JSON.stringify(response.user || {}));
-
-            if (rememberMeRef.current) {
-              localStorage.setItem("rememberMe", "true");
-            } else {
-              localStorage.removeItem("rememberMe");
-            }
-
-            setLoginSuccess(true);
-            setLoading(false);
-
-            setTimeout(() => {
-              if (!cancelled) {
-                goToDashboard();
+              if (!idToken) {
+                throw new Error("No se recibio credential de Google");
               }
-            }, 420);
-          } catch (error) {
+
+              googleLoginInFlightRef.current = true;
+              setLoading(true);
+              setErrors({});
+
+              const response = await withTimeout(loginGoogleConRetry(idToken));
+
+              if (!response?.token) {
+                throw new Error("No se recibio token de autenticacion");
+              }
+
+              localStorage.setItem("token", response.token);
+              localStorage.setItem("user", JSON.stringify(response.user || {}));
+
+              if (rememberMeRef.current) {
+                localStorage.setItem("rememberMe", "true");
+              } else {
+                localStorage.removeItem("rememberMe");
+              }
+
+              setLoginSuccess(true);
+              setLoading(false);
+
+              setTimeout(() => {
+                if (!cancelled) {
+                  goToDashboard();
+                }
+              }, 420);
+            } catch (error) {
+              setErrors({
+                general: error.message || "Error al iniciar sesion con Google",
+              });
+              setLoading(false);
+            } finally {
+              googleLoginInFlightRef.current = false;
+            }
+          },
+          error_callback: () => {
             setErrors({
-              general: error.message || "Error al iniciar sesion con Google",
+              general:
+                "Google no pudo completar el login. Revisa dominios autorizados y el Client ID.",
             });
             setLoading(false);
-          } finally {
-            googleLoginInFlightRef.current = false;
-          }
-        },
-        error_callback: () => {
-          setErrors({
-            general:
-              "Google no pudo completar el login. Revisa dominios autorizados y el Client ID.",
-          });
-          setLoading(false);
-        },
-        itp_support: true,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
+          },
+          itp_support: true,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+        gsiState.initialized = true;
+        gsiState.clientId = clientId;
+      }
 
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         type: "standard",
