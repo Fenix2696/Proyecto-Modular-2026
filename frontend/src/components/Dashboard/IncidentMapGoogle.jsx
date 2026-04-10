@@ -299,6 +299,7 @@ export default function IncidentMapGoogle({
   navigationActive = false,
   onStopNavigation,
   onClearDirections,
+  onExitNavigation,
   onNavigationStepChange,
   onNavigationComplete,
   clearMapToken = 0,
@@ -1310,6 +1311,10 @@ export default function IncidentMapGoogle({
             <button
               type="button"
               onClick={() => {
+                if (onExitNavigation) {
+                  onExitNavigation();
+                  return;
+                }
                 onStopNavigation?.();
                 onClearDirections?.();
               }}
