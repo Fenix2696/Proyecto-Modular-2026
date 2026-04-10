@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "../../styles/dashboard.css";
@@ -250,6 +250,7 @@ export default function Dashboard() {
   const [routesInfo, setRoutesInfo] = useState([]);
   const [routeIndex, setRouteIndex] = useState(0);
   const routeIndexRef = useRef(0);
+  const buildDirectionsRef = useRef(null);
 
   // trafficData (Routes API v2)
   const [trafficData, setTrafficData] = useState(null);
@@ -298,7 +299,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     })();
-  }, [navigate]);
+  }, [navigate, loadAIReports]);
 
   useEffect(() => {
     const handleClickOutsideSidebar = (event) => {
@@ -464,7 +465,7 @@ export default function Dashboard() {
     }
   };
 
-  const loadAIReports = async (limit = 50) => {
+  const loadAIReports = useCallback(async (limit = 50) => {
     try {
       const response = await getActiveAIReports(limit);
       const rows = response?.data || [];
@@ -484,7 +485,7 @@ export default function Dashboard() {
       setAiReports([]);
       return [];
     }
-  };
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -788,6 +789,7 @@ export default function Dashboard() {
       return bestIdx;
     });
   };
+  buildDirectionsRef.current = buildDirections;
 
   const openDirectionsPanel = () => setActivePanel("directions");
 
@@ -920,7 +922,7 @@ export default function Dashboard() {
       setNavigationCurrentStep(null);
 
       await buildDirections(travelMode);
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   const handleDestinationEnter = async (text) => {
@@ -940,7 +942,7 @@ export default function Dashboard() {
       setMapZoom((z) => Math.max(z, 14));
 
       await buildDirections(travelMode);
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   useEffect(() => {
@@ -956,14 +958,15 @@ export default function Dashboard() {
 
     (async () => {
       try {
-        await buildDirections(travelMode, { preserveSelectedRoute: true });
-      } catch {}
+        await buildDirectionsRef.current?.(travelMode, { preserveSelectedRoute: true });
+      } catch { /* no-op */ }
     })();
   }, [
     travelMode,
     originIsMyLocation,
     destIsMyLocation,
     navigationActive,
+    userLocation,
   ]);
 
   const handleSwap = () => {

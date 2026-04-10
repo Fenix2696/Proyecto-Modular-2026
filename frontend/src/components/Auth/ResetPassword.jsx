@@ -104,7 +104,7 @@ function ResetPassword() {
 
     setLoading(true);
     try {
-      const res = await resetPassword(token, p1);
+      await resetPassword(token, p1);
       setOk(true);
 
       setTimeout(() => {
