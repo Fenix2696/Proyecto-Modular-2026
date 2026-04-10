@@ -420,6 +420,13 @@ export default function Dashboard() {
     return () => navigator.geolocation.clearWatch(id);
   }, [followMe, navigationActive]);
 
+  // Seguridad: durante navegacion nunca dejar follow continuo activo
+  useEffect(() => {
+    if (navigationActive && followMe) {
+      setFollowMe(false);
+    }
+  }, [navigationActive, followMe]);
+
   const loadProfile = async () => {
     try {
       const res = await getMe();
