@@ -340,6 +340,7 @@ export default function IncidentMapGoogle({
   const mePulseRef = useRef(null);
   const meHeadingRef = useRef(null);
   const latestPosRef = useRef(null);
+  const lastEmittedViewportRef = useRef({ lat: null, lng: null, zoom: null });
 
   const dirRendererRef = useRef(null);
 
@@ -497,11 +498,31 @@ export default function IncidentMapGoogle({
     const lng = centerNow?.lng?.();
     const zoomNow = mapObj.getZoom?.();
 
-    onUserPanMap({
-      lat: Number.isFinite(lat) ? lat : undefined,
-      lng: Number.isFinite(lng) ? lng : undefined,
-      zoom: Number.isFinite(zoomNow) ? zoomNow : undefined,
-    });
+    const safeLat = Number.isFinite(lat) ? lat : undefined;
+    const safeLng = Number.isFinite(lng) ? lng : undefined;
+    const safeZoom = Number.isFinite(zoomNow) ? zoomNow : undefined;
+
+    const prev = lastEmittedViewportRef.current;
+    const changed =
+      !Number.isFinite(prev.lat) ||
+      !Number.isFinite(prev.lng) ||
+      !Number.isFinite(prev.zoom) ||
+      !Number.isFinite(safeLat) ||
+      !Number.isFinite(safeLng) ||
+      !Number.isFinite(safeZoom) ||
+      Math.abs(prev.lat - safeLat) > 0.00001 ||
+      Math.abs(prev.lng - safeLng) > 0.00001 ||
+      prev.zoom !== safeZoom;
+
+    if (!changed) return;
+
+    lastEmittedViewportRef.current = {
+      lat: safeLat,
+      lng: safeLng,
+      zoom: safeZoom,
+    };
+
+    onUserPanMap({ lat: safeLat, lng: safeLng, zoom: safeZoom });
   }, [mapObj, onUserPanMap]);
 
   const cleanupPulseInterval = useCallback(() => {

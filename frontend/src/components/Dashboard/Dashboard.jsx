@@ -230,6 +230,7 @@ export default function Dashboard() {
   const [userLocation, setUserLocation] = useState(null);
   const [followMe, setFollowMe] = useState(false);
   const didInitialFlyToMeRef = useRef(false);
+  const lastViewportRef = useRef({ lat: null, lng: null, zoom: null });
 
   const sidebarRef = useRef(null);
   const menuButtonRef = useRef(null);
@@ -601,11 +602,28 @@ export default function Dashboard() {
     const zoom = Number(viewport?.zoom);
 
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      setMapCenter([lat, lng]);
+      const lastLat = Number(lastViewportRef.current.lat);
+      const lastLng = Number(lastViewportRef.current.lng);
+      const centerChanged =
+        !Number.isFinite(lastLat) ||
+        !Number.isFinite(lastLng) ||
+        Math.abs(lastLat - lat) > 0.00001 ||
+        Math.abs(lastLng - lng) > 0.00001;
+
+      if (centerChanged) {
+        lastViewportRef.current.lat = lat;
+        lastViewportRef.current.lng = lng;
+        setMapCenter([lat, lng]);
+      }
     }
 
     if (Number.isFinite(zoom)) {
-      setMapZoom(Math.min(20, Math.max(3, zoom)));
+      const nextZoom = Math.min(20, Math.max(3, zoom));
+      const lastZoom = Number(lastViewportRef.current.zoom);
+      if (!Number.isFinite(lastZoom) || lastZoom !== nextZoom) {
+        lastViewportRef.current.zoom = nextZoom;
+        setMapZoom(nextZoom);
+      }
     }
   };
 
@@ -1085,7 +1103,7 @@ export default function Dashboard() {
                 center={mapCenter}
                 zoom={mapZoom}
                 incidents={filteredIncidents}
-                aiReports={[...aiReports]}
+                aiReports={aiReports}
                 mapMode={mapMode}
                 onChangeMapMode={setMapMode}
                 userLocation={userLocation}
