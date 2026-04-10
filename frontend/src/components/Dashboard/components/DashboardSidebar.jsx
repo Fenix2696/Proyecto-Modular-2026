@@ -98,7 +98,8 @@ export default function DashboardSidebar({
       </div>
 
       <nav className="rc-sidebar-nav" aria-label="Navegacion">
-        {items.map(({ key, label, Icon, title }) => {
+        {items.map((item) => {
+          const { key, label, title } = item;
           const active = activePanel === key;
 
           return (
@@ -110,7 +111,7 @@ export default function DashboardSidebar({
               type="button"
             >
               <span className="rc-side-ico" aria-hidden="true">
-                <Icon size={18} />
+                {React.createElement(item.Icon, { size: 18 })}
               </span>
 
               <span className="rc-side-label">{label}</span>

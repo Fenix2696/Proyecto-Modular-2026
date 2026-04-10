@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import Dashboard from "./components/Dashboard/Dashboard";
 import Login from "./components/Auth/Login";
@@ -8,29 +8,28 @@ import ForgotPassword from "./components/Auth/ForgotPassword";
 import ResetPassword from "./components/Auth/ResetPassword";
 
 const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos
+const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 function SessionHandler() {
   const navigate = useNavigate();
   const location = useLocation();
   const timeoutRef = useRef(null);
 
-  const publicRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
-
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
     timeoutRef.current = setTimeout(() => {
       const token = localStorage.getItem("token");
-      const isPublicRoute = publicRoutes.includes(location.pathname);
+      const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname);
 
       if (token && !isPublicRoute) {
         localStorage.clear();
         navigate("/login", { replace: true });
       }
     }, INACTIVITY_TIME);
-  };
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
@@ -48,7 +47,7 @@ function SessionHandler() {
         window.removeEventListener(event, resetTimer);
       });
     };
-  }, [location.pathname]);
+  }, [resetTimer]);
 
   return null;
 }
