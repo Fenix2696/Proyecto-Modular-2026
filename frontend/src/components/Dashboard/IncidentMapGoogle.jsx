@@ -489,6 +489,21 @@ export default function IncidentMapGoogle({
     setMapObj(map);
   }, []);
 
+  const emitViewportToParent = useCallback(() => {
+    if (!mapObj || !onUserPanMap) return;
+
+    const centerNow = mapObj.getCenter?.();
+    const lat = centerNow?.lat?.();
+    const lng = centerNow?.lng?.();
+    const zoomNow = mapObj.getZoom?.();
+
+    onUserPanMap({
+      lat: Number.isFinite(lat) ? lat : undefined,
+      lng: Number.isFinite(lng) ? lng : undefined,
+      zoom: Number.isFinite(zoomNow) ? zoomNow : undefined,
+    });
+  }, [mapObj, onUserPanMap]);
+
   const animateBackToUser = useCallback(() => {
     if (!mapObj || !userLocation) return;
 
@@ -1076,6 +1091,7 @@ export default function IncidentMapGoogle({
         onDragStart={() => onUserPanMap?.()}
         onDrag={() => onUserPanMap?.()}
         onZoomChanged={() => onUserPanMap?.()}
+        onIdle={emitViewportToParent}
         options={options}
         onLoad={handleMapLoad}
         onUnmount={handleMapUnmount}
