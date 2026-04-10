@@ -1,0 +1,97 @@
+# Ideas para mejorar la busqueda del scrapper de noticias de incidentes
+
+Este documento propone mejoras practicas para que el scrapper encuentre **mas noticias utiles** y que puedan mostrarse en el mapa con mejor calidad.
+
+## 1) Mejorar la construccion de consultas (query builder)
+
+- Usar combinaciones por:
+  - **tipo de incidente** (asalto, robo, choque, incendio, balacera, etc.)
+  - **zona geografica** (colonia, municipio, ciudad, estado)
+  - **ventana temporal** (hoy, ultimas 24h, ultimos 3 dias)
+- Generar sinonimos automaticamente por categoria:
+  - Ejemplo `robo`: robo, asalto, atraco, despojo, "intento de robo".
+- Incluir variantes de redaccion local (regionalismos) y errores comunes de ortografia.
+- Mantener una lista de palabras excluidas para reducir ruido (deportes, espectaculos, opinion, etc.).
+
+## 2) Ampliar fuentes sin perder control de calidad
+
+- Priorizar fuentes locales con alta frecuencia de reportes.
+- Agregar medios hiperlocales y cuentas verificadas (si la politica del proyecto lo permite).
+- Mantener un ranking de confiabilidad por fuente (score historico de precision).
+- Desactivar temporalmente fuentes con contenido duplicado o baja tasa de geolocalizacion.
+
+## 3) Pipeline por etapas: recall primero, precision despues
+
+### Etapa A: Captura amplia (alta cobertura)
+- Buscar con consultas amplias para no perder eventos.
+- Guardar metadata completa de cada resultado (url, titulo, snippet, fecha, fuente, query origen).
+
+### Etapa B: Filtrado inteligente
+- Clasificar con IA/NLP si realmente es incidente y de que tipo.
+- Detectar y eliminar noticias no incidentales (politica, editorial, historico, publicidad).
+- Asignar score de relevancia para decidir si se pinta en mapa.
+
+## 4) Deduplicacion mas robusta
+
+- Deduplicar por:
+  - URL canonica
+  - similitud semantica de titulo + cuerpo
+  - cercania temporal y geografica
+- Unificar varias notas del mismo evento en un solo incidente enriquecido.
+- Conservar referencias a todas las fuentes que hablaron del evento.
+
+## 5) Mejor geolocalizacion para mostrar mas puntos
+
+- Extraer ubicaciones desde:
+  - titulo
+  - subtitulo
+  - cuerpo
+  - metadatos de la nota
+- Resolver ubicaciones ambiguas con contexto de ciudad/estado de la misma noticia.
+- Usar geocodificacion por lotes con cache para reducir costo y latencia.
+- Si no hay coordenadas exactas, usar centroides de colonia/municipio con etiqueta de precision baja.
+
+## 6) Estrategia temporal y de recrawl
+
+- Recolectar en ciclos cortos (ej. cada 10-20 min) para no perder notas recientes.
+- Reintentar URLs sin coordenadas despues de 1-2 horas (a veces la nota se actualiza).
+- Mantener estado incremental por fuente para evitar reprocesar todo cada vez.
+
+## 7) Observabilidad y metricas clave
+
+Medir diariamente:
+- total de noticias capturadas
+- porcentaje clasificado como incidente
+- porcentaje geolocalizado
+- porcentaje duplicado
+- cobertura por municipio/colonia
+- latencia promedio desde publicacion hasta aparicion en mapa
+
+Con estas metricas es mas facil saber si los cambios realmente aumentan la cobertura.
+
+## 8) Recomendaciones de impacto rapido (quick wins)
+
+1. Expandir diccionario de sinonimos por categoria.
+2. Activar deduplicacion por similitud de texto.
+3. Mejorar parser de ubicaciones en titulo/snippet.
+4. Cachear geocodificacion para reuso.
+5. Dashboard interno con metricas de cobertura y geolocalizacion.
+
+## 9) Backlog sugerido (priorizado)
+
+### Alta prioridad
+- Query builder dinamico por categoria + zona.
+- Deduplicacion multi-criterio.
+- Geoparsing con fallback por municipio.
+
+### Media prioridad
+- Score de confiabilidad por fuente.
+- Reintentos programados para notas sin coordenadas.
+
+### Baja prioridad
+- Modelos especializados por categoria de incidente.
+- Ajustes por estacionalidad y eventos masivos.
+
+---
+
+Si quieres, puedo convertir estas ideas en un **plan tecnico por sprints** (con tareas concretas para backend, IA y frontend), incluyendo endpoints, estructura de datos y criterios de aceptacion.

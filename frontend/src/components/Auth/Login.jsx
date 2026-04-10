@@ -11,6 +11,7 @@ function Login() {
   const navigate = useNavigate();
   const googleBtnRef = useRef(null);
   const rememberMeRef = useRef(false);
+  const googleLoginInFlightRef = useRef(false);
 
   const [formData, setFormData] = useState({
     identifier: "",
@@ -139,6 +140,14 @@ function Login() {
       }
     };
 
+    const withTimeout = (promise, timeoutMs = 15000) =>
+      Promise.race([
+        promise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout al iniciar sesion con Google")), timeoutMs)
+        ),
+      ]);
+
     const initGoogleButton = () => {
       if (cancelled) return false;
       if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
@@ -149,6 +158,7 @@ function Login() {
         client_id: clientId,
         callback: async (resp) => {
           if (cancelled) return;
+          if (googleLoginInFlightRef.current) return;
 
           try {
             const idToken = resp?.credential;
@@ -157,10 +167,11 @@ function Login() {
               throw new Error("No se recibio credential de Google");
             }
 
+            googleLoginInFlightRef.current = true;
             setLoading(true);
             setErrors({});
 
-            const response = await loginGoogleConRetry(idToken);
+            const response = await withTimeout(loginGoogleConRetry(idToken));
 
             if (!response?.token) {
               throw new Error("No se recibio token de autenticacion");
@@ -188,6 +199,8 @@ function Login() {
               general: error.message || "Error al iniciar sesion con Google",
             });
             setLoading(false);
+          } finally {
+            googleLoginInFlightRef.current = false;
           }
         },
         error_callback: () => {
