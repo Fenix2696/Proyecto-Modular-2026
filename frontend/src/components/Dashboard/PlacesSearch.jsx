@@ -26,6 +26,7 @@ export default function PlacesSearch({
   const acRef = useRef(null);
   const justSelectedRef = useRef(false);
   const onSelectRef = useRef(onSelect);
+  const onEnterRef = useRef(onEnter);
   const setInputValueRef = useRef(null);
   const pushRecentSearchRef = useRef(null);
   const [ready, setReady] = useState(false);
@@ -73,9 +74,10 @@ export default function PlacesSearch({
 
   useEffect(() => {
     onSelectRef.current = onSelect;
+    onEnterRef.current = onEnter;
     setInputValueRef.current = setInputValue;
     pushRecentSearchRef.current = pushRecentSearch;
-  }, [onSelect, onValueChange, onChange, enableRecentSearches, maxRecentSearches]);
+  }, [onSelect, onEnter, onValueChange, onChange, enableRecentSearches, maxRecentSearches]);
 
   const removeRecentSearch = (text) => {
     const next = recentSearches.filter((item) => item !== text);
@@ -186,6 +188,11 @@ export default function PlacesSearch({
         typeof lng === "number"
       ) {
         onSelectRef.current({ lat, lng, address, place });
+      } else if (address) {
+        // Fallback: algunas respuestas de Autocomplete llegan sin geometry
+        // en el primer click/tap. Forzamos flujo por texto para no pedir
+        // una segunda seleccion al usuario.
+        onEnterRef.current?.(address);
       }
 
       try {
