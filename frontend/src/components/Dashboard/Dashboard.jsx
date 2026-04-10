@@ -592,8 +592,20 @@ export default function Dashboard() {
     setMapZoom((z) => Math.max(z, 16));
   };
 
-  const handleUserPanMap = () => {
+  const handleUserPanMap = (viewport) => {
     if (followMe) setFollowMe(false);
+
+    const lat = Number(viewport?.lat);
+    const lng = Number(viewport?.lng);
+    const zoom = Number(viewport?.zoom);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      setMapCenter([lat, lng]);
+    }
+
+    if (Number.isFinite(zoom)) {
+      setMapZoom(Math.min(20, Math.max(3, zoom)));
+    }
   };
 
   const handleCreate = async (data) => {
