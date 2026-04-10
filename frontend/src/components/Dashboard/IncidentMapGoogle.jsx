@@ -803,37 +803,16 @@ export default function IncidentMapGoogle({
       mePulseRef.current = new window.google.maps.Circle({
         map: mapObj,
         center: pos,
-        radius: 10,
+        radius: 18,
         strokeOpacity: 0,
         fillColor: "#3b82f6",
-        fillOpacity: 0.22,
+        fillOpacity: 0.18,
         zIndex: 3500,
         clickable: false,
       });
-
-      let r = 10;
-      let growing = true;
-
-      mePulseRef.current.__pulseInterval = setInterval(() => {
-        if (!mePulseRef.current) return;
-        const p = latestPosRef.current;
-        if (!p) return;
-
-        if (growing) {
-          r += 2;
-          if (r > 46) growing = false;
-        } else {
-          r -= 2;
-          if (r < 10) growing = true;
-        }
-
-        try {
-          mePulseRef.current.setCenter(p);
-          mePulseRef.current.setRadius(r);
-        } catch (_) {}
-      }, 60);
     } else {
       mePulseRef.current.setCenter(pos);
+      mePulseRef.current.setRadius(18);
       mePulseRef.current.setMap(mapObj);
     }
 
