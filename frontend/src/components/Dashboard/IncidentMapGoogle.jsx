@@ -633,6 +633,7 @@ export default function IncidentMapGoogle({
     }
 
     const hasTrafficOverlay = !!trafficData;
+    const baseRouteOpacity = hasTrafficOverlay ? 0.62 : 0.9;
 
     if (!dirRendererRef.current) {
       dirRendererRef.current = new window.google.maps.DirectionsRenderer({
@@ -640,7 +641,7 @@ export default function IncidentMapGoogle({
         suppressMarkers: true,
         preserveViewport: true,
         polylineOptions: {
-          strokeOpacity: hasTrafficOverlay ? 0 : 0.9,
+          strokeOpacity: baseRouteOpacity,
           strokeWeight: 6,
           strokeColor: "#60a5fa",
         },
@@ -649,7 +650,7 @@ export default function IncidentMapGoogle({
       try {
         dirRendererRef.current.setOptions({
           polylineOptions: {
-            strokeOpacity: hasTrafficOverlay ? 0 : 0.9,
+            strokeOpacity: baseRouteOpacity,
             strokeWeight: 6,
             strokeColor: "#60a5fa",
           },
@@ -802,37 +803,16 @@ export default function IncidentMapGoogle({
       mePulseRef.current = new window.google.maps.Circle({
         map: mapObj,
         center: pos,
-        radius: 10,
+        radius: 18,
         strokeOpacity: 0,
         fillColor: "#3b82f6",
-        fillOpacity: 0.22,
+        fillOpacity: 0.18,
         zIndex: 3500,
         clickable: false,
       });
-
-      let r = 10;
-      let growing = true;
-
-      mePulseRef.current.__pulseInterval = setInterval(() => {
-        if (!mePulseRef.current) return;
-        const p = latestPosRef.current;
-        if (!p) return;
-
-        if (growing) {
-          r += 2;
-          if (r > 46) growing = false;
-        } else {
-          r -= 2;
-          if (r < 10) growing = true;
-        }
-
-        try {
-          mePulseRef.current.setCenter(p);
-          mePulseRef.current.setRadius(r);
-        } catch (_) {}
-      }, 60);
     } else {
       mePulseRef.current.setCenter(pos);
+      mePulseRef.current.setRadius(18);
       mePulseRef.current.setMap(mapObj);
     }
 
@@ -862,7 +842,7 @@ export default function IncidentMapGoogle({
       meAccuracyRef.current = null;
     }
 
-    if (Number.isFinite(userLocation.heading)) {
+    if (navigationActive && Number.isFinite(userLocation.heading)) {
       const heading = userLocation.heading || 0;
       if (!meHeadingRef.current) {
         meHeadingRef.current = new window.google.maps.Marker({
@@ -884,7 +864,7 @@ export default function IncidentMapGoogle({
       } catch (_) {}
       meHeadingRef.current = null;
     }
-  }, [isLoaded, mapObj, userLocation, cleanupMeLayers]);
+  }, [isLoaded, mapObj, userLocation, navigationActive, cleanupMeLayers]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -1053,7 +1033,7 @@ export default function IncidentMapGoogle({
   useEffect(() => {
     if (!mapObj) return;
 
-    if (!navigationActive) {
+    if (!navigationActive || !followMe) {
       try {
         mapObj.setTilt?.(0);
       } catch (_) {}
@@ -1079,7 +1059,7 @@ export default function IncidentMapGoogle({
         mapObj.setTilt?.(45);
       } catch (_) {}
     } catch (_) {}
-  }, [navigationActive, mapObj, userLocation]);
+  }, [navigationActive, followMe, mapObj, userLocation]);
 
   const selectedPosition = useMemo(() => getSelectedLatLng(selected), [selected]);
 
