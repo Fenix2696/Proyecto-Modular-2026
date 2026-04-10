@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "../../styles/dashboard.css";
@@ -250,6 +250,7 @@ export default function Dashboard() {
   const [routesInfo, setRoutesInfo] = useState([]);
   const [routeIndex, setRouteIndex] = useState(0);
   const routeIndexRef = useRef(0);
+  const buildDirectionsRef = useRef(null);
 
   // trafficData (Routes API v2)
   const [trafficData, setTrafficData] = useState(null);
@@ -266,7 +267,7 @@ export default function Dashboard() {
     emergency: true,
     theft: true,
     vandalism: true,
-    timeRange: "all",
+    timeRange: "1h",
   });
 
   const [mapMode, setMapMode] = useState(
@@ -277,7 +278,6 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const [photoTs, setPhotoTs] = useState(() => Date.now());
   const [clearMapToken, setClearMapToken] = useState(0);
-  const [mapRefreshKey, setMapRefreshKey] = useState(0);
 
   useEffect(() => {
     routeIndexRef.current = routeIndex;
@@ -298,6 +298,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   useEffect(() => {
@@ -464,7 +465,7 @@ export default function Dashboard() {
     }
   };
 
-  const loadAIReports = async (limit = 50) => {
+  const loadAIReports = useCallback(async (limit = 50) => {
     try {
       const response = await getActiveAIReports(limit);
       const rows = response?.data || [];
@@ -484,7 +485,7 @@ export default function Dashboard() {
       setAiReports([]);
       return [];
     }
-  };
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -510,6 +511,42 @@ export default function Dashboard() {
       );
     });
   }, [incidents, incidentQuery, filters]);
+
+  const filteredAIReports = useMemo(() => {
+    const q = (incidentQuery || "").trim().toLowerCase();
+
+    return (aiReports || []).filter((r) => {
+      const ts =
+        (r.published_at && new Date(r.published_at)) ||
+        (r.publishedAt && new Date(r.publishedAt)) ||
+        (r.date && new Date(r.date)) ||
+        (r.created_at && new Date(r.created_at)) ||
+        (r.createdAt && new Date(r.createdAt)) ||
+        (r.updated_at && new Date(r.updated_at)) ||
+        (r.updatedAt && new Date(r.updatedAt)) ||
+        null;
+
+      if (!(ts instanceof Date) || Number.isNaN(ts.getTime())) return false;
+      if (!inTimeRange(ts, filters.timeRange)) return false;
+
+      const normalizedType = mapAiCategoryToType(r.category);
+      if (!filters[normalizedType]) return false;
+
+      if (!q) return true;
+
+      const title = String(r.title || "").toLowerCase();
+      const body = String(r.body || r.summary || "").toLowerCase();
+      const city = String(r.city || "").toLowerCase();
+      const cat = String(r.category || "").toLowerCase();
+
+      return (
+        title.includes(q) ||
+        body.includes(q) ||
+        city.includes(q) ||
+        cat.includes(q)
+      );
+    });
+  }, [aiReports, incidentQuery, filters]);
 
   const aiRouteIncidents = useMemo(() => {
     const q = (incidentQuery || "").trim().toLowerCase();
@@ -665,7 +702,7 @@ export default function Dashboard() {
       emergency: true,
       theft: true,
       vandalism: true,
-      timeRange: "all",
+      timeRange: "1h",
     });
     setIncidentQuery("");
   };
@@ -788,6 +825,7 @@ export default function Dashboard() {
       return bestIdx;
     });
   };
+  buildDirectionsRef.current = buildDirections;
 
   const openDirectionsPanel = () => setActivePanel("directions");
 
@@ -834,13 +872,6 @@ export default function Dashboard() {
     setNavigationActive(false);
     setNavigationCurrentStep(null);
     setFollowMe(false);
-  };
-
-  const handleExitNavigationWithRefresh = () => {
-    handleClearDirections();
-    setTimeout(() => {
-      setMapRefreshKey((prev) => prev + 1);
-    }, 90);
   };
 
   const handleOriginSelect = async ({ lat, lng, address }) => {
@@ -920,7 +951,7 @@ export default function Dashboard() {
       setNavigationCurrentStep(null);
 
       await buildDirections(travelMode);
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   const handleDestinationEnter = async (text) => {
@@ -940,7 +971,7 @@ export default function Dashboard() {
       setMapZoom((z) => Math.max(z, 14));
 
       await buildDirections(travelMode);
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   useEffect(() => {
@@ -956,14 +987,15 @@ export default function Dashboard() {
 
     (async () => {
       try {
-        await buildDirections(travelMode, { preserveSelectedRoute: true });
-      } catch {}
+        await buildDirectionsRef.current?.(travelMode, { preserveSelectedRoute: true });
+      } catch { /* no-op */ }
     })();
   }, [
     travelMode,
     originIsMyLocation,
     destIsMyLocation,
     navigationActive,
+    userLocation,
   ]);
 
   const handleSwap = () => {
@@ -1099,11 +1131,10 @@ export default function Dashboard() {
           <main className="rc-main">
             <div className="rc-map-wrap">
               <IncidentMapGoogle
-                key={`gmap-${mapRefreshKey}`}
                 center={mapCenter}
                 zoom={mapZoom}
                 incidents={filteredIncidents}
-                aiReports={aiReports}
+                aiReports={filteredAIReports}
                 mapMode={mapMode}
                 onChangeMapMode={setMapMode}
                 userLocation={userLocation}
@@ -1116,7 +1147,7 @@ export default function Dashboard() {
                 navigationActive={navigationActive}
                 onStopNavigation={handleStopNavigation}
                 onClearDirections={handleClearDirections}
-                onExitNavigation={handleExitNavigationWithRefresh}
+                onExitNavigation={handleClearDirections}
                 onNavigationStepChange={handleNavigationStepChange}
                 onNavigationComplete={handleNavigationComplete}
                 clearMapToken={clearMapToken}

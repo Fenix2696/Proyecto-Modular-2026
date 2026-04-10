@@ -11,29 +11,57 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GuardiaNocturnaScraper {
 
     private static final String BASE_URL = "https://guardianocturna.mx/";
     private static final int CONNECT_TIMEOUT_MS = 8000;
     private static final int READ_TIMEOUT_MS = 8000;
-    private static final int MAX_LINES = 900;
-    private static final int MAX_CHARS = 120000;
+    private static final int MAX_LINES = 3000;
+    private static final int MAX_CHARS = 450000;
+    private static final int MAX_SECTIONS = 14;
+    private static final int MAX_SECTION_PAGES = 2;
 
     public static List<NewsResult> fetch() {
         try {
-            String html = getHtml(BASE_URL);
+            String homeHtml = getHtml(BASE_URL);
 
-            if (html == null || html.isBlank()) {
+            if (homeHtml == null || homeHtml.isBlank()) {
                 System.out.println("Guardia Nocturna: HTML vacio");
                 return new ArrayList<>();
             }
 
-            List<NewsResult> parsed = parseLinks(html);
+            List<NewsResult> parsed = new ArrayList<>();
+            parsed.addAll(parseLinks(homeHtml));
+
+            List<String> sections = parseSectionUrls(homeHtml);
+            System.out.println("Guardia Nocturna sections detectadas: " + sections.size());
+
+            for (String sectionUrl : sections) {
+                for (int page = 1; page <= MAX_SECTION_PAGES; page++) {
+                    String pagedUrl = buildPagedSectionUrl(sectionUrl, page);
+                    try {
+                        String sectionHtml = getHtml(pagedUrl);
+                        if (sectionHtml == null || sectionHtml.isBlank()) continue;
+                        parsed.addAll(parseLinks(sectionHtml));
+                    } catch (Exception e) {
+                        System.out.println("Guardia Nocturna skip section/page: " + pagedUrl + " -> " + e.getMessage());
+                    }
+                }
+            }
+
             List<NewsResult> deduped = dedupe(parsed);
+            deduped.sort(
+                    Comparator.comparing(
+                                    (NewsResult n) -> safeInstant(n != null ? n.getLastUpdated() : null))
+                            .reversed()
+            );
 
             System.out.println("Guardia Nocturna parsed items: " + parsed.size());
             System.out.println("Guardia Nocturna final unique: " + deduped.size());
@@ -261,6 +289,50 @@ public class GuardiaNocturnaScraper {
         }
 
         return new ArrayList<>(unique.values());
+    }
+
+    private static Instant safeInstant(String raw) {
+        try {
+            if (raw == null || raw.isBlank()) return Instant.EPOCH;
+            return Instant.parse(raw);
+        } catch (Exception e) {
+            return Instant.EPOCH;
+        }
+    }
+
+    private static List<String> parseSectionUrls(String html) {
+        List<String> out = new ArrayList<>();
+        if (html == null || html.isBlank()) return out;
+
+        String safeHtml = html.length() > MAX_CHARS ? html.substring(0, MAX_CHARS) : html;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "(?is)<a[^>]+href\\s*=\\s*\"([^\"]+)\"[^>]*>(.*?)</a>"
+        );
+        java.util.regex.Matcher m = p.matcher(safeHtml);
+        Set<String> seen = new HashSet<>();
+
+        while (m.find() && out.size() < MAX_SECTIONS) {
+            String href = toAbsoluteUrl(m.group(1));
+            if (href == null) continue;
+
+            String lower = href.toLowerCase();
+            if (!lower.startsWith("https://guardianocturna.mx/")) continue;
+            if (!lower.contains("/category/")) continue;
+            if (lower.contains("/page/")) continue;
+            if (lower.endsWith("/category/")) continue;
+            if (lower.contains("politica")) continue;
+            if (lower.contains("deportes")) continue;
+
+            if (seen.add(lower)) out.add(href);
+        }
+        return out;
+    }
+
+    private static String buildPagedSectionUrl(String sectionUrl, int page) {
+        if (sectionUrl == null || sectionUrl.isBlank()) return sectionUrl;
+        if (page <= 1) return sectionUrl;
+        String base = sectionUrl.endsWith("/") ? sectionUrl.substring(0, sectionUrl.length() - 1) : sectionUrl;
+        return base + "/page/" + page + "/";
     }
 
     private static String clean(String html) {
