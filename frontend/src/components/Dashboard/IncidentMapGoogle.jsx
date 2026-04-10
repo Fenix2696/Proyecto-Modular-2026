@@ -299,6 +299,7 @@ export default function IncidentMapGoogle({
   navigationActive = false,
   onStopNavigation,
   onClearDirections,
+  onExitNavigation,
   onNavigationStepChange,
   onNavigationComplete,
   clearMapToken = 0,
@@ -488,6 +489,21 @@ export default function IncidentMapGoogle({
   const handleMapLoad = useCallback((map) => {
     setMapObj(map);
   }, []);
+
+  const emitViewportToParent = useCallback(() => {
+    if (!mapObj || !onUserPanMap) return;
+
+    const centerNow = mapObj.getCenter?.();
+    const lat = centerNow?.lat?.();
+    const lng = centerNow?.lng?.();
+    const zoomNow = mapObj.getZoom?.();
+
+    onUserPanMap({
+      lat: Number.isFinite(lat) ? lat : undefined,
+      lng: Number.isFinite(lng) ? lng : undefined,
+      zoom: Number.isFinite(zoomNow) ? zoomNow : undefined,
+    });
+  }, [mapObj, onUserPanMap]);
 
   const animateBackToUser = useCallback(() => {
     if (!mapObj || !userLocation) return;
@@ -1076,6 +1092,7 @@ export default function IncidentMapGoogle({
         onDragStart={() => onUserPanMap?.()}
         onDrag={() => onUserPanMap?.()}
         onZoomChanged={() => onUserPanMap?.()}
+        onIdle={emitViewportToParent}
         options={options}
         onLoad={handleMapLoad}
         onUnmount={handleMapUnmount}
@@ -1316,6 +1333,10 @@ export default function IncidentMapGoogle({
             <button
               type="button"
               onClick={() => {
+                if (onExitNavigation) {
+                  onExitNavigation();
+                  return;
+                }
                 onStopNavigation?.();
                 onClearDirections?.();
               }}

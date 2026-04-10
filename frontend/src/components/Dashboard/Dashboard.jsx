@@ -276,6 +276,7 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const [photoTs, setPhotoTs] = useState(() => Date.now());
   const [clearMapToken, setClearMapToken] = useState(0);
+  const [mapRefreshKey, setMapRefreshKey] = useState(0);
 
   useEffect(() => {
     routeIndexRef.current = routeIndex;
@@ -592,8 +593,20 @@ export default function Dashboard() {
     setMapZoom((z) => Math.max(z, 16));
   };
 
-  const handleUserPanMap = () => {
+  const handleUserPanMap = (viewport) => {
     if (followMe) setFollowMe(false);
+
+    const lat = Number(viewport?.lat);
+    const lng = Number(viewport?.lng);
+    const zoom = Number(viewport?.zoom);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      setMapCenter([lat, lng]);
+    }
+
+    if (Number.isFinite(zoom)) {
+      setMapZoom(Math.min(20, Math.max(3, zoom)));
+    }
   };
 
   const handleCreate = async (data) => {
@@ -803,6 +816,13 @@ export default function Dashboard() {
     setNavigationActive(false);
     setNavigationCurrentStep(null);
     setFollowMe(false);
+  };
+
+  const handleExitNavigationWithRefresh = () => {
+    handleClearDirections();
+    setTimeout(() => {
+      setMapRefreshKey((prev) => prev + 1);
+    }, 90);
   };
 
   const handleOriginSelect = async ({ lat, lng, address }) => {
@@ -1061,6 +1081,7 @@ export default function Dashboard() {
           <main className="rc-main">
             <div className="rc-map-wrap">
               <IncidentMapGoogle
+                key={`gmap-${mapRefreshKey}`}
                 center={mapCenter}
                 zoom={mapZoom}
                 incidents={filteredIncidents}
@@ -1077,6 +1098,7 @@ export default function Dashboard() {
                 navigationActive={navigationActive}
                 onStopNavigation={handleStopNavigation}
                 onClearDirections={handleClearDirections}
+                onExitNavigation={handleExitNavigationWithRefresh}
                 onNavigationStepChange={handleNavigationStepChange}
                 onNavigationComplete={handleNavigationComplete}
                 clearMapToken={clearMapToken}
