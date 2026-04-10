@@ -276,6 +276,7 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const [photoTs, setPhotoTs] = useState(() => Date.now());
   const [clearMapToken, setClearMapToken] = useState(0);
+  const [mapRefreshKey, setMapRefreshKey] = useState(0);
 
   useEffect(() => {
     routeIndexRef.current = routeIndex;
@@ -817,6 +818,13 @@ export default function Dashboard() {
     setFollowMe(false);
   };
 
+  const handleExitNavigationWithRefresh = () => {
+    handleClearDirections();
+    setTimeout(() => {
+      setMapRefreshKey((prev) => prev + 1);
+    }, 90);
+  };
+
   const handleOriginSelect = async ({ lat, lng, address }) => {
     originLatLngRef.current = { lat, lng, address: address || "" };
     setOriginInput(address || "");
@@ -1073,6 +1081,7 @@ export default function Dashboard() {
           <main className="rc-main">
             <div className="rc-map-wrap">
               <IncidentMapGoogle
+                key={`gmap-${mapRefreshKey}`}
                 center={mapCenter}
                 zoom={mapZoom}
                 incidents={filteredIncidents}
@@ -1089,6 +1098,7 @@ export default function Dashboard() {
                 navigationActive={navigationActive}
                 onStopNavigation={handleStopNavigation}
                 onClearDirections={handleClearDirections}
+                onExitNavigation={handleExitNavigationWithRefresh}
                 onNavigationStepChange={handleNavigationStepChange}
                 onNavigationComplete={handleNavigationComplete}
                 clearMapToken={clearMapToken}
