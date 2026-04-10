@@ -324,7 +324,6 @@ export default function IncidentMapGoogle({
   const [imgOpen, setImgOpen] = useState(false);
   const [imgTs, setImgTs] = useState(() => Date.now());
   const [navStepIndex, setNavStepIndex] = useState(0);
-  const [returningToUser, setReturningToUser] = useState(false);
 
   const incidentImageUrl = useMemo(() => {
     if (!selected?.id || selected?.isAIReport) return "";
@@ -489,38 +488,20 @@ export default function IncidentMapGoogle({
     setMapObj(map);
   }, []);
 
-  const animateBackToUser = useCallback(() => {
-    if (!mapObj || !userLocation) return;
+  const emitViewportToParent = useCallback(() => {
+    if (!mapObj || !onUserPanMap) return;
 
-    const hasCoords =
-      Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng);
+    const centerNow = mapObj.getCenter?.();
+    const lat = centerNow?.lat?.();
+    const lng = centerNow?.lng?.();
+    const zoomNow = mapObj.getZoom?.();
 
-    if (!hasCoords) return;
-
-    setReturningToUser(true);
-
-    try {
-      const currentZoom = mapObj.getZoom?.() || 16;
-      mapObj.panTo({ lat: userLocation.lat, lng: userLocation.lng });
-
-      if (currentZoom > 16) {
-        mapObj.setZoom(currentZoom - 1);
-      } else if (currentZoom < 16) {
-        mapObj.setZoom(16);
-      }
-
-      setTimeout(() => {
-        try {
-          mapObj.panTo({ lat: userLocation.lat, lng: userLocation.lng });
-          mapObj.setZoom(16);
-        } catch (_) {}
-      }, 180);
-    } catch (_) {}
-
-    setTimeout(() => {
-      setReturningToUser(false);
-    }, 420);
-  }, [mapObj, userLocation]);
+    onUserPanMap({
+      lat: Number.isFinite(lat) ? lat : undefined,
+      lng: Number.isFinite(lng) ? lng : undefined,
+      zoom: Number.isFinite(zoomNow) ? zoomNow : undefined,
+    });
+  }, [mapObj, onUserPanMap]);
 
   const cleanupPulseInterval = useCallback(() => {
     if (mePulseRef.current?.__pulseInterval) {
@@ -611,12 +592,9 @@ export default function IncidentMapGoogle({
     cleanupTrafficPolylines();
     cleanupDestMarker();
     setSelected(null);
-
-    animateBackToUser();
   }, [
     clearMapToken,
     mapObj,
-    animateBackToUser,
     cleanupDirections,
     cleanupTrafficPolylines,
     cleanupDestMarker,
@@ -1076,6 +1054,7 @@ export default function IncidentMapGoogle({
         onDragStart={() => onUserPanMap?.()}
         onDrag={() => onUserPanMap?.()}
         onZoomChanged={() => onUserPanMap?.()}
+        onIdle={emitViewportToParent}
         options={options}
         onLoad={handleMapLoad}
         onUnmount={handleMapUnmount}
@@ -1234,12 +1213,6 @@ export default function IncidentMapGoogle({
           </InfoWindow>
         )}
       </GoogleMap>
-
-      {returningToUser && (
-        <div className="rc-map-return-overlay">
-          <div className="rc-map-return-glow" />
-        </div>
-      )}
 
       {navigationActive && currentNavInstruction && (
         <div
