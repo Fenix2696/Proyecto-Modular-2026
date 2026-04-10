@@ -1420,3 +1420,184 @@
     padding-bottom: 34px;
   }
 }
+
+/* =====================================================
+   MOBILE UX TUNING (LOGIN + REGISTER)
+   mejora legibilidad, tactilidad y evita zoom/overflow
+   ===================================================== */
+@media (max-width: 768px){
+  .radar-login-container,
+  .register-page{
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  .radar-hero-section{
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: 8px;
+  }
+
+  .radar-logo-wrapper{
+    width: 82px;
+    height: 82px;
+    margin-bottom: 12px;
+  }
+
+  .logo-circle-outer{
+    width: 82px;
+    height: 82px;
+  }
+
+  .logo-circle-inner{
+    width: 50px;
+    height: 50px;
+  }
+
+  .logo-shield{
+    width: 28px;
+    height: 28px;
+  }
+
+  .radar-main-title{
+    font-size: clamp(30px, 8.4vw, 46px);
+    line-height: 1.02;
+  }
+
+  .radar-main-subtitle{
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .radar-form-section{
+    padding-top: 12px;
+  }
+
+  .input-group-radar{
+    margin-bottom: 14px;
+  }
+
+  .input-group-radar label{
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .input-radar,
+  .form-group input{
+    font-size: 16px; /* evita zoom automatico en iOS */
+  }
+
+  .input-radar{
+    min-height: 52px;
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  .toggle-password{
+    right: 12px;
+    font-size: 22px;
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-login-radar,
+  .btn-social{
+    min-height: 52px;
+    border-radius: 16px;
+    font-size: 16px;
+  }
+
+  .divider-radar{
+    margin-top: 18px;
+    margin-bottom: 14px;
+  }
+
+  .social-buttons-radar{
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .register-link-radar{
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 560px){
+  .form-options-radar{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .link-forgot{
+    justify-self: start;
+    text-align: left;
+  }
+
+  .checkbox-label input{
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (max-width: 420px){
+  .radar-hero-section,
+  .radar-form-section{
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .radar-main-title{
+    font-size: 29px;
+  }
+
+  .radar-main-subtitle{
+    font-size: 13px;
+  }
+
+  .input-radar{
+    min-height: 50px;
+    padding: 13px 14px;
+    border-radius: 15px;
+  }
+
+  .toggle-password{
+    right: 10px;
+    font-size: 20px;
+  }
+
+  .btn-login-radar,
+  .btn-social{
+    min-height: 50px;
+    padding: 13px 14px;
+    font-size: 15px;
+    border-radius: 15px;
+  }
+}
+
+@media (max-height: 740px) and (max-width: 768px){
+  .radar-logo-wrapper{
+    margin-bottom: 8px;
+  }
+
+  .radar-main-subtitle{
+    margin-top: 8px;
+  }
+
+  .radar-form-section{
+    padding-top: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .radar-login-container,
+  .radar-login-container.is-leaving,
+  .wave-animation,
+  .wave-ring.ring-1,
+  .wave-ring.ring-2,
+  .wave-ring.ring-3{
+    animation: none !important;
+  }
+}

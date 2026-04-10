@@ -228,60 +228,89 @@ export default function PlacesSearch({
     } catch {}
   };
 
+  const hasInputValue = String(value || "").trim().length > 0;
+
+  const handleClearInput = () => {
+    setInputValue("");
+    setShowRecent(enableRecentSearches && recentSearches.length > 0);
+
+    try {
+      if (inputRef.current) {
+        inputRef.current.value = "";
+        inputRef.current.focus();
+      }
+    } catch {}
+  };
+
   return (
     <div
       className={`rc-places-wrap rc-places-wrap--${dropdownVariant}`}
       style={{ width: "100%", position: "relative" }}
     >
-      <input
-        ref={inputRef}
-        className={inputClassName}
-        defaultValue={value}
-        placeholder={placeholder}
-        autoComplete="off"
-        onFocus={() => {
-          if (enableRecentSearches) {
-            setRecentSearches(loadRecentSearches());
-            setShowRecent(true);
-          }
-        }}
-        onBlur={() => {
-          setTimeout(() => setShowRecent(false), 180);
-        }}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          if (enableRecentSearches) {
-            setShowRecent(!e.target.value.trim());
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter") return;
+      <div className="rc-places-input-wrap">
+        <input
+          ref={inputRef}
+          className={`${inputClassName} ${hasInputValue ? "has-clear" : ""}`}
+          defaultValue={value}
+          placeholder={placeholder}
+          autoComplete="off"
+          onFocus={() => {
+            if (enableRecentSearches) {
+              setRecentSearches(loadRecentSearches());
+              setShowRecent(true);
+            }
+          }}
+          onBlur={() => {
+            setTimeout(() => setShowRecent(false), 180);
+          }}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            if (enableRecentSearches) {
+              setShowRecent(!e.target.value.trim());
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
 
-          if (justSelectedRef.current) {
+            if (justSelectedRef.current) {
+              e.preventDefault();
+              e.stopPropagation();
+              try {
+                e.currentTarget.blur();
+              } catch {}
+              return;
+            }
+
             e.preventDefault();
             e.stopPropagation();
+
+            const q = (e.currentTarget.value || "").trim();
+            if (q) {
+              pushRecentSearch(q);
+              onEnter?.(q);
+            }
+
+            setShowRecent(false);
+
             try {
               e.currentTarget.blur();
             } catch {}
-            return;
-          }
+          }}
+        />
 
-          e.preventDefault();
-          e.stopPropagation();
-
-          const q = (e.currentTarget.value || "").trim();
-          if (q) {
-            pushRecentSearch(q);
-            onEnter?.(q);
-          }
-
-          setShowRecent(false);
-
-          try {
-            e.currentTarget.blur();
-          } catch {}
-        }}
-      />
+        {hasInputValue && (
+          <button
+            type="button"
+            className="rc-places-clear"
+            aria-label="Limpiar direccion"
+            title="Limpiar"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleClearInput}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {shouldShowRecent && (
         <div className="rc-recent-searches">
