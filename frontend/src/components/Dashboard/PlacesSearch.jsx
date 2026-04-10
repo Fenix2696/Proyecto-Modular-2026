@@ -25,6 +25,9 @@ export default function PlacesSearch({
   const inputRef = useRef(null);
   const acRef = useRef(null);
   const justSelectedRef = useRef(false);
+  const onSelectRef = useRef(onSelect);
+  const setInputValueRef = useRef(null);
+  const pushRecentSearchRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
@@ -67,6 +70,12 @@ export default function PlacesSearch({
       return next;
     });
   };
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    setInputValueRef.current = setInputValue;
+    pushRecentSearchRef.current = pushRecentSearch;
+  }, [onSelect, onValueChange, onChange, enableRecentSearches, maxRecentSearches]);
 
   const removeRecentSearch = (text) => {
     const next = recentSearches.filter((item) => item !== text);
@@ -163,16 +172,20 @@ export default function PlacesSearch({
         justSelectedRef.current = false;
       }, 450);
 
-      setInputValue(address);
-      pushRecentSearch(address);
+      setInputValueRef.current?.(address);
+      pushRecentSearchRef.current?.(address);
       setShowRecent(false);
 
       const loc = place?.geometry?.location;
       const lat = loc?.lat?.();
       const lng = loc?.lng?.();
 
-      if (onSelect && typeof lat === "number" && typeof lng === "number") {
-        onSelect({ lat, lng, address, place });
+      if (
+        onSelectRef.current &&
+        typeof lat === "number" &&
+        typeof lng === "number"
+      ) {
+        onSelectRef.current({ lat, lng, address, place });
       }
 
       try {
@@ -204,9 +217,7 @@ export default function PlacesSearch({
   }, [
     ready,
     biasGuadalajara,
-    onSelect,
     dropdownVariant,
-    enableRecentSearches,
   ]);
 
   useEffect(() => {
