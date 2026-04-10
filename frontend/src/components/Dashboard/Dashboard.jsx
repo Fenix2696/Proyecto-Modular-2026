@@ -512,6 +512,42 @@ export default function Dashboard() {
     });
   }, [incidents, incidentQuery, filters]);
 
+  const filteredAIReports = useMemo(() => {
+    const q = (incidentQuery || "").trim().toLowerCase();
+
+    return (aiReports || []).filter((r) => {
+      const ts =
+        (r.published_at && new Date(r.published_at)) ||
+        (r.publishedAt && new Date(r.publishedAt)) ||
+        (r.date && new Date(r.date)) ||
+        (r.created_at && new Date(r.created_at)) ||
+        (r.createdAt && new Date(r.createdAt)) ||
+        (r.updated_at && new Date(r.updated_at)) ||
+        (r.updatedAt && new Date(r.updatedAt)) ||
+        null;
+
+      if (!(ts instanceof Date) || Number.isNaN(ts.getTime())) return false;
+      if (!inTimeRange(ts, filters.timeRange)) return false;
+
+      const normalizedType = mapAiCategoryToType(r.category);
+      if (!filters[normalizedType]) return false;
+
+      if (!q) return true;
+
+      const title = String(r.title || "").toLowerCase();
+      const body = String(r.body || r.summary || "").toLowerCase();
+      const city = String(r.city || "").toLowerCase();
+      const cat = String(r.category || "").toLowerCase();
+
+      return (
+        title.includes(q) ||
+        body.includes(q) ||
+        city.includes(q) ||
+        cat.includes(q)
+      );
+    });
+  }, [aiReports, incidentQuery, filters]);
+
   const aiRouteIncidents = useMemo(() => {
     const q = (incidentQuery || "").trim().toLowerCase();
 
@@ -1098,7 +1134,7 @@ export default function Dashboard() {
                 center={mapCenter}
                 zoom={mapZoom}
                 incidents={filteredIncidents}
-                aiReports={aiReports}
+                aiReports={filteredAIReports}
                 mapMode={mapMode}
                 onChangeMapMode={setMapMode}
                 userLocation={userLocation}
