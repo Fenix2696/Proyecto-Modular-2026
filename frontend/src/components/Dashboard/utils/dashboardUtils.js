@@ -22,6 +22,8 @@ export const inTimeRange = (date, timeRange) => {
   const diff = Date.now() - date.getTime();
   if (timeRange === "1h") return diff <= 3600000;
   if (timeRange === "24h") return diff <= 86400000;
+  if (timeRange === "2d") return diff <= 2 * 86400000;
+  if (timeRange === "5d") return diff <= 5 * 86400000;
   if (timeRange === "7d") return diff <= 604800000;
 
   return true;
