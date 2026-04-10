@@ -116,7 +116,8 @@ export default function DirectionsDrawer({
 
           {/* Mode tabs */}
           <div className="rc-dir-modes" role="tablist" aria-label="Modo de viaje">
-            {MODES.map(({ key, label, Icon }) => {
+            {MODES.map((mode) => {
+              const { key, label } = mode;
               const active = key === modeKey;
               return (
                 <button
@@ -128,7 +129,7 @@ export default function DirectionsDrawer({
                   aria-selected={active}
                   title={label}
                 >
-                  <Icon size={18} />
+                  {React.createElement(mode.Icon, { size: 18 })}
                   <span>{label}</span>
                 </button>
               );

@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TYPE_LABEL } from "../utils/incidentTypes";
 
 const TIME_OPTIONS = [
-  { value: "all", label: "Todo" },
   { value: "1h", label: "Ultima hora" },
-  { value: "24h", label: "Ultimas 24 horas" },
+  { value: "2d", label: "Ultimos 2 dias" },
+  { value: "5d", label: "Ultimos 5 dias" },
   { value: "7d", label: "Ultimos 7 dias" },
 ];
 
@@ -14,7 +14,7 @@ export default function FiltersPanel({ filters, setFilters, onResetFilters }) {
   const wrapRef = useRef(null);
 
   const timeLabel =
-    TIME_OPTIONS.find((o) => o.value === filters.timeRange)?.label || "Todo";
+    TIME_OPTIONS.find((o) => o.value === filters.timeRange)?.label || "Ultima hora";
 
   useEffect(() => {
     function onDocClick(e) {
