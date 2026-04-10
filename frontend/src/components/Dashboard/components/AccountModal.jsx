@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getMe, updateMe, uploadMyPhoto, changeMyPassword } from "../../../services/user";
-import { UserRound, Lock, ImagePlus, Trash2, KeyRound, X } from "lucide-react";
+import { UserRound, Lock, ImagePlus, Trash2, KeyRound, X, Eye, EyeOff } from "lucide-react";
 
 /* ======================================================
    Toast
@@ -46,6 +46,11 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     currentPassword: "",
     newPassword: "",
     confirm: "",
+  });
+  const [showPw, setShowPw] = useState({
+    current: false,
+    next: false,
+    confirm: false,
   });
 
   // ✅ base backend
@@ -100,6 +105,7 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
       });
 
       setPw({ currentPassword: "", newPassword: "", confirm: "" });
+      setShowPw({ current: false, next: false, confirm: false });
 
       const u = user || {};
       const missing = !u.username && !u.name && !u.full_name && !u.phone;
@@ -283,6 +289,25 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     userPhotoUrl || user?.photo_url || user?.avatar || user?.photo_path || "";
   const effectivePhoto = localPreview || normalizePhotoUrl(basePhoto);
 
+  const getPasswordStrength = (value) => {
+    const pwd = String(value || "");
+    if (!pwd) return { label: "Sin evaluar", cls: "none", score: 0 };
+
+    let score = 0;
+    if (pwd.length >= 8) score += 1;
+    if (pwd.length >= 12) score += 1;
+    if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score += 1;
+    if (/\d/.test(pwd)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
+
+    if (score <= 2) return { label: "Debil", cls: "weak", score };
+    if (score <= 3) return { label: "Media", cls: "medium", score };
+    if (score <= 4) return { label: "Fuerte", cls: "strong", score };
+    return { label: "Muy fuerte", cls: "very-strong", score };
+  };
+
+  const strength = getPasswordStrength(pw.newPassword);
+
   return (
     <div className="rc-modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -388,32 +413,85 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
           <div className="rc-security">
             <div className="rc-field">
               <label>Password actual</label>
-              <input
-                type="password"
-                className="rc-input"
-                value={pw.currentPassword}
-                onChange={(e) => setPw((p) => ({ ...p, currentPassword: e.target.value }))}
-              />
+              <div className="rc-password-input-wrap">
+                <input
+                  type={showPw.current ? "text" : "password"}
+                  className="rc-input rc-input-password"
+                  value={pw.currentPassword}
+                  name="current-password-change"
+                  autoComplete="off"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute("readonly")}
+                  data-lpignore="true"
+                  onChange={(e) => setPw((p) => ({ ...p, currentPassword: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="rc-password-toggle"
+                  aria-label={showPw.current ? "Ocultar password actual" : "Ver password actual"}
+                  onClick={() => setShowPw((prev) => ({ ...prev, current: !prev.current }))}
+                >
+                  {showPw.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             <div className="rc-field">
               <label>Password nuevo</label>
-              <input
-                type="password"
-                className="rc-input"
-                value={pw.newPassword}
-                onChange={(e) => setPw((p) => ({ ...p, newPassword: e.target.value }))}
-              />
+              <div className="rc-password-input-wrap">
+                <input
+                  type={showPw.next ? "text" : "password"}
+                  className="rc-input rc-input-password"
+                  value={pw.newPassword}
+                  name="new-password-change"
+                  autoComplete="new-password"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute("readonly")}
+                  data-lpignore="true"
+                  onChange={(e) => setPw((p) => ({ ...p, newPassword: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="rc-password-toggle"
+                  aria-label={showPw.next ? "Ocultar password nueva" : "Ver password nueva"}
+                  onClick={() => setShowPw((prev) => ({ ...prev, next: !prev.next }))}
+                >
+                  {showPw.next ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <div className="rc-password-strength">
+                <div className="rc-password-strength-bar">
+                  <span className={`rc-password-strength-fill ${strength.cls}`} />
+                </div>
+                <small className={`rc-password-strength-label ${strength.cls}`}>
+                  Seguridad: {strength.label}
+                </small>
+              </div>
             </div>
 
             <div className="rc-field">
               <label>Confirmar password</label>
-              <input
-                type="password"
-                className="rc-input"
-                value={pw.confirm}
-                onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))}
-              />
+              <div className="rc-password-input-wrap">
+                <input
+                  type={showPw.confirm ? "text" : "password"}
+                  className="rc-input rc-input-password"
+                  value={pw.confirm}
+                  name="confirm-password-change"
+                  autoComplete="new-password"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute("readonly")}
+                  data-lpignore="true"
+                  onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="rc-password-toggle"
+                  aria-label={showPw.confirm ? "Ocultar confirmacion de password" : "Ver confirmacion de password"}
+                  onClick={() => setShowPw((prev) => ({ ...prev, confirm: !prev.confirm }))}
+                >
+                  {showPw.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             <div className="rc-modal-actions">
