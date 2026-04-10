@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * PlacesSearch
@@ -33,12 +33,12 @@ export default function PlacesSearch({
   const [showRecent, setShowRecent] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
 
-  const setInputValue = (nextValue) => {
+  const setInputValue = useCallback((nextValue) => {
     onValueChange?.(nextValue);
     onChange?.(nextValue);
-  };
+  }, [onValueChange, onChange]);
 
-  const loadRecentSearches = () => {
+  const loadRecentSearches = useCallback(() => {
     if (!enableRecentSearches) return [];
     try {
       const raw = localStorage.getItem(recentStorageKey);
@@ -47,16 +47,16 @@ export default function PlacesSearch({
     } catch {
       return [];
     }
-  };
+  }, [enableRecentSearches, recentStorageKey]);
 
-  const saveRecentSearches = (items) => {
+  const saveRecentSearches = useCallback((items) => {
     if (!enableRecentSearches) return;
     try {
       localStorage.setItem(recentStorageKey, JSON.stringify(items));
-    } catch {}
-  };
+    } catch { /* no-op */ }
+  }, [enableRecentSearches, recentStorageKey]);
 
-  const pushRecentSearch = (text) => {
+  const pushRecentSearch = useCallback((text) => {
     if (!enableRecentSearches) return;
     const clean = String(text || "").trim();
     if (!clean) return;
@@ -70,14 +70,14 @@ export default function PlacesSearch({
       saveRecentSearches(next);
       return next;
     });
-  };
+  }, [enableRecentSearches, maxRecentSearches, saveRecentSearches]);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
     onEnterRef.current = onEnter;
     setInputValueRef.current = setInputValue;
     pushRecentSearchRef.current = pushRecentSearch;
-  }, [onSelect, onEnter, onValueChange, onChange, enableRecentSearches, maxRecentSearches]);
+  }, [onSelect, onEnter, setInputValue, pushRecentSearch]);
 
   const removeRecentSearch = (text) => {
     const next = recentSearches.filter((item) => item !== text);
@@ -88,7 +88,7 @@ export default function PlacesSearch({
   useEffect(() => {
     if (!enableRecentSearches) return;
     setRecentSearches(loadRecentSearches());
-  }, [enableRecentSearches]);
+  }, [enableRecentSearches, loadRecentSearches]);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -197,7 +197,7 @@ export default function PlacesSearch({
           if (typeof pLat === "number" && typeof pLng === "number") {
             return { lat: pLat, lng: pLng };
           }
-        } catch {}
+        } catch { /* no-op */ }
       }
 
       const text = String(fallbackAddress || "").trim();
@@ -223,7 +223,7 @@ export default function PlacesSearch({
         if (typeof aLat === "number" && typeof aLng === "number") {
           return { lat: aLat, lng: aLng };
         }
-      } catch {}
+      } catch { /* no-op */ }
 
       return null;
     };
@@ -259,7 +259,7 @@ export default function PlacesSearch({
 
       try {
         input.blur();
-      } catch {}
+      } catch { /* no-op */ }
     };
 
     const handleInputFocus = () => {
@@ -280,7 +280,7 @@ export default function PlacesSearch({
       input.removeEventListener("input", handleInputInput);
       try {
         placeChangedListener?.remove?.();
-      } catch {}
+      } catch { /* no-op */ }
       acRef.current = null;
     };
   }, [
@@ -311,7 +311,7 @@ export default function PlacesSearch({
 
     try {
       inputRef.current?.blur();
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   const hasInputValue = String(value || "").trim().length > 0;
@@ -325,7 +325,7 @@ export default function PlacesSearch({
         inputRef.current.value = "";
         inputRef.current.focus();
       }
-    } catch {}
+    } catch { /* no-op */ }
   };
 
   return (
@@ -363,7 +363,7 @@ export default function PlacesSearch({
               e.stopPropagation();
               try {
                 e.currentTarget.blur();
-              } catch {}
+              } catch { /* no-op */ }
               return;
             }
 
@@ -380,7 +380,7 @@ export default function PlacesSearch({
 
             try {
               e.currentTarget.blur();
-            } catch {}
+            } catch { /* no-op */ }
           }}
         />
 
