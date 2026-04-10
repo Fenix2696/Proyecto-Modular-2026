@@ -25,6 +25,9 @@ export default function PlacesSearch({
   const inputRef = useRef(null);
   const acRef = useRef(null);
   const justSelectedRef = useRef(false);
+  const onSelectRef = useRef(onSelect);
+  const setInputValueRef = useRef(null);
+  const pushRecentSearchRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
@@ -57,16 +60,22 @@ export default function PlacesSearch({
     const clean = String(text || "").trim();
     if (!clean) return;
 
-    const next = [
-      clean,
-      ...recentSearches.filter(
-        (item) => item.toLowerCase() !== clean.toLowerCase()
-      ),
-    ].slice(0, maxRecentSearches);
-
-    setRecentSearches(next);
-    saveRecentSearches(next);
+    setRecentSearches((prev) => {
+      const base = Array.isArray(prev) ? prev : [];
+      const next = [
+        clean,
+        ...base.filter((item) => item.toLowerCase() !== clean.toLowerCase()),
+      ].slice(0, maxRecentSearches);
+      saveRecentSearches(next);
+      return next;
+    });
   };
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    setInputValueRef.current = setInputValue;
+    pushRecentSearchRef.current = pushRecentSearch;
+  }, [onSelect, onValueChange, onChange, enableRecentSearches, maxRecentSearches]);
 
   const removeRecentSearch = (text) => {
     const next = recentSearches.filter((item) => item !== text);
@@ -85,8 +94,7 @@ export default function PlacesSearch({
         typeof window !== "undefined" &&
         window.google &&
         window.google.maps &&
-        window.google.maps.places &&
-        window.google.maps.places.Autocomplete;
+        window.google.maps.places;
 
       if (ok) {
         clearInterval(t);
@@ -104,7 +112,10 @@ export default function PlacesSearch({
 
     const input = inputRef.current;
 
-    const ac = new window.google.maps.places.Autocomplete(input, {
+    const LegacyAutocomplete = window.google?.maps?.places?.Autocomplete;
+    if (typeof LegacyAutocomplete !== "function") return;
+
+    const ac = new LegacyAutocomplete(input, {
       fields: ["formatted_address", "geometry", "name"],
       componentRestrictions: { country: "mx" },
     });
@@ -161,16 +172,20 @@ export default function PlacesSearch({
         justSelectedRef.current = false;
       }, 450);
 
-      setInputValue(address);
-      pushRecentSearch(address);
+      setInputValueRef.current?.(address);
+      pushRecentSearchRef.current?.(address);
       setShowRecent(false);
 
       const loc = place?.geometry?.location;
       const lat = loc?.lat?.();
       const lng = loc?.lng?.();
 
-      if (onSelect && typeof lat === "number" && typeof lng === "number") {
-        onSelect({ lat, lng, address, place });
+      if (
+        onSelectRef.current &&
+        typeof lat === "number" &&
+        typeof lng === "number"
+      ) {
+        onSelectRef.current({ lat, lng, address, place });
       }
 
       try {
@@ -178,29 +193,31 @@ export default function PlacesSearch({
       } catch {}
     };
 
-   input.addEventListener("focus", () => {
-     setTimeout(applyPacVariantClass, 50);
-   });
+    const handleInputFocus = () => {
+      setTimeout(applyPacVariantClass, 50);
+    };
+    const handleInputInput = () => {
+      setTimeout(applyPacVariantClass, 50);
+    };
 
-   input.addEventListener("input", () => {
-     setTimeout(applyPacVariantClass, 50);
-   });
+    input.addEventListener("focus", handleInputFocus);
+    input.addEventListener("input", handleInputInput);
 
-    ac.addListener("place_changed", onPlaceChanged);
+    const placeChangedListener = ac.addListener("place_changed", onPlaceChanged);
     acRef.current = ac;
 
     return () => {
-      input.removeEventListener("focus", applyPacVariantClass);
-      input.removeEventListener("input", applyPacVariantClass);
+      input.removeEventListener("focus", handleInputFocus);
+      input.removeEventListener("input", handleInputInput);
+      try {
+        placeChangedListener?.remove?.();
+      } catch {}
       acRef.current = null;
     };
   }, [
     ready,
     biasGuadalajara,
-    onSelect,
     dropdownVariant,
-    enableRecentSearches,
-    recentSearches,
   ]);
 
   useEffect(() => {
