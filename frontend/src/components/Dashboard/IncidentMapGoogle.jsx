@@ -863,7 +863,7 @@ export default function IncidentMapGoogle({
       meAccuracyRef.current = null;
     }
 
-    if (Number.isFinite(userLocation.heading)) {
+    if (navigationActive && Number.isFinite(userLocation.heading)) {
       const heading = userLocation.heading || 0;
       if (!meHeadingRef.current) {
         meHeadingRef.current = new window.google.maps.Marker({
@@ -885,7 +885,7 @@ export default function IncidentMapGoogle({
       } catch (_) {}
       meHeadingRef.current = null;
     }
-  }, [isLoaded, mapObj, userLocation, cleanupMeLayers]);
+  }, [isLoaded, mapObj, userLocation, navigationActive, cleanupMeLayers]);
 
   useEffect(() => {
     if (!isLoaded) return;
