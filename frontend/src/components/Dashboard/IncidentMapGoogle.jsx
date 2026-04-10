@@ -325,7 +325,6 @@ export default function IncidentMapGoogle({
   const [imgOpen, setImgOpen] = useState(false);
   const [imgTs, setImgTs] = useState(() => Date.now());
   const [navStepIndex, setNavStepIndex] = useState(0);
-  const [returningToUser, setReturningToUser] = useState(false);
 
   const incidentImageUrl = useMemo(() => {
     if (!selected?.id || selected?.isAIReport) return "";
@@ -505,39 +504,6 @@ export default function IncidentMapGoogle({
     });
   }, [mapObj, onUserPanMap]);
 
-  const animateBackToUser = useCallback(() => {
-    if (!mapObj || !userLocation) return;
-
-    const hasCoords =
-      Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng);
-
-    if (!hasCoords) return;
-
-    setReturningToUser(true);
-
-    try {
-      const currentZoom = mapObj.getZoom?.() || 16;
-      mapObj.panTo({ lat: userLocation.lat, lng: userLocation.lng });
-
-      if (currentZoom > 16) {
-        mapObj.setZoom(currentZoom - 1);
-      } else if (currentZoom < 16) {
-        mapObj.setZoom(16);
-      }
-
-      setTimeout(() => {
-        try {
-          mapObj.panTo({ lat: userLocation.lat, lng: userLocation.lng });
-          mapObj.setZoom(16);
-        } catch (_) {}
-      }, 180);
-    } catch (_) {}
-
-    setTimeout(() => {
-      setReturningToUser(false);
-    }, 420);
-  }, [mapObj, userLocation]);
-
   const cleanupPulseInterval = useCallback(() => {
     if (mePulseRef.current?.__pulseInterval) {
       clearInterval(mePulseRef.current.__pulseInterval);
@@ -627,12 +593,9 @@ export default function IncidentMapGoogle({
     cleanupTrafficPolylines();
     cleanupDestMarker();
     setSelected(null);
-
-    animateBackToUser();
   }, [
     clearMapToken,
     mapObj,
-    animateBackToUser,
     cleanupDirections,
     cleanupTrafficPolylines,
     cleanupDestMarker,
@@ -1251,12 +1214,6 @@ export default function IncidentMapGoogle({
           </InfoWindow>
         )}
       </GoogleMap>
-
-      {returningToUser && (
-        <div className="rc-map-return-overlay">
-          <div className="rc-map-return-glow" />
-        </div>
-      )}
 
       {navigationActive && currentNavInstruction && (
         <div
