@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import FiltersPanel from "../panels/FiltersPanel";
 import DirectionsPanel from "../panels/DirectionsPanel";
@@ -121,7 +121,6 @@ export default function DashboardPanel({
   hasDirectionsRoute = false,
   isNavigationActive = false,
   navigationCurrentStep = null,
-  onStartNavigation,
   onStopNavigation,
   onClearDirections,
   getTimeAgo,
@@ -135,7 +134,7 @@ export default function DashboardPanel({
   const [aiError, setAiError] = useState("");
   const [aiMessage, setAiMessage] = useState("");
 
-  const loadAIReports = async (limit = 50) => {
+  const loadAIReports = useCallback(async (limit = 50) => {
     try {
       setLoadingAI(true);
       setAiError("");
@@ -149,7 +148,7 @@ export default function DashboardPanel({
     } finally {
       setLoadingAI(false);
     }
-  };
+  }, [onReloadAIReports]);
 
   const handleSyncAI = async (force = false) => {
     try {
@@ -188,7 +187,7 @@ export default function DashboardPanel({
   useEffect(() => {
     if (activePanel !== "news" && activePanel !== "stats") return;
     loadAIReports(50);
-  }, [activePanel]);
+  }, [activePanel, loadAIReports]);
 
   const sortedAIReports = useMemo(() => {
     return [...aiReports].sort((a, b) => getNewsTimestamp(b) - getNewsTimestamp(a));

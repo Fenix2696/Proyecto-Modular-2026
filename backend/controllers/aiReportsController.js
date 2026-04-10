@@ -516,9 +516,6 @@ function isUsefulCategory(category, text = "") {
 
 function looksLikeRegionalNews(item) {
   const text = `${item?.title || ""} ${item?.body || ""}`.toLowerCase();
-  const source = String(item?.source_name || "").toLowerCase();
-
-  if (source.includes("guardia nocturna")) return true;
   if (containsAny(text, ZMG_KEYWORDS)) return true;
 
   const excluded = [
@@ -1103,12 +1100,8 @@ async function syncAIReports(req, res) {
 
       const text = `${n.title || ""} ${n.body || ""}`;
       const category = normalizeCategory(n.raw_category, text);
-      const isGuardia = String(n.source_name || "").toLowerCase().includes("guardia nocturna");
-
-      if (!isGuardia) {
-        if (!isUsefulCategory(category, text)) return false;
-        if (!looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
-      }
+      if (!isUsefulCategory(category, text)) return false;
+      if (!looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
 
       const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);

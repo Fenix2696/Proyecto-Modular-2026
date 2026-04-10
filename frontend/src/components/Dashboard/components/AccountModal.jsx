@@ -134,7 +134,7 @@ export default function AccountModal({ open, onClose, user, userPhotoUrl, onUpda
     return () => {
       try {
         if (localPreview) URL.revokeObjectURL(localPreview);
-      } catch {}
+      } catch { /* no-op */ }
     };
   }, [localPreview]);
 

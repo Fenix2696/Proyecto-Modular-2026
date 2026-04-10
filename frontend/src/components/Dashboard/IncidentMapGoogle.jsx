@@ -538,7 +538,7 @@ export default function IncidentMapGoogle({
       if (ref.current) {
         try {
           ref.current.setMap(null);
-        } catch (_) {}
+        } catch { /* no-op */ }
         ref.current = null;
       }
     });
@@ -548,19 +548,19 @@ export default function IncidentMapGoogle({
     if (dirRendererRef.current) {
       try {
         dirRendererRef.current.setDirections({ routes: [] });
-      } catch (_) {}
+      } catch { /* no-op */ }
 
       try {
         dirRendererRef.current.setRouteIndex(0);
-      } catch (_) {}
+      } catch { /* no-op */ }
 
       try {
         dirRendererRef.current.setPanel(null);
-      } catch (_) {}
+      } catch { /* no-op */ }
 
       try {
         dirRendererRef.current.setMap(null);
-      } catch (_) {}
+      } catch { /* no-op */ }
 
       dirRendererRef.current = null;
     }
@@ -571,7 +571,7 @@ export default function IncidentMapGoogle({
     for (const pl of arr) {
       try {
         pl.setMap(null);
-      } catch (_) {}
+      } catch { /* no-op */ }
     }
     trafficPolylinesRef.current = [];
   }, []);
@@ -580,7 +580,7 @@ export default function IncidentMapGoogle({
     if (destMarkerRef.current) {
       try {
         destMarkerRef.current.setMap(null);
-      } catch (_) {}
+      } catch { /* no-op */ }
       destMarkerRef.current = null;
     }
   }, []);
@@ -595,7 +595,7 @@ export default function IncidentMapGoogle({
     if (heatLayerRef.current) {
       try {
         heatLayerRef.current.setMap(null);
-      } catch (_) {}
+      } catch { /* no-op */ }
       heatLayerRef.current = null;
     }
 
@@ -655,14 +655,14 @@ export default function IncidentMapGoogle({
             strokeColor: "#60a5fa",
           },
         });
-      } catch (_) {}
+      } catch { /* no-op */ }
     }
 
     dirRendererRef.current.setDirections(directions);
 
     try {
       dirRendererRef.current.setRouteIndex(routeIndex || 0);
-    } catch (_) {}
+    } catch { /* no-op */ }
   }, [isLoaded, mapObj, directions, routeIndex, trafficData, cleanupDirections, cleanupTrafficPolylines, cleanupDestMarker]);
 
   useEffect(() => {
@@ -838,7 +838,7 @@ export default function IncidentMapGoogle({
     } else if (meAccuracyRef.current) {
       try {
         meAccuracyRef.current.setMap(null);
-      } catch (_) {}
+      } catch { /* no-op */ }
       meAccuracyRef.current = null;
     }
 
@@ -861,7 +861,7 @@ export default function IncidentMapGoogle({
     } else if (meHeadingRef.current) {
       try {
         meHeadingRef.current.setMap(null);
-      } catch (_) {}
+      } catch { /* no-op */ }
       meHeadingRef.current = null;
     }
   }, [isLoaded, mapObj, userLocation, navigationActive, cleanupMeLayers]);
@@ -875,7 +875,7 @@ export default function IncidentMapGoogle({
       if (heatLayerRef.current) {
         try {
           heatLayerRef.current.setMap(null);
-        } catch (_) {}
+        } catch { /* no-op */ }
         heatLayerRef.current = null;
       }
       return;
@@ -892,7 +892,7 @@ export default function IncidentMapGoogle({
         heatLayerRef.current.setData(heatmapData);
         heatLayerRef.current.setOptions(heatmapOptions);
         heatLayerRef.current.setMap(mapObj);
-      } catch (_) {}
+      } catch { /* no-op */ }
     }
   }, [isLoaded, mapObj, heatmapOn, heatmapData, heatmapOptions]);
 
@@ -1036,7 +1036,7 @@ export default function IncidentMapGoogle({
     if (!navigationActive || !followMe) {
       try {
         mapObj.setTilt?.(0);
-      } catch (_) {}
+      } catch { /* no-op */ }
       return;
     }
 
@@ -1052,13 +1052,13 @@ export default function IncidentMapGoogle({
       if (Number.isFinite(userLocation.heading)) {
         try {
           mapObj.setHeading?.(userLocation.heading || 0);
-        } catch (_) {}
+        } catch { /* no-op */ }
       }
 
       try {
         mapObj.setTilt?.(45);
-      } catch (_) {}
-    } catch (_) {}
+      } catch { /* no-op */ }
+    } catch { /* no-op */ }
   }, [navigationActive, followMe, mapObj, userLocation]);
 
   const selectedPosition = useMemo(() => getSelectedLatLng(selected), [selected]);
