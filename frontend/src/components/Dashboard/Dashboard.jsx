@@ -299,7 +299,8 @@ export default function Dashboard() {
         setLoading(false);
       }
     })();
-  }, [navigate, loadAIReports]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
 
   useEffect(() => {
     const handleClickOutsideSidebar = (event) => {
