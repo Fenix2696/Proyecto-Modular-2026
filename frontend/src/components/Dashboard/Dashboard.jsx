@@ -248,6 +248,7 @@ export default function Dashboard() {
   const [directions, setDirections] = useState(null);
   const [routesInfo, setRoutesInfo] = useState([]);
   const [routeIndex, setRouteIndex] = useState(0);
+  const routeIndexRef = useRef(0);
 
   // trafficData (Routes API v2)
   const [trafficData, setTrafficData] = useState(null);
@@ -275,6 +276,10 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const [photoTs, setPhotoTs] = useState(() => Date.now());
   const [clearMapToken, setClearMapToken] = useState(0);
+
+  useEffect(() => {
+    routeIndexRef.current = routeIndex;
+  }, [routeIndex]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -369,7 +374,7 @@ export default function Dashboard() {
         setUserLocation(loc);
         setMapCenter([loc.lat, loc.lng]);
         setMapZoom(16);
-        setFollowMe(true);
+        setFollowMe(false);
         didInitialFlyToMeRef.current = true;
       },
       () => {
@@ -400,7 +405,7 @@ export default function Dashboard() {
 
         setUserLocation(next);
 
-        if (followMe) {
+        if (followMe && !navigationActive) {
           setMapCenter([next.lat, next.lng]);
           setMapZoom((z) => Math.max(z, 16));
         }
@@ -413,7 +418,14 @@ export default function Dashboard() {
     );
 
     return () => navigator.geolocation.clearWatch(id);
-  }, [followMe]);
+  }, [followMe, navigationActive]);
+
+  // Seguridad: durante navegacion nunca dejar follow continuo activo
+  useEffect(() => {
+    if (navigationActive && followMe) {
+      setFollowMe(false);
+    }
+  }, [navigationActive, followMe]);
 
   const loadProfile = async () => {
     try {
@@ -574,7 +586,8 @@ export default function Dashboard() {
 
   const handleCenterToMe = () => {
     if (!userLocation) return;
-    setFollowMe(true);
+    // centrar solo bajo demanda, nunca activar follow continuo
+    setFollowMe(false);
     setMapCenter([userLocation.lat, userLocation.lng]);
     setMapZoom((z) => Math.max(z, 16));
   };
@@ -651,7 +664,9 @@ export default function Dashboard() {
     return { lat: Number(p.lat), lng: Number(p.lng) };
   };
 
-  const buildDirections = async (modeKey) => {
+  const buildDirections = async (modeKey, options = {}) => {
+    const { preserveSelectedRoute = false } = options;
+
     await waitForGoogle();
 
     const originLL = getPointLatLng(originIsMyLocation, originLatLngRef);
@@ -731,7 +746,16 @@ export default function Dashboard() {
 
     setDirections(res);
     setRoutesInfo(info);
-    setRouteIndex(bestIdx);
+    setRouteIndex((prev) => {
+      if (preserveSelectedRoute) {
+        const current =
+          Number.isFinite(routeIndexRef.current) ? routeIndexRef.current : prev;
+        if (Number.isFinite(current)) {
+          return Math.min(Math.max(current, 0), res.routes.length - 1);
+        }
+      }
+      return bestIdx;
+    });
   };
 
   const openDirectionsPanel = () => setActivePanel("directions");
@@ -759,6 +783,9 @@ export default function Dashboard() {
 
   const handleStartNavigation = () => {
     if (!directions?.routes?.length) return;
+    // evita "jitter" de camara en movil por updates de geolocalizacion
+    // el usuario puede recentrar manualmente con el boton "mi ubicacion"
+    setFollowMe(false);
     setNavigationActive(true);
   };
 
@@ -879,16 +906,27 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (!userLocation && (originIsMyLocation || destIsMyLocation)) return;
+    if (navigationActive) return;
+    const userLocationReady =
+      !!userLocation &&
+      Number.isFinite(userLocation.lat) &&
+      Number.isFinite(userLocation.lng);
+
+    if (!userLocationReady && (originIsMyLocation || destIsMyLocation)) return;
     if (!originIsMyLocation && !originLatLngRef.current) return;
     if (!destIsMyLocation && !destLatLngRef.current) return;
 
     (async () => {
       try {
-        await buildDirections(travelMode);
+        await buildDirections(travelMode, { preserveSelectedRoute: true });
       } catch {}
     })();
-  }, [travelMode, originIsMyLocation, destIsMyLocation, userLocation]);
+  }, [
+    travelMode,
+    originIsMyLocation,
+    destIsMyLocation,
+    navigationActive,
+  ]);
 
   const handleSwap = () => {
     setOriginIsMyLocation((prevOriginMy) => {
@@ -1014,7 +1052,7 @@ export default function Dashboard() {
             onClearDirections={handleClearDirections}
             onStartRouteAndFocusMap={() => {
               handleStartNavigation();
-              setFollowMe(true);
+              setFollowMe(false);
               setActivePanel("none");
               setSidebarCollapsed(true);
             }}
