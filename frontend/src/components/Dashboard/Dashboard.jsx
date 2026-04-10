@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "../../styles/dashboard.css";
@@ -299,7 +299,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     })();
-  }, [navigate]);
+  }, [navigate, loadAIReports]);
 
   useEffect(() => {
     const handleClickOutsideSidebar = (event) => {
@@ -465,7 +465,7 @@ export default function Dashboard() {
     }
   };
 
-  const loadAIReports = async (limit = 50) => {
+  const loadAIReports = useCallback(async (limit = 50) => {
     try {
       const response = await getActiveAIReports(limit);
       const rows = response?.data || [];
@@ -485,7 +485,7 @@ export default function Dashboard() {
       setAiReports([]);
       return [];
     }
-  };
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
