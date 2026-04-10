@@ -339,7 +339,11 @@ export default function PlacesSearch({
           className={`${inputClassName} ${hasInputValue ? "has-clear" : ""}`}
           defaultValue={value}
           placeholder={placeholder}
+          name="destination-search"
           autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
           onFocus={() => {
             if (enableRecentSearches) {
               setRecentSearches(loadRecentSearches());
