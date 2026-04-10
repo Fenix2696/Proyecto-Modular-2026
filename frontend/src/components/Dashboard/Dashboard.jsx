@@ -374,7 +374,7 @@ export default function Dashboard() {
         setUserLocation(loc);
         setMapCenter([loc.lat, loc.lng]);
         setMapZoom(16);
-        setFollowMe(true);
+        setFollowMe(false);
         didInitialFlyToMeRef.current = true;
       },
       () => {
@@ -586,15 +586,8 @@ export default function Dashboard() {
 
   const handleCenterToMe = () => {
     if (!userLocation) return;
-    // En navegacion: centrar solo bajo demanda (sin auto-follow continuo)
-    if (navigationActive) {
-      setFollowMe(false);
-      setMapCenter([userLocation.lat, userLocation.lng]);
-      setMapZoom((z) => Math.max(z, 16));
-      return;
-    }
-
-    setFollowMe(true);
+    // centrar solo bajo demanda, nunca activar follow continuo
+    setFollowMe(false);
     setMapCenter([userLocation.lat, userLocation.lng]);
     setMapZoom((z) => Math.max(z, 16));
   };
