@@ -672,8 +672,18 @@ export default function Dashboard() {
       return;
     }
 
+    const normalizedDescription =
+      typeof data.description === "string" && data.description.trim().length > 0
+        ? data.description.trim()
+        : String(data.title || "").trim();
+
     try {
-      const res = await createIncident({ ...data, lat, lng });
+      const res = await createIncident({
+        ...data,
+        lat,
+        lng,
+        description: normalizedDescription,
+      });
       if (!res?.success) {
         alert(res?.message || "Error al crear incidente");
         return;
@@ -683,8 +693,9 @@ export default function Dashboard() {
       setMapCenter([lat, lng]);
       setMapZoom((z) => Math.max(z, 16));
       await loadIncidents();
-    } catch {
-      alert("Error al crear incidente");
+    } catch (error) {
+      const backendMessage = error?.response?.data?.message;
+      alert(backendMessage || "Error al crear incidente");
     }
   };
 

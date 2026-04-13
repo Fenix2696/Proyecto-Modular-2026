@@ -181,6 +181,7 @@ async function createIncident(req, res) {
   try {
     const {
       type,
+      title,
       description,
       address,
       priority,
@@ -195,11 +196,15 @@ async function createIncident(req, res) {
 
     const latNum = toNumberOrNull(lat ?? latitude);
     const lngNum = toNumberOrNull(lng ?? longitude);
+    const titleText = typeof title === "string" ? title.trim() : "";
+    const descriptionText =
+      typeof description === "string" ? description.trim() : "";
+    const normalizedDescription = descriptionText || titleText;
 
-    if (!type || !description) {
+    if (!type || !normalizedDescription) {
       return res.status(400).json({
         success: false,
-        message: "type y description son requeridos",
+        message: "type y description/title son requeridos",
       });
     }
 
@@ -245,7 +250,7 @@ async function createIncident(req, res) {
       `,
       [
         type,
-        description,
+        normalizedDescription,
         latNum,
         lngNum,
         address || null,
