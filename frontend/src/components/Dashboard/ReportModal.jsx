@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import "../../styles/report-modal.css";
 import PlacesSearch from "./PlacesSearch";
 
+const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB aprox para evitar limites en despliegue
+const MAX_IMAGE_DIMENSION = 1600;
+
 const TYPES = [
   { key: "robbery", label: "Asalto/Robo", emoji: "🚨" },
   { key: "accident", label: "Accidente", emoji: "🚗" },
@@ -24,6 +27,7 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
   // 🔥 NUEVO — Imagen
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   const canNext = useMemo(() => {
     if (step === 1) return !!type;
@@ -64,7 +68,64 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
   };
 
   // 🔥 NUEVO — Manejo imagen
-  const handleImageChange = (e) => {
+  const compressImageIfNeeded = async (file) => {
+    if (!file || file.size <= MAX_IMAGE_SIZE_BYTES) return file;
+
+    const readAsDataUrl = (blob) =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+    const dataUrl = await readAsDataUrl(file);
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = dataUrl;
+    });
+
+    const ratio = Math.min(
+      1,
+      MAX_IMAGE_DIMENSION / Math.max(img.width || 1, img.height || 1)
+    );
+    const targetWidth = Math.max(1, Math.round(img.width * ratio));
+    const targetHeight = Math.max(1, Math.round(img.height * ratio));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+    let quality = 0.88;
+    let compressedBlob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+
+    while (compressedBlob && compressedBlob.size > MAX_IMAGE_SIZE_BYTES && quality > 0.45) {
+      quality -= 0.1;
+      // eslint-disable-next-line no-await-in-loop
+      compressedBlob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", quality)
+      );
+    }
+
+    if (!compressedBlob) return file;
+    if (compressedBlob.size >= file.size) return file;
+
+    const originalName = file.name.replace(/\.[^.]+$/, "");
+    return new File([compressedBlob], `${originalName || "incidente"}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  };
+
+  const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -73,13 +134,21 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
       return;
     }
 
-    if (file.size > 8 * 1024 * 1024) {
-      alert("La imagen no puede superar 8MB");
-      return;
+    try {
+      setIsProcessingImage(true);
+      const finalFile = await compressImageIfNeeded(file);
+      if (finalFile.size > MAX_IMAGE_SIZE_BYTES) {
+        alert("La imagen sigue siendo muy pesada. Intenta con otra foto.");
+        return;
+      }
+      setImageFile(finalFile);
+      setImagePreview(URL.createObjectURL(finalFile));
+    } catch {
+      alert("No se pudo procesar la imagen");
+    } finally {
+      setIsProcessingImage(false);
+      e.target.value = "";
     }
-
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
   };
 
   const removeImage = () => {
@@ -207,7 +276,12 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
                     accept="image/*"
                     onChange={handleImageChange}
                     className="rm-input"
+                    disabled={isProcessingImage}
                   />
+                )}
+
+                {isProcessingImage && (
+                  <div className="rm-small">Procesando imagen...</div>
                 )}
 
                 {imagePreview && (
