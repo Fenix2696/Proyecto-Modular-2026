@@ -29,10 +29,29 @@ http.interceptors.request.use(
 
     config.headers = config.headers || {};
 
+    const removeContentTypeHeader = (headers) => {
+      if (!headers) return;
+
+      // AxiosHeaders (axios v1)
+      if (typeof headers.delete === "function") {
+        headers.delete("Content-Type");
+        headers.delete("content-type");
+      }
+
+      // objeto plano
+      delete headers["Content-Type"];
+      delete headers["content-type"];
+    };
+
     if (isFormData) {
       // Deja que axios/browser ponga multipart con boundary
-      if (config.headers["Content-Type"]) delete config.headers["Content-Type"];
-      if (config.headers["content-type"]) delete config.headers["content-type"];
+      removeContentTypeHeader(config.headers);
+
+      // Tambien limpiar defaults heredados por metodo (post/put/patch)
+      removeContentTypeHeader(http.defaults?.headers?.common);
+      removeContentTypeHeader(http.defaults?.headers?.post);
+      removeContentTypeHeader(http.defaults?.headers?.put);
+      removeContentTypeHeader(http.defaults?.headers?.patch);
     } else {
       // Para JSON normal
       if (!config.headers["Content-Type"] && !config.headers["content-type"]) {
