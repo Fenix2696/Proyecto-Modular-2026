@@ -14,7 +14,13 @@ const uploadIncidentImage = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
   fileFilter: (req, file, cb) => {
-    if (file && file.mimetype && file.mimetype.startsWith("image/")) return cb(null, true);
+    const mime = String(file?.mimetype || "").toLowerCase();
+    const name = String(file?.originalname || "").toLowerCase();
+    const hasImageExtension = /\.(png|jpe?g|webp|gif|bmp|heic|heif|avif)$/i.test(name);
+
+    if (mime.startsWith("image/") || (!mime && hasImageExtension)) {
+      return cb(null, true);
+    }
     return cb(new Error("Archivo no es imagen"), false);
   },
 }).single("image");
@@ -181,6 +187,7 @@ async function createIncident(req, res) {
   try {
     const {
       type,
+      title,
       description,
       address,
       priority,
@@ -195,11 +202,15 @@ async function createIncident(req, res) {
 
     const latNum = toNumberOrNull(lat ?? latitude);
     const lngNum = toNumberOrNull(lng ?? longitude);
+    const titleText = typeof title === "string" ? title.trim() : "";
+    const descriptionText =
+      typeof description === "string" ? description.trim() : "";
+    const normalizedDescription = descriptionText || titleText;
 
-    if (!type || !description) {
+    if (!type || !normalizedDescription) {
       return res.status(400).json({
         success: false,
-        message: "type y description son requeridos",
+        message: "type y description/title son requeridos",
       });
     }
 
@@ -245,7 +256,7 @@ async function createIncident(req, res) {
       `,
       [
         type,
-        description,
+        normalizedDescription,
         latNum,
         lngNum,
         address || null,
