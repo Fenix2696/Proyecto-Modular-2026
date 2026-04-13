@@ -695,6 +695,11 @@ export default function Dashboard() {
       await loadIncidents();
     } catch (error) {
       const backendMessage = error?.response?.data?.message;
+      const status = Number(error?.response?.status || 0);
+      if (status === 413) {
+        alert("La imagen es demasiado grande para el servidor. Intenta con una foto mas ligera.");
+        return;
+      }
       alert(backendMessage || "Error al crear incidente");
     }
   };
