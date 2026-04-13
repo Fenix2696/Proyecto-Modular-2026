@@ -23,18 +23,18 @@ export async function createIncident(payload) {
     return data;
   }
 
-  const img =
-    payload?.imageFile ||
-    payload?.image ||
-    null;
+  const img = payload?.imageFile || payload?.image || null;
 
   // Si viene un File/Blob, mandamos multipart
-  const isBlob =
-    img &&
+  const isBlobLike =
+    !!img &&
     (img instanceof Blob ||
-      (typeof File !== "undefined" && img instanceof File));
+      (typeof File !== "undefined" && img instanceof File) ||
+      (typeof img === "object" &&
+        typeof img.arrayBuffer === "function" &&
+        typeof img.type === "string"));
 
-  if (isBlob) {
+  if (isBlobLike) {
     const fd = new FormData();
 
     // append de todos los campos (sin reventar)

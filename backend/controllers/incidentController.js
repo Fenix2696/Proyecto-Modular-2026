@@ -14,7 +14,13 @@ const uploadIncidentImage = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
   fileFilter: (req, file, cb) => {
-    if (file && file.mimetype && file.mimetype.startsWith("image/")) return cb(null, true);
+    const mime = String(file?.mimetype || "").toLowerCase();
+    const name = String(file?.originalname || "").toLowerCase();
+    const hasImageExtension = /\.(png|jpe?g|webp|gif|bmp|heic|heif|avif)$/i.test(name);
+
+    if (mime.startsWith("image/") || (!mime && hasImageExtension)) {
+      return cb(null, true);
+    }
     return cb(new Error("Archivo no es imagen"), false);
   },
 }).single("image");
