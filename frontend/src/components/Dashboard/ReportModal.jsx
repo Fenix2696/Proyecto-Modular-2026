@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import "../../styles/report-modal.css";
 import PlacesSearch from "./PlacesSearch";
 
-const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB aprox para evitar limites en despliegue
-const MAX_IMAGE_DIMENSION = 1600;
+const MAX_IMAGE_SIZE_BYTES = 1200 * 1024; // ~1.2MB para reducir fallas en mobile/serverless
+const MAX_IMAGE_DIMENSION = 1280;
 
 const TYPES = [
   { key: "robbery", label: "Asalto/Robo", emoji: "🚨" },
@@ -69,7 +69,13 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
 
   // 🔥 NUEVO — Manejo imagen
   const compressImageIfNeeded = async (file) => {
-    if (!file || file.size <= MAX_IMAGE_SIZE_BYTES) return file;
+    if (!file) return file;
+
+    const mime = String(file.type || "").toLowerCase();
+    const shouldNormalizeToJpeg =
+      file.size > MAX_IMAGE_SIZE_BYTES || mime.includes("heic") || mime.includes("heif") || mime.includes("avif");
+
+    if (!shouldNormalizeToJpeg) return file;
 
     const readAsDataUrl = (blob) =>
       new Promise((resolve, reject) => {
@@ -109,14 +115,32 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
 
     while (compressedBlob && compressedBlob.size > MAX_IMAGE_SIZE_BYTES && quality > 0.45) {
       quality -= 0.1;
-      // eslint-disable-next-line no-await-in-loop
       compressedBlob = await new Promise((resolve) =>
         canvas.toBlob(resolve, "image/jpeg", quality)
       );
     }
 
     if (!compressedBlob) return file;
-    if (compressedBlob.size >= file.size) return file;
+
+    // Si sigue muy pesada intentamos una segunda pasada mas agresiva
+    if (compressedBlob.size > MAX_IMAGE_SIZE_BYTES) {
+      const reducedScale = Math.min(1, 1024 / Math.max(targetWidth || 1, targetHeight || 1));
+      if (reducedScale < 1) {
+        const secondCanvas = document.createElement("canvas");
+        secondCanvas.width = Math.max(1, Math.round(targetWidth * reducedScale));
+        secondCanvas.height = Math.max(1, Math.round(targetHeight * reducedScale));
+        const secondCtx = secondCanvas.getContext("2d");
+        if (secondCtx) {
+          secondCtx.drawImage(canvas, 0, 0, secondCanvas.width, secondCanvas.height);
+          compressedBlob = await new Promise((resolve) =>
+            secondCanvas.toBlob(resolve, "image/jpeg", 0.72)
+          );
+        }
+      }
+    }
+
+    if (!compressedBlob) return file;
+    if (compressedBlob.size >= file.size && !shouldNormalizeToJpeg) return file;
 
     const originalName = file.name.replace(/\.[^.]+$/, "");
     return new File([compressedBlob], `${originalName || "incidente"}.jpg`, {
@@ -138,7 +162,7 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
       setIsProcessingImage(true);
       const finalFile = await compressImageIfNeeded(file);
       if (finalFile.size > MAX_IMAGE_SIZE_BYTES) {
-        alert("La imagen sigue siendo muy pesada. Intenta con otra foto.");
+        alert("La imagen sigue siendo muy pesada. Intenta con otra foto o recortala antes de subirla.");
         return;
       }
       setImageFile(finalFile);
