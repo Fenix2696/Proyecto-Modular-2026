@@ -42,9 +42,28 @@ function Login() {
 
   const goToDashboard = useCallback(() => {
     setLeaving(true);
-    setTimeout(() => {
+
+    const go = () => {
       navigate("/", { replace: true });
-    }, 280);
+
+      // Fallback para flujos de Google en Chrome movil que pueden abrir
+      // una ventana/pestana intermedia y no completar bien la navegacion SPA.
+      setTimeout(() => {
+        if (window.location.pathname !== "/") {
+          try {
+            if (window.top && window.top !== window) {
+              window.top.location.assign(`${window.location.origin}/`);
+              return;
+            }
+          } catch {
+            // Ignorar errores de acceso cross-origin a window.top
+          }
+          window.location.assign(`${window.location.origin}/`);
+        }
+      }, 700);
+    };
+
+    setTimeout(go, 280);
   }, [navigate]);
 
   const handleSubmit = async (e) => {
