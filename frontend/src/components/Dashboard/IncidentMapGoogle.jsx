@@ -384,8 +384,8 @@ export default function IncidentMapGoogle({
   const cleanAIReports = useMemo(() => {
     return (aiReports || [])
       .map((r) => {
-        const latitude = Number(r.latitude);
-        const longitude = Number(r.longitude);
+        const latitude = Number(r.latitude ?? r.lat);
+        const longitude = Number(r.longitude ?? r.lng);
 
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
