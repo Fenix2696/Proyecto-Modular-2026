@@ -2,7 +2,6 @@ const pool = require("../config/database");
 const axios = require("axios");
 
 const JAVA_BASE_URL = (process.env.JAVA_BASE_URL || "http://localhost:8080").replace(/\/+$/, "");
-const JAVA_GNEWS_URL = `${JAVA_BASE_URL}/WebSearch/newsByQuery`;
 const JAVA_GUARDIA_URL = `${JAVA_BASE_URL}/WebSearch/guardiaNocturna`;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 
@@ -11,11 +10,8 @@ const MIN_SYNC_INTERVAL_MINUTES = 20;
 const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
 
-// Reducidas para bajar el riesgo de 429
-const PRIMARY_SEARCH_QUERIES = [
-  "Guadalajara inseguridad",
-  "Guadalajara accidente vial",
-];
+let guardiaRateLimitBackoffUntil = 0;
+const GUARDIA_RATE_LIMIT_BACKOFF_MS = 30 * 60 * 1000;
 
 const ZMG_KEYWORDS = [
   "guadalajara",
@@ -232,6 +228,13 @@ function parseDate(value) {
 function getDiffDays(date) {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return Infinity;
   return (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
+}
+
+function isCurrentMonthAndYear(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+
+  const now = new Date();
+  return date.getUTCFullYear() === now.getUTCFullYear() && date.getUTCMonth() === now.getUTCMonth();
 }
 
 function toNullableString(value) {
@@ -512,6 +515,10 @@ function isUsefulCategory(category, text = "") {
     "detenido",
     "droga",
   ]);
+}
+
+function isGuardiaNocturnaSource(sourceName = "") {
+  return String(sourceName || "").toLowerCase().includes("guardia nocturna");
 }
 
 function looksLikeRegionalNews(item) {
@@ -801,12 +808,12 @@ async function resolveLocationForNews(item) {
   }
 
   return {
-    latitude: null,
-    longitude: null,
-    address_text: existingAddress || (municipal ? `${municipal.city}, ${municipal.state}, Mexico` : null),
+    latitude: municipal?.lat ?? 20.6597,
+    longitude: municipal?.lng ?? -103.3496,
+    address_text: existingAddress || (municipal ? `${municipal.city}, ${municipal.state}, Mexico` : "Guadalajara, Jalisco, Mexico"),
     city: municipal?.city || "Guadalajara",
     state: municipal?.state || "Jalisco",
-    source: "none",
+    source: municipal ? "fallback-municipality" : "fallback-default-guadalajara",
   };
 }
 
@@ -815,50 +822,24 @@ function looksLikeRateLimitError(message = "") {
   return m.includes("429") || m.includes("too many requests");
 }
 
-async function fetchGNewsWithQueries(queries) {
-  const allResults = [];
-  const queryStats = [];
+async function fetchGuardiaNocturna() {
+  const now = Date.now();
 
-  for (const query of queries) {
-    try {
-      const response = await axios.get(JAVA_GNEWS_URL, {
-        params: { query },
-        timeout: 20000,
-      });
-
-      const noticias = normalizeNewsResponse(response.data)
-        .map(normalizeScraperItem)
-        .filter(Boolean);
-
-      console.log("GNews query:", query);
-      console.log("GNews raw preview:", safePreview(response.data));
-      console.log("GNews normalized count:", noticias.length);
-
-      allResults.push(...noticias);
-
-      queryStats.push({
-        source: "GNews",
-        query,
-        count: noticias.length,
-      });
-
-      await sleep(3000);
-    } catch (error) {
-      console.error("Error GNews:", query, error.message);
-      queryStats.push({
-        source: "GNews",
-        query,
-        count: 0,
-        error: error.message,
-      });
-      await sleep(4000);
-    }
+  if (guardiaRateLimitBackoffUntil > now) {
+    const waitMs = guardiaRateLimitBackoffUntil - now;
+    return {
+      allResults: [],
+      queryStats: [
+        {
+          source: "Guardia Nocturna",
+          query: "/WebSearch/guardiaNocturna",
+          count: 0,
+          error: `Rate limit backoff activo (${Math.ceil(waitMs / 1000)}s restantes)`,
+        },
+      ],
+    };
   }
 
-  return { allResults, queryStats };
-}
-
-async function fetchGuardiaNocturna() {
   try {
     const response = await axios.get(JAVA_GUARDIA_URL, {
       timeout: 45000,
@@ -867,6 +848,8 @@ async function fetchGuardiaNocturna() {
     const noticias = normalizeNewsResponse(response.data)
       .map(normalizeScraperItem)
       .filter(Boolean);
+
+    guardiaRateLimitBackoffUntil = 0;
 
     console.log("Guardia raw preview:", safePreview(response.data));
     console.log("Guardia normalized count:", noticias.length);
@@ -882,6 +865,10 @@ async function fetchGuardiaNocturna() {
       ],
     };
   } catch (error) {
+    if (looksLikeRateLimitError(error?.message)) {
+      guardiaRateLimitBackoffUntil = Date.now() + GUARDIA_RATE_LIMIT_BACKOFF_MS;
+    }
+
     console.error("Error Guardia Nocturna:", error.message);
     return {
       allResults: [],
@@ -898,12 +885,11 @@ async function fetchGuardiaNocturna() {
 }
 
 async function fetchAllNewsFromJava() {
-  const gnews = await fetchGNewsWithQueries(PRIMARY_SEARCH_QUERIES);
   const guardia = await fetchGuardiaNocturna();
 
   return {
-    noticias: [...guardia.allResults, ...gnews.allResults],
-    queryStats: [...guardia.queryStats, ...gnews.queryStats],
+    noticias: guardia.allResults,
+    queryStats: guardia.queryStats,
   };
 }
 
@@ -964,6 +950,8 @@ async function getStoredActiveAIReports(limit = DEFAULT_REPORT_LIMIT) {
     FROM ai_reports
     WHERE is_active = TRUE
       AND expires_at > NOW()
+      AND published_at >= DATE_TRUNC('month', NOW())
+      AND published_at < (DATE_TRUNC('month', NOW()) + INTERVAL '1 month')
     ORDER BY published_at DESC NULLS LAST, detected_at DESC
     LIMIT $1
     `,
@@ -980,6 +968,8 @@ async function getStoredFallbackAIReports(limit = DEFAULT_REPORT_LIMIT) {
     `
     SELECT *
     FROM ai_reports
+    WHERE published_at >= DATE_TRUNC('month', NOW())
+      AND published_at < (DATE_TRUNC('month', NOW()) + INTERVAL '1 month')
     ORDER BY
       is_active DESC,
       published_at DESC NULLS LAST,
@@ -1008,7 +998,7 @@ function selectBestDayWindow(newsItems) {
     }
   }
 
-  return { days: 15, filtered: newsItems };
+  return { days: 15, filtered: newsItems.filter((n) => isCurrentMonthAndYear(parseDate(n.published_at))) };
 }
 
 async function buildFallbackResponse({
@@ -1100,13 +1090,15 @@ async function syncAIReports(req, res) {
 
       const text = `${n.title || ""} ${n.body || ""}`;
       const category = normalizeCategory(n.raw_category, text);
-      if (!isUsefulCategory(category, text)) return false;
-      if (!looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
+      const isGuardia = isGuardiaNocturnaSource(n.source_name);
+
+      if (!isGuardia && !isUsefulCategory(category, text)) return false;
+      if (!isGuardia && !looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
 
       const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);
 
-      return Number.isFinite(diffDias) && diffDias >= 0 && diffDias <= 45;
+      return Number.isFinite(diffDias) && diffDias >= 0 && isCurrentMonthAndYear(fecha);
     });
 
     if (!noticiasValidas.length) {
