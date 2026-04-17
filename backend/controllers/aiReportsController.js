@@ -510,6 +510,10 @@ function isUsefulCategory(category, text = "") {
   ]);
 }
 
+function isGuardiaNocturnaSource(sourceName = "") {
+  return String(sourceName || "").toLowerCase().includes("guardia nocturna");
+}
+
 function looksLikeRegionalNews(item) {
   const text = `${item?.title || ""} ${item?.body || ""}`.toLowerCase();
   if (containsAny(text, ZMG_KEYWORDS)) return true;
@@ -797,12 +801,12 @@ async function resolveLocationForNews(item) {
   }
 
   return {
-    latitude: null,
-    longitude: null,
-    address_text: existingAddress || (municipal ? `${municipal.city}, ${municipal.state}, Mexico` : null),
+    latitude: municipal?.lat ?? 20.6597,
+    longitude: municipal?.lng ?? -103.3496,
+    address_text: existingAddress || (municipal ? `${municipal.city}, ${municipal.state}, Mexico` : "Guadalajara, Jalisco, Mexico"),
     city: municipal?.city || "Guadalajara",
     state: municipal?.state || "Jalisco",
-    source: "none",
+    source: municipal ? "fallback-municipality" : "fallback-default-guadalajara",
   };
 }
 
@@ -1075,8 +1079,10 @@ async function syncAIReports(req, res) {
 
       const text = `${n.title || ""} ${n.body || ""}`;
       const category = normalizeCategory(n.raw_category, text);
-      if (!isUsefulCategory(category, text)) return false;
-      if (!looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
+      const isGuardia = isGuardiaNocturnaSource(n.source_name);
+
+      if (!isGuardia && !isUsefulCategory(category, text)) return false;
+      if (!isGuardia && !looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
 
       const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);
