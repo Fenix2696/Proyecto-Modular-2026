@@ -451,10 +451,17 @@ export default function Dashboard() {
       const res = await getAllIncidents();
       if (res?.success && Array.isArray(res.data)) {
         const clean = res.data
-          .map((i) => ({
-            ...i,
-            timestamp: i.timestamp ? new Date(i.timestamp) : new Date(),
-          }))
+          .map((i) => {
+            const lat = Number(i.lat ?? i.latitude);
+            const lng = Number(i.lng ?? i.longitude);
+
+            return {
+              ...i,
+              lat,
+              lng,
+              timestamp: i.timestamp ? new Date(i.timestamp) : new Date(),
+            };
+          })
           .filter((i) => Number.isFinite(i.lat) && Number.isFinite(i.lng));
         setIncidents(clean);
       } else {
