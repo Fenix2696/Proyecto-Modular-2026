@@ -2,7 +2,6 @@ const pool = require("../config/database");
 const axios = require("axios");
 
 const JAVA_BASE_URL = (process.env.JAVA_BASE_URL || "http://localhost:8080").replace(/\/+$/, "");
-const JAVA_GNEWS_URL = `${JAVA_BASE_URL}/WebSearch/newsByQuery`;
 const JAVA_GUARDIA_URL = `${JAVA_BASE_URL}/WebSearch/guardiaNocturna`;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 
@@ -10,12 +9,6 @@ const AI_REPORT_VISIBLE_HOURS = 12;
 const MIN_SYNC_INTERVAL_MINUTES = 20;
 const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
-
-// Reducidas para bajar el riesgo de 429
-const PRIMARY_SEARCH_QUERIES = [
-  "Guadalajara inseguridad",
-  "Guadalajara accidente vial",
-];
 
 const ZMG_KEYWORDS = [
   "guadalajara",
@@ -815,49 +808,6 @@ function looksLikeRateLimitError(message = "") {
   return m.includes("429") || m.includes("too many requests");
 }
 
-async function fetchGNewsWithQueries(queries) {
-  const allResults = [];
-  const queryStats = [];
-
-  for (const query of queries) {
-    try {
-      const response = await axios.get(JAVA_GNEWS_URL, {
-        params: { query },
-        timeout: 20000,
-      });
-
-      const noticias = normalizeNewsResponse(response.data)
-        .map(normalizeScraperItem)
-        .filter(Boolean);
-
-      console.log("GNews query:", query);
-      console.log("GNews raw preview:", safePreview(response.data));
-      console.log("GNews normalized count:", noticias.length);
-
-      allResults.push(...noticias);
-
-      queryStats.push({
-        source: "GNews",
-        query,
-        count: noticias.length,
-      });
-
-      await sleep(3000);
-    } catch (error) {
-      console.error("Error GNews:", query, error.message);
-      queryStats.push({
-        source: "GNews",
-        query,
-        count: 0,
-        error: error.message,
-      });
-      await sleep(4000);
-    }
-  }
-
-  return { allResults, queryStats };
-}
-
 async function fetchGuardiaNocturna() {
   try {
     const response = await axios.get(JAVA_GUARDIA_URL, {
@@ -898,12 +848,11 @@ async function fetchGuardiaNocturna() {
 }
 
 async function fetchAllNewsFromJava() {
-  const gnews = await fetchGNewsWithQueries(PRIMARY_SEARCH_QUERIES);
   const guardia = await fetchGuardiaNocturna();
 
   return {
-    noticias: [...guardia.allResults, ...gnews.allResults],
-    queryStats: [...guardia.queryStats, ...gnews.queryStats],
+    noticias: guardia.allResults,
+    queryStats: guardia.queryStats,
   };
 }
 

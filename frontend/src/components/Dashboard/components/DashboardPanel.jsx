@@ -65,9 +65,6 @@ function sourceMeta(sourceName) {
     return { label: "Guardia Nocturna", color: "#22c55e" };
   }
 
-  if (s.includes("gnews")) {
-    return { label: "GNews", color: "#3b82f6" };
-  }
 
   return { label: sourceName || "Fuente", color: "#64748b" };
 }
@@ -265,10 +262,10 @@ export default function DashboardPanel({
                 <button
                   className="rc-secondary-btn"
                   type="button"
-                  onClick={() => handleSyncAI(true)}
+                  onClick={() => handleSyncAI(false)}
                   disabled={syncingAI}
                 >
-                  {syncingAI ? "Sincronizando..." : "Forzar sync"}
+                  {syncingAI ? "Sincronizando..." : "Actualizar noticias"}
                 </button>
               </div>
             </div>
