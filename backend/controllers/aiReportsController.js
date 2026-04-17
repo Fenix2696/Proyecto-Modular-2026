@@ -230,6 +230,13 @@ function getDiffDays(date) {
   return (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
 }
 
+function isCurrentMonthAndYear(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+
+  const now = new Date();
+  return date.getUTCFullYear() === now.getUTCFullYear() && date.getUTCMonth() === now.getUTCMonth();
+}
+
 function toNullableString(value) {
   if (value === null || value === undefined) return null;
   const text = String(value).trim();
@@ -943,6 +950,8 @@ async function getStoredActiveAIReports(limit = DEFAULT_REPORT_LIMIT) {
     FROM ai_reports
     WHERE is_active = TRUE
       AND expires_at > NOW()
+      AND published_at >= DATE_TRUNC('month', NOW())
+      AND published_at < (DATE_TRUNC('month', NOW()) + INTERVAL '1 month')
     ORDER BY published_at DESC NULLS LAST, detected_at DESC
     LIMIT $1
     `,
@@ -959,6 +968,8 @@ async function getStoredFallbackAIReports(limit = DEFAULT_REPORT_LIMIT) {
     `
     SELECT *
     FROM ai_reports
+    WHERE published_at >= DATE_TRUNC('month', NOW())
+      AND published_at < (DATE_TRUNC('month', NOW()) + INTERVAL '1 month')
     ORDER BY
       is_active DESC,
       published_at DESC NULLS LAST,
@@ -987,7 +998,7 @@ function selectBestDayWindow(newsItems) {
     }
   }
 
-  return { days: 15, filtered: newsItems };
+  return { days: 15, filtered: newsItems.filter((n) => isCurrentMonthAndYear(parseDate(n.published_at))) };
 }
 
 async function buildFallbackResponse({
@@ -1087,7 +1098,7 @@ async function syncAIReports(req, res) {
       const fecha = parseDate(n.published_at);
       const diffDias = getDiffDays(fecha);
 
-      return Number.isFinite(diffDias) && diffDias >= 0 && diffDias <= 45;
+      return Number.isFinite(diffDias) && diffDias >= 0 && isCurrentMonthAndYear(fecha);
     });
 
     if (!noticiasValidas.length) {
