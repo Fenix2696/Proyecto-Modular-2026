@@ -109,10 +109,14 @@ exports.computeTrafficRoutes = async (req, res) => {
       origin: { location: { latLng: { latitude: Number(origin.lat), longitude: Number(origin.lng) } } },
       destination: { location: { latLng: { latitude: Number(destination.lat), longitude: Number(destination.lng) } } },
       travelMode: mode,
-      routingPreference: "TRAFFIC_AWARE",
       polylineQuality: "HIGH_QUALITY",
       computeAlternativeRoutes: Boolean(alternatives),
     };
+
+    // Google Routes no permite routingPreference en TRANSIT/WALK/BICYCLE.
+    if (mode === "DRIVE" || mode === "TWO_WHEELER") {
+      body.routingPreference = "TRAFFIC_AWARE";
+    }
 
     const data = await fetchJson(ROUTES_URL, {
       method: "POST",
