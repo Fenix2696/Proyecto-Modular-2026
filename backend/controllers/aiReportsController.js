@@ -2,20 +2,15 @@ const pool = require("../config/database");
 const axios = require("axios");
 
 const JAVA_BASE_URL = (process.env.JAVA_BASE_URL || "http://localhost:8080").replace(/\/+$/, "");
-const JAVA_GNEWS_URL = `${JAVA_BASE_URL}/WebSearch/newsByQuery`;
 const JAVA_GUARDIA_URL = `${JAVA_BASE_URL}/WebSearch/guardiaNocturna`;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 
 const AI_REPORT_VISIBLE_HOURS = 12;
 const MIN_SYNC_INTERVAL_MINUTES = 20;
+const RATE_LIMIT_COOLDOWN_MINUTES = 30;
 const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
-
-// Reducidas para bajar el riesgo de 429
-const PRIMARY_SEARCH_QUERIES = [
-  "Guadalajara inseguridad",
-  "Guadalajara accidente vial",
-];
+let externalRateLimitCooldownUntil = 0;
 
 const ZMG_KEYWORDS = [
   "guadalajara",
@@ -815,47 +810,26 @@ function looksLikeRateLimitError(message = "") {
   return m.includes("429") || m.includes("too many requests");
 }
 
-async function fetchGNewsWithQueries(queries) {
-  const allResults = [];
-  const queryStats = [];
+function activateRateLimitCooldown() {
+  externalRateLimitCooldownUntil = Date.now() + RATE_LIMIT_COOLDOWN_MINUTES * 60 * 1000;
+}
 
-  for (const query of queries) {
-    try {
-      const response = await axios.get(JAVA_GNEWS_URL, {
-        params: { query },
-        timeout: 20000,
-      });
-
-      const noticias = normalizeNewsResponse(response.data)
-        .map(normalizeScraperItem)
-        .filter(Boolean);
-
-      console.log("GNews query:", query);
-      console.log("GNews raw preview:", safePreview(response.data));
-      console.log("GNews normalized count:", noticias.length);
-
-      allResults.push(...noticias);
-
-      queryStats.push({
-        source: "GNews",
-        query,
-        count: noticias.length,
-      });
-
-      await sleep(3000);
-    } catch (error) {
-      console.error("Error GNews:", query, error.message);
-      queryStats.push({
-        source: "GNews",
-        query,
-        count: 0,
-        error: error.message,
-      });
-      await sleep(4000);
-    }
+function getRateLimitCooldownState() {
+  if (!externalRateLimitCooldownUntil) {
+    return { active: false, retryAt: null, remainingMinutes: 0 };
   }
 
-  return { allResults, queryStats };
+  const remainingMs = externalRateLimitCooldownUntil - Date.now();
+  if (remainingMs <= 0) {
+    externalRateLimitCooldownUntil = 0;
+    return { active: false, retryAt: null, remainingMinutes: 0 };
+  }
+
+  return {
+    active: true,
+    retryAt: new Date(externalRateLimitCooldownUntil).toISOString(),
+    remainingMinutes: Math.ceil(remainingMs / 60000),
+  };
 }
 
 async function fetchGuardiaNocturna() {
@@ -898,12 +872,11 @@ async function fetchGuardiaNocturna() {
 }
 
 async function fetchAllNewsFromJava() {
-  const gnews = await fetchGNewsWithQueries(PRIMARY_SEARCH_QUERIES);
   const guardia = await fetchGuardiaNocturna();
 
   return {
-    noticias: [...guardia.allResults, ...gnews.allResults],
-    queryStats: [...guardia.queryStats, ...gnews.queryStats],
+    noticias: [...guardia.allResults],
+    queryStats: [...guardia.queryStats],
   };
 }
 
@@ -1054,6 +1027,17 @@ async function syncAIReports(req, res) {
     await expireOldAIReports();
 
     const forceSync = String(req.query.force || "").toLowerCase() === "true";
+    const cooldown = getRateLimitCooldownState();
+    if (cooldown.active) {
+      return buildFallbackResponse({
+        res,
+        forceSync,
+        queryStats: [],
+        message: "Fuente externa temporalmente saturada. Mostrando noticias guardadas en base de datos.",
+        reason: `Reintento automatico en ~${cooldown.remainingMinutes} min`,
+      });
+    }
+
     const syncCheck = await shouldSkipExternalSync();
 
     if (!forceSync && syncCheck.skip) {
@@ -1082,15 +1066,18 @@ async function syncAIReports(req, res) {
 
     if (!Array.isArray(noticias) || noticias.length === 0) {
       const hasRateLimit = queryStats.some((q) => looksLikeRateLimitError(q.error));
+      if (hasRateLimit) {
+        activateRateLimitCooldown();
+      }
 
       return buildFallbackResponse({
         res,
         forceSync,
         queryStats,
         message: hasRateLimit
-          ? "Las fuentes externas alcanzaron su limite. Mostrando noticias guardadas en base de datos."
+          ? "Las fuentes externas estan temporalmente saturadas. Mostrando noticias guardadas en base de datos."
           : "No se pudieron obtener noticias externas. Mostrando noticias guardadas en base de datos.",
-        reason: hasRateLimit ? "Rate limit 429 detectado" : "Sin resultados externos",
+        reason: hasRateLimit ? "Reintentaremos automaticamente en unos minutos" : "Sin resultados externos",
       });
     }
 

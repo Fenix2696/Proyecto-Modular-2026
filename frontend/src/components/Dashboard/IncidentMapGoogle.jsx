@@ -344,6 +344,7 @@ export default function IncidentMapGoogle({
 
   const dirRendererRef = useRef(null);
   const lastSelectedMarkerKeyRef = useRef(null);
+  const lastAutoFitAIKeyRef = useRef("");
 
   const trafficPolylinesRef = useRef([]);
   const destMarkerRef = useRef(null);
@@ -384,8 +385,8 @@ export default function IncidentMapGoogle({
   const cleanAIReports = useMemo(() => {
     return (aiReports || [])
       .map((r) => {
-        const latitude = Number(r.latitude);
-        const longitude = Number(r.longitude);
+        const latitude = Number(r.latitude ?? r.lat);
+        const longitude = Number(r.longitude ?? r.lng);
 
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
@@ -437,6 +438,12 @@ export default function IncidentMapGoogle({
     const count = Array.isArray(heatmapData) ? heatmapData.length : 0;
     return getHeatmapOptions({ preset: "auto", pointCount: count });
   }, [heatmapData]);
+
+  const aiBoundsKey = useMemo(() => {
+    return cleanAIReports
+      .map((r) => `${r.id}:${r.latitude.toFixed(5)},${r.longitude.toFixed(5)}`)
+      .join("|");
+  }, [cleanAIReports]);
 
   const legendCounts = useMemo(() => {
     return {
@@ -622,6 +629,23 @@ export default function IncidentMapGoogle({
     cleanupTrafficPolylines,
     cleanupDestMarker,
   ]);
+
+  useEffect(() => {
+    if (!isLoaded || !mapObj || !window.google) return;
+    if (!aiBoundsKey || lastAutoFitAIKeyRef.current === aiBoundsKey) return;
+    if (navigationActive || directions?.routes?.length) return;
+    if (!cleanAIReports.length) return;
+
+    const bounds = new window.google.maps.LatLngBounds();
+    cleanAIReports.forEach((report) => {
+      bounds.extend({ lat: report.latitude, lng: report.longitude });
+    });
+
+    if (bounds.isEmpty()) return;
+
+    mapObj.fitBounds(bounds, { top: 80, right: 80, bottom: 80, left: 80 });
+    lastAutoFitAIKeyRef.current = aiBoundsKey;
+  }, [isLoaded, mapObj, cleanAIReports, navigationActive, directions, aiBoundsKey]);
 
   useEffect(() => {
     if (!isLoaded || !mapObj || !window.google) return;

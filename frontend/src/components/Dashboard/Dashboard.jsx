@@ -267,7 +267,7 @@ export default function Dashboard() {
     emergency: true,
     theft: true,
     vandalism: true,
-    timeRange: "1h",
+    timeRange: "7d",
   });
 
   const [mapMode, setMapMode] = useState(
@@ -718,7 +718,7 @@ export default function Dashboard() {
       emergency: true,
       theft: true,
       vandalism: true,
-      timeRange: "1h",
+      timeRange: "7d",
     });
     setIncidentQuery("");
   };

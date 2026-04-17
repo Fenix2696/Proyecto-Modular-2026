@@ -265,10 +265,10 @@ export default function DashboardPanel({
                 <button
                   className="rc-secondary-btn"
                   type="button"
-                  onClick={() => handleSyncAI(true)}
+                  onClick={() => handleSyncAI(false)}
                   disabled={syncingAI}
                 >
-                  {syncingAI ? "Sincronizando..." : "Forzar sync"}
+                  {syncingAI ? "Sincronizando..." : "Actualizar noticias"}
                 </button>
               </div>
             </div>
