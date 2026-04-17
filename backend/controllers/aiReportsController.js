@@ -10,6 +10,9 @@ const MIN_SYNC_INTERVAL_MINUTES = 20;
 const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
 
+let guardiaRateLimitBackoffUntil = 0;
+const GUARDIA_RATE_LIMIT_BACKOFF_MS = 30 * 60 * 1000;
+
 const ZMG_KEYWORDS = [
   "guadalajara",
   "zapopan",
@@ -809,6 +812,23 @@ function looksLikeRateLimitError(message = "") {
 }
 
 async function fetchGuardiaNocturna() {
+  const now = Date.now();
+
+  if (guardiaRateLimitBackoffUntil > now) {
+    const waitMs = guardiaRateLimitBackoffUntil - now;
+    return {
+      allResults: [],
+      queryStats: [
+        {
+          source: "Guardia Nocturna",
+          query: "/WebSearch/guardiaNocturna",
+          count: 0,
+          error: `Rate limit backoff activo (${Math.ceil(waitMs / 1000)}s restantes)`,
+        },
+      ],
+    };
+  }
+
   try {
     const response = await axios.get(JAVA_GUARDIA_URL, {
       timeout: 45000,
@@ -817,6 +837,8 @@ async function fetchGuardiaNocturna() {
     const noticias = normalizeNewsResponse(response.data)
       .map(normalizeScraperItem)
       .filter(Boolean);
+
+    guardiaRateLimitBackoffUntil = 0;
 
     console.log("Guardia raw preview:", safePreview(response.data));
     console.log("Guardia normalized count:", noticias.length);
@@ -832,6 +854,10 @@ async function fetchGuardiaNocturna() {
       ],
     };
   } catch (error) {
+    if (looksLikeRateLimitError(error?.message)) {
+      guardiaRateLimitBackoffUntil = Date.now() + GUARDIA_RATE_LIMIT_BACKOFF_MS;
+    }
+
     console.error("Error Guardia Nocturna:", error.message);
     return {
       allResults: [],
