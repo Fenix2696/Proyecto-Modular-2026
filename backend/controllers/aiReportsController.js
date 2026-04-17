@@ -325,10 +325,35 @@ function safePreview(data, maxLength = 500) {
   }
 }
 
+function extractDateFromGuardiaUrl(url) {
+  const value = toNullableString(url);
+  if (!value) return null;
+
+  const match = value.match(/guardianocturna\.mx\/(\d{4})\/(\d{2})(?:\/(\d{2}))?\//i);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = match[3] ? Number(match[3]) : 1;
+
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
 function normalizeScraperItem(item) {
   if (!item || typeof item !== "object") return null;
 
   const sourceObj = item.source && typeof item.source === "object" ? item.source : null;
+  const sourceUrl =
+    toNullableString(item.source_url) ||
+    toNullableString(item.url);
+  const sourceName =
+    toNullableString(item.source_name) ||
+    toNullableString(item.source) ||
+    toNullableString(sourceObj?.name) ||
+    null;
+  const isGuardia = isGuardiaNocturnaSource(sourceName);
+  const publishedFromUrl = isGuardia ? extractDateFromGuardiaUrl(sourceUrl) : null;
 
   return {
     external_id: toNullableString(item.id),
@@ -342,14 +367,8 @@ function normalizeScraperItem(item) {
       toNullableString(item.content) ||
       toNullableString(item.description) ||
       null,
-    source_name:
-      toNullableString(item.source_name) ||
-      toNullableString(item.source) ||
-      toNullableString(sourceObj?.name) ||
-      null,
-    source_url:
-      toNullableString(item.source_url) ||
-      toNullableString(item.url),
+    source_name: sourceName,
+    source_url: sourceUrl,
     image_url: extractImageUrl(item),
     raw_category:
       toNullableString(item.category) ||
@@ -357,6 +376,7 @@ function normalizeScraperItem(item) {
       null,
     confidence: toNullableNumber(item.confidence),
     published_at:
+      publishedFromUrl ||
       toNullableString(item.published_at) ||
       toNullableString(item.publishedAt) ||
       toNullableString(item.lastUpdated),
