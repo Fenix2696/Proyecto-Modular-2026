@@ -11,7 +11,7 @@ const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
 
 let guardiaRateLimitBackoffUntil = 0;
-const GUARDIA_RATE_LIMIT_BACKOFF_MS = 30 * 60 * 1000;
+const GUARDIA_RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000;
 
 const ZMG_KEYWORDS = [
   "guadalajara",
