@@ -28,7 +28,7 @@ import java.util.Optional;
 public class ScrapCaller {
 
     private static final int MAX_GNEWS_RESULTS = 8;
-    private static final int MAX_GUARDIA_RESULTS = 30;
+    private static final int MAX_GUARDIA_RESULTS = resolveGuardiaLimit();
     private static final int MAX_ITEMS_TO_CLASSIFY = 20;
 
     @Inject
@@ -62,8 +62,8 @@ public class ScrapCaller {
     @Get("/guardiaNocturna")
     public List<ClassifiedNews> getGuardiaNocturna() {
         try {
-            List<NewsResult> news = GuardiaNocturnaScraper.fetch();
-            news = limitNews(news, MAX_GUARDIA_RESULTS);
+            List<NewsResult> allNews = GuardiaNocturnaScraper.fetch();
+            List<NewsResult> news = limitNews(allNews, MAX_GUARDIA_RESULTS);
 
             List<ClassifiedNews> result = new ArrayList<>();
 
@@ -82,12 +82,26 @@ public class ScrapCaller {
                 result.add(out);
             }
 
+            System.out.println("Guardia Nocturna endpoint total fetched: " + allNews.size());
+            System.out.println("Guardia Nocturna endpoint limit applied: " + MAX_GUARDIA_RESULTS);
             System.out.println("Guardia Nocturna endpoint returned: " + result.size());
             return result;
 
         } catch (Exception e) {
             System.out.println("Error Guardia Nocturna endpoint: " + e.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    private static int resolveGuardiaLimit() {
+        String raw = System.getenv("MAX_GUARDIA_RESULTS");
+        if (raw == null || raw.isBlank()) return 80;
+
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return Math.max(1, Math.min(value, 200));
+        } catch (Exception ignored) {
+            return 80;
         }
     }
 
