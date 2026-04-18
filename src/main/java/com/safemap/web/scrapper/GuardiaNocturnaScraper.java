@@ -173,7 +173,7 @@ public class GuardiaNocturnaScraper {
             news.setUrl(href);
             news.setSource("Guardia Nocturna");
             news.setSnippet(buildSnippet(title, href));
-            news.setLastUpdated(extractDateFromUrl(href));
+            news.setLastUpdated(resolvePublishedDate(href, title));
 
             results.add(news);
         }
@@ -255,28 +255,116 @@ public class GuardiaNocturnaScraper {
     }
 
     private static String buildSnippet(String title, String url) {
-        String dateText = extractDateFromUrl(url);
+        String dateText = resolvePublishedDate(url, title);
         return "Nota obtenida de Guardia Nocturna. Titulo: " + title + ". Fecha detectada: " + dateText;
     }
 
-    private static String extractDateFromUrl(String link) {
-        if (link == null) return Instant.now().toString();
+    private static String resolvePublishedDate(String link, String title) {
+        String fromUrl = extractDateFromUrl(link);
+        if (fromUrl != null && !fromUrl.isBlank()) return fromUrl;
 
-        java.util.regex.Matcher m = java.util.regex.Pattern
+        String fromTitle = extractDateFromTitle(title);
+        if (fromTitle != null && !fromTitle.isBlank()) return fromTitle;
+
+        return Instant.EPOCH.toString();
+    }
+
+    private static String extractDateFromUrl(String link) {
+        if (link == null) return null;
+
+        java.util.regex.Matcher dayMatcher = java.util.regex.Pattern
                 .compile("https://guardianocturna\\.mx/(\\d{4})/(\\d{2})/(\\d{2})/")
                 .matcher(link);
 
-        if (m.find()) {
-            int y = Integer.parseInt(m.group(1));
-            int mo = Integer.parseInt(m.group(2));
-            int d = Integer.parseInt(m.group(3));
+        if (dayMatcher.find()) {
+            int y = Integer.parseInt(dayMatcher.group(1));
+            int mo = Integer.parseInt(dayMatcher.group(2));
+            int d = Integer.parseInt(dayMatcher.group(3));
             return LocalDate.of(y, mo, d)
                     .atStartOfDay()
                     .toInstant(ZoneOffset.UTC)
                     .toString();
         }
 
-        return Instant.now().toString();
+        java.util.regex.Matcher monthMatcher = java.util.regex.Pattern
+                .compile("https://guardianocturna\\.mx/(\\d{4})/(\\d{2})/.+")
+                .matcher(link);
+
+        if (monthMatcher.find()) {
+            int y = Integer.parseInt(monthMatcher.group(1));
+            int mo = Integer.parseInt(monthMatcher.group(2));
+            return LocalDate.of(y, mo, 1)
+                    .atStartOfDay()
+                    .toInstant(ZoneOffset.UTC)
+                    .toString();
+        }
+
+        return null;
+    }
+
+    private static String extractDateFromTitle(String title) {
+        if (title == null || title.isBlank()) return null;
+
+        String normalized = title
+                .toLowerCase()
+                .replace("á", "a")
+                .replace("é", "e")
+                .replace("í", "i")
+                .replace("ó", "o")
+                .replace("ú", "u");
+
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(\\d{1,2})\\s+de\\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\\s+del?\\s+(\\d{4})")
+                .matcher(normalized);
+
+        if (!m.find()) return null;
+
+        int day = Integer.parseInt(m.group(1));
+        int year = Integer.parseInt(m.group(3));
+        int month = monthFromSpanish(m.group(2));
+        if (month <= 0) return null;
+
+        try {
+            return LocalDate.of(year, month, day)
+                    .atStartOfDay()
+                    .toInstant(ZoneOffset.UTC)
+                    .toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static int monthFromSpanish(String name) {
+        if (name == null) return -1;
+        switch (name) {
+            case "enero":
+                return 1;
+            case "febrero":
+                return 2;
+            case "marzo":
+                return 3;
+            case "abril":
+                return 4;
+            case "mayo":
+                return 5;
+            case "junio":
+                return 6;
+            case "julio":
+                return 7;
+            case "agosto":
+                return 8;
+            case "septiembre":
+            case "setiembre":
+                return 9;
+            case "octubre":
+                return 10;
+            case "noviembre":
+                return 11;
+            case "diciembre":
+                return 12;
+            default:
+                return -1;
+        }
     }
 
     private static List<NewsResult> dedupe(List<NewsResult> input) {
