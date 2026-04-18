@@ -529,6 +529,27 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
               <div className="rm-field">
                 <label>Buscar direccion</label>
 
+                <div className="rm-inline-location-actions">
+                  <button
+                    className={`rm-inline-location-btn ${locationMethod === "current" ? "active" : ""}`}
+                    type="button"
+                    disabled={isLocating}
+                    onClick={handleUseCurrentLocation}
+                  >
+                    {isLocating ? "Obteniendo..." : "Usar mi ubicacion"}
+                  </button>
+                  <button
+                    className={`rm-inline-location-btn ${locationMethod === "map" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => {
+                      setLocationMethod("map");
+                      setLocationFeedback("Mueve el mapa y confirma la ubicacion.");
+                    }}
+                  >
+                    Elegir en mapa
+                  </button>
+                </div>
+
                 <PlacesSearch
                   value={address}
                   onValueChange={setAddress}
@@ -542,6 +563,28 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
                   Selecciona una sugerencia para guardar lat/lng.
                 </div>
               </div>
+
+              {locationMethod === "map" && (
+                <div className="rm-map-picker-wrap">
+                  <div ref={mapPickerContainerRef} className="rm-map-picker" />
+                  <div className="rm-map-pin-fixed" aria-hidden="true">
+                    📍
+                  </div>
+                  <div className="rm-small rm-small-no-margin">
+                    Mueve el mapa y deja el pin en el punto exacto del incidente.
+                  </div>
+                  <button
+                    className="rm-btn rm-btn-primary rm-confirm-location-btn"
+                    type="button"
+                    onClick={() => {
+                      setLocationPickedFromMap(true);
+                      setLocationFeedback("Ubicacion confirmada desde el mapa.");
+                    }}
+                  >
+                    Confirmar ubicacion
+                  </button>
+                </div>
+              )}
 
               {locationFeedback && (
                 <div className="rm-small rm-location-feedback">{locationFeedback}</div>

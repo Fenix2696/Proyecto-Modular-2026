@@ -200,41 +200,28 @@
   margin-top: 0;
 }
 
-.rm-location-methods{
+.rm-inline-location-actions{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.rm-location-method{
-  height: 44px;
-  border-radius: 14px;
+.rm-inline-location-btn{
+  height: 40px;
+  border-radius: 12px;
   border: 2px solid #e7eef6;
-  background: #ffffff;
+  background: #f8fafc;
   color: #1e293b;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 900;
   cursor: pointer;
 }
 
-.rm-location-method.active{
+.rm-inline-location-btn.active{
   border-color: #6366f1;
-  background: rgba(99,102,241,0.1);
+  background: rgba(99,102,241,0.12);
   color: #3730a3;
-}
-
-.rm-current-location-card{
-  border: 2px solid #e7eef6;
-  background: #f8fafc;
-  border-radius: 16px;
-  padding: 12px;
-  margin-bottom: 14px;
-}
-
-.rm-locate-btn{
-  width: 100%;
-  margin-top: 10px;
 }
 
 .rm-map-picker-wrap{
