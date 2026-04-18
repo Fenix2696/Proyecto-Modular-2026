@@ -28,7 +28,7 @@ import java.util.Optional;
 public class ScrapCaller {
 
     private static final int MAX_GNEWS_RESULTS = 8;
-    private static final int MAX_GUARDIA_RESULTS = 15;
+    private static final int MAX_GUARDIA_RESULTS = 30;
     private static final int MAX_ITEMS_TO_CLASSIFY = 20;
 
     @Inject
@@ -63,7 +63,7 @@ public class ScrapCaller {
     public List<ClassifiedNews> getGuardiaNocturna() {
         try {
             List<NewsResult> news = GuardiaNocturnaScraper.fetch();
-            news = limitNews(news, 8);
+            news = limitNews(news, MAX_GUARDIA_RESULTS);
 
             List<ClassifiedNews> result = new ArrayList<>();
 
