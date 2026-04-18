@@ -330,27 +330,80 @@ function extractDateFromGuardiaUrl(url) {
   const value = toNullableString(url);
   if (!value) return null;
 
-  const match = value.match(/guardianocturna\.mx\/(\d{4})\/(\d{2})(?:\/(\d{2}))?\//i);
+  const match = value.match(/guardianocturna\.mx\/(\d{4})\/(\d{2})\/(\d{2})\//i);
   if (!match) return null;
 
   const year = Number(match[1]);
   const month = Number(match[2]);
-  const day = match[3] ? Number(match[3]) : 1;
+  const day = Number(match[3]);
 
   const parsed = new Date(Date.UTC(year, month - 1, day));
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function extractDateFromSpanishText(text) {
+  const value = toNullableString(text);
+  if (!value) return null;
+
+  const normalized = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  const match = normalized.match(
+    /\b(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+del?\s+(\d{4})\b/
+  );
+
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const monthMap = {
+    enero: 1,
+    febrero: 2,
+    marzo: 3,
+    abril: 4,
+    mayo: 5,
+    junio: 6,
+    julio: 7,
+    agosto: 8,
+    septiembre: 9,
+    setiembre: 9,
+    octubre: 10,
+    noviembre: 11,
+    diciembre: 12,
+  };
+  const month = monthMap[match[2]];
+  const year = Number(match[3]);
+  if (!month) return null;
+
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function extractGuardiaPublishedDate(item) {
+  const sourceUrl = toNullableString(item?.source_url) || toNullableString(item?.url);
+
+  const fromUrl = extractDateFromGuardiaUrl(sourceUrl);
+  if (fromUrl) return fromUrl;
+
+  const fromTitle = extractDateFromSpanishText(item?.title);
+  if (fromTitle) return fromTitle;
+
+  const fromBody = extractDateFromSpanishText(item?.body);
+  if (fromBody) return fromBody;
+
+  return null;
 }
 
 function getEffectivePublishedDate(item) {
   if (!item || typeof item !== "object") return null;
 
   const sourceName = toNullableString(item.source_name) || toNullableString(item.source);
-  const sourceUrl = toNullableString(item.source_url) || toNullableString(item.url);
 
   if (isGuardiaNocturnaSource(sourceName)) {
-    const fromUrl = extractDateFromGuardiaUrl(sourceUrl);
-    const parsedFromUrl = parseDate(fromUrl);
-    if (parsedFromUrl) return parsedFromUrl;
+    const guardiaPublished = extractGuardiaPublishedDate(item);
+    const parsedGuardiaDate = parseDate(guardiaPublished);
+    if (parsedGuardiaDate) return parsedGuardiaDate;
   }
 
   return (
@@ -378,7 +431,7 @@ function normalizeScraperItem(item) {
     toNullableString(sourceObj?.name) ||
     null;
   const isGuardia = isGuardiaNocturnaSource(sourceName);
-  const publishedFromUrl = isGuardia ? extractDateFromGuardiaUrl(sourceUrl) : null;
+  const publishedFromGuardia = isGuardia ? extractGuardiaPublishedDate(item) : null;
 
   return {
     external_id: toNullableString(item.id),
@@ -401,7 +454,7 @@ function normalizeScraperItem(item) {
       null,
     confidence: toNullableNumber(item.confidence),
     published_at:
-      publishedFromUrl ||
+      publishedFromGuardia ||
       toNullableString(item.published_at) ||
       toNullableString(item.publishedAt) ||
       toNullableString(item.lastUpdated),
