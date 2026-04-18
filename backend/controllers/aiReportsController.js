@@ -9,6 +9,7 @@ const AI_REPORT_VISIBLE_HOURS = 12;
 const MIN_SYNC_INTERVAL_MINUTES = 20;
 const DEFAULT_REPORT_LIMIT = 80;
 const MAX_REPORT_LIMIT = 150;
+const GUARDIA_MAX_AGE_DAYS = 7;
 
 let guardiaRateLimitBackoffUntil = 0;
 const GUARDIA_RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000;
@@ -338,6 +339,30 @@ function extractDateFromGuardiaUrl(url) {
 
   const parsed = new Date(Date.UTC(year, month - 1, day));
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function getEffectivePublishedDate(item) {
+  if (!item || typeof item !== "object") return null;
+
+  const sourceName = toNullableString(item.source_name) || toNullableString(item.source);
+  const sourceUrl = toNullableString(item.source_url) || toNullableString(item.url);
+
+  if (isGuardiaNocturnaSource(sourceName)) {
+    const fromUrl = extractDateFromGuardiaUrl(sourceUrl);
+    const parsedFromUrl = parseDate(fromUrl);
+    if (parsedFromUrl) return parsedFromUrl;
+  }
+
+  return (
+    parseDate(item.published_at) ||
+    parseDate(item.publishedAt) ||
+    parseDate(item.lastUpdated)
+  );
+}
+
+function isWithinDays(date, maxDays) {
+  const diffDays = getDiffDays(date);
+  return Number.isFinite(diffDays) && diffDays >= 0 && diffDays <= maxDays;
 }
 
 function normalizeScraperItem(item) {
@@ -978,7 +1003,16 @@ async function getStoredActiveAIReports(limit = DEFAULT_REPORT_LIMIT) {
     [safeLimit]
   );
 
-  return result.rows;
+  return result.rows.filter((row) => {
+    const effectiveDate = getEffectivePublishedDate(row);
+    const isGuardia = isGuardiaNocturnaSource(row?.source_name);
+
+    if (isGuardia) {
+      return isWithinDays(effectiveDate, GUARDIA_MAX_AGE_DAYS);
+    }
+
+    return isCurrentMonthAndYear(effectiveDate);
+  });
 }
 
 async function getStoredFallbackAIReports(limit = DEFAULT_REPORT_LIMIT) {
@@ -1000,7 +1034,16 @@ async function getStoredFallbackAIReports(limit = DEFAULT_REPORT_LIMIT) {
     [safeLimit]
   );
 
-  return result.rows;
+  return result.rows.filter((row) => {
+    const effectiveDate = getEffectivePublishedDate(row);
+    const isGuardia = isGuardiaNocturnaSource(row?.source_name);
+
+    if (isGuardia) {
+      return isWithinDays(effectiveDate, GUARDIA_MAX_AGE_DAYS);
+    }
+
+    return isCurrentMonthAndYear(effectiveDate);
+  });
 }
 
 function selectBestDayWindow(newsItems) {
@@ -1008,9 +1051,8 @@ function selectBestDayWindow(newsItems) {
 
   for (const days of windows) {
     const filtered = newsItems.filter((n) => {
-      const fecha = parseDate(n.published_at);
-      const diffDias = getDiffDays(fecha);
-      return Number.isFinite(diffDias) && diffDias >= 0 && diffDias <= days;
+      const fecha = getEffectivePublishedDate(n);
+      return isWithinDays(fecha, days);
     });
 
     if (filtered.length >= 8) {
@@ -1018,7 +1060,15 @@ function selectBestDayWindow(newsItems) {
     }
   }
 
-  return { days: 15, filtered: newsItems.filter((n) => isCurrentMonthAndYear(parseDate(n.published_at))) };
+  return {
+    days: 15,
+    filtered: newsItems.filter((n) => {
+      const fecha = getEffectivePublishedDate(n);
+      const isGuardia = isGuardiaNocturnaSource(n?.source_name);
+      if (isGuardia) return isWithinDays(fecha, GUARDIA_MAX_AGE_DAYS);
+      return isCurrentMonthAndYear(fecha);
+    }),
+  };
 }
 
 async function buildFallbackResponse({
@@ -1115,9 +1165,14 @@ async function syncAIReports(req, res) {
       if (!isGuardia && !isUsefulCategory(category, text)) return false;
       if (!isGuardia && !looksLikeRegionalNews({ ...n, source_name: n.source_name })) return false;
 
-      const fecha = parseDate(n.published_at);
-      const diffDias = getDiffDays(fecha);
+      const fecha = getEffectivePublishedDate(n);
+      if (!fecha) return false;
 
+      if (isGuardia) {
+        return isWithinDays(fecha, GUARDIA_MAX_AGE_DAYS);
+      }
+
+      const diffDias = getDiffDays(fecha);
       return Number.isFinite(diffDias) && diffDias >= 0 && isCurrentMonthAndYear(fecha);
     });
 
@@ -1165,7 +1220,7 @@ async function syncAIReports(req, res) {
       try {
         const text = `${n.title || ""} ${n.body || ""}`;
         const category = normalizeCategory(n.raw_category, text);
-        const fecha = parseDate(n.published_at);
+        const fecha = getEffectivePublishedDate(n);
 
         if (!fecha) {
           failed++;
