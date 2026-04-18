@@ -196,6 +196,83 @@
   color: #64748b;
 }
 
+.rm-small-no-margin{
+  margin-top: 0;
+}
+
+.rm-location-methods{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rm-location-method{
+  height: 44px;
+  border-radius: 14px;
+  border: 2px solid #e7eef6;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.rm-location-method.active{
+  border-color: #6366f1;
+  background: rgba(99,102,241,0.1);
+  color: #3730a3;
+}
+
+.rm-current-location-card{
+  border: 2px solid #e7eef6;
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.rm-locate-btn{
+  width: 100%;
+  margin-top: 10px;
+}
+
+.rm-map-picker-wrap{
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.rm-map-picker{
+  width: 100%;
+  height: 220px;
+  border-radius: 16px;
+  border: 2px solid #e7eef6;
+}
+
+.rm-map-pin-fixed{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% - 14px));
+  font-size: 34px;
+  pointer-events: none;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.rm-confirm-location-btn{
+  width: 100%;
+  margin-top: 10px;
+}
+
+.rm-location-feedback{
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.rm-map-warning{
+  color: #7c2d12;
+}
+
 .rm-coords{
   display:flex;
   gap: 12px;
