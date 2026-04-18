@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "../../styles/report-modal.css";
-import PlacesSearch from "./PlacesSearch";
 
 const MAX_IMAGE_SIZE_BYTES = 1200 * 1024; // ~1.2MB para reducir fallas en mobile/serverless
 const MAX_IMAGE_DIMENSION = 1280;
@@ -20,7 +19,6 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const [address, setAddress] = useState("");
   const [lat, setLat] = useState(currentPosition?.[0] ?? 20.6597);
   const [lng, setLng] = useState(currentPosition?.[1] ?? -103.3496);
   const [locationMethod, setLocationMethod] = useState("current");
@@ -30,7 +28,6 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
   const mapPickerContainerRef = useRef(null);
   const mapPickerInstanceRef = useRef(null);
   const mapCenterListenerRef = useRef(null);
-  const mapIdleListenerRef = useRef(null);
   const latestCoordsRef = useRef({
     lat: currentPosition?.[0] ?? 20.6597,
     lng: currentPosition?.[1] ?? -103.3496,
@@ -80,13 +77,115 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
     if (step !== 3 && canNext) goNext();
   };
 
-  const handlePlaceSelect = ({ lat: la, lng: ln, address: addr }) => {
-    if (typeof la === "number" && typeof ln === "number") {
-      setLat(la);
-      setLng(ln);
-      setLocationPickedFromMap(true);
+  useEffect(() => {
+    if (step !== 3 || locationMethod !== "map") return undefined;
+
+    let cancelled = false;
+    let mapContainer = mapPickerContainerRef.current;
+
+    const setupMap = () => {
+      if (cancelled) return;
+      mapContainer = mapPickerContainerRef.current;
+      if (!mapContainer) return;
+
+      const mapsApi = window.google?.maps;
+      if (!mapsApi?.Map) {
+        setLocationFeedback("Mapa no disponible. Puedes usar tu ubicacion actual o buscar direccion.");
+        return;
+      }
+
+      if (!mapPickerInstanceRef.current) {
+        mapPickerInstanceRef.current = new mapsApi.Map(mapContainer, {
+          center: {
+            lat: Number(latestCoordsRef.current.lat),
+            lng: Number(latestCoordsRef.current.lng),
+          },
+          zoom: 17,
+          mapTypeControl: false,
+          fullscreenControl: false,
+          streetViewControl: false,
+          clickableIcons: false,
+          gestureHandling: "greedy",
+        });
+      } else {
+        mapPickerInstanceRef.current.panTo({
+          lat: Number(latestCoordsRef.current.lat),
+          lng: Number(latestCoordsRef.current.lng),
+        });
+      }
+
+      mapCenterListenerRef.current?.remove?.();
+
+      mapCenterListenerRef.current = mapPickerInstanceRef.current.addListener("center_changed", () => {
+        const center = mapPickerInstanceRef.current?.getCenter?.();
+        const la = center?.lat?.();
+        const ln = center?.lng?.();
+        if (typeof la === "number" && typeof ln === "number") {
+          setLat(la);
+          setLng(ln);
+          setLocationPickedFromMap(false);
+        }
+      });
+
+    };
+
+    const t = setTimeout(setupMap, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      mapCenterListenerRef.current?.remove?.();
+    };
+  }, [step, locationMethod]);
+
+  useEffect(() => {
+    if (locationMethod === "map") {
+      setLocationPickedFromMap(false);
     }
-    if (addr) setAddress(addr);
+  }, [locationMethod]);
+
+  const handleUseCurrentLocation = () => {
+    const knownLat = Number(currentPosition?.[0]);
+    const knownLng = Number(currentPosition?.[1]);
+
+    if (Number.isFinite(knownLat) && Number.isFinite(knownLng)) {
+      setLat(knownLat);
+      setLng(knownLng);
+      setLocationMethod("current");
+      setLocationPickedFromMap(false);
+      setLocationFeedback("Ubicacion actual tomada desde tu sesion.");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationFeedback("Tu navegador no permite geolocalizacion en este dispositivo.");
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationFeedback("Obteniendo tu ubicacion...");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const la = Number(pos?.coords?.latitude);
+        const ln = Number(pos?.coords?.longitude);
+        if (Number.isFinite(la) && Number.isFinite(ln)) {
+          setLat(la);
+          setLng(ln);
+          setLocationMethod("current");
+          setLocationPickedFromMap(false);
+          setLocationFeedback("Ubicacion actual cargada.");
+        } else {
+          setLocationFeedback("No se pudo leer tu ubicacion.");
+        }
+        setIsLocating(false);
+      },
+      () => {
+        setLocationFeedback("No pudimos acceder a tu ubicacion. Revisa permisos del navegador.");
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   useEffect(() => {
@@ -329,7 +428,7 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
       type,
       title: title.trim(),
       description: description.trim(),
-      address: address.trim(),
+      address: "",
       lat,
       lng,
       imageFile, // 🔥 Se envía al api.js
@@ -496,40 +595,9 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
               </div>
 
               <div className="rm-field">
-                <label>Buscar direccion</label>
-
-                <div className="rm-inline-location-actions">
-                  <button
-                    className={`rm-inline-location-btn ${locationMethod === "current" ? "active" : ""}`}
-                    type="button"
-                    disabled={isLocating}
-                    onClick={handleUseCurrentLocation}
-                  >
-                    {isLocating ? "Obteniendo..." : "Usar mi ubicacion"}
-                  </button>
-                  <button
-                    className={`rm-inline-location-btn ${locationMethod === "map" ? "active" : ""}`}
-                    type="button"
-                    onClick={() => {
-                      setLocationMethod("map");
-                      setLocationFeedback("Mueve el mapa y confirma la ubicacion.");
-                    }}
-                  >
-                    Elegir en mapa
-                  </button>
-                </div>
-
-                <PlacesSearch
-                  value={address}
-                  onValueChange={setAddress}
-                  onSelect={handlePlaceSelect}
-                  placeholder="Escribe una direccion o lugar..."
-                  inputClassName="rm-input"
-                  showHelp={false}
-                />
-
-                <div className="rm-small">
-                  Selecciona una sugerencia para guardar lat/lng.
+                <label>Ubicacion del incidente</label>
+                <div className="rm-small rm-small-no-margin">
+                  Selecciona tu ubicacion actual o ajusta el mapa manualmente.
                 </div>
               </div>
 
@@ -558,21 +626,6 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
               {locationFeedback && (
                 <div className="rm-small rm-location-feedback">{locationFeedback}</div>
               )}
-
-              <div className="rm-coords">
-                <div className="rm-coord">
-                  <div className="rm-coord-label">Lat</div>
-                  <div className="rm-coord-value">
-                    {Number(lat).toFixed(6)}
-                  </div>
-                </div>
-                <div className="rm-coord">
-                  <div className="rm-coord-label">Lng</div>
-                  <div className="rm-coord-value">
-                    {Number(lng).toFixed(6)}
-                  </div>
-                </div>
-              </div>
               {locationMethod === "map" && !locationPickedFromMap && (
                 <div className="rm-small rm-map-warning">
                   Tip: presiona "Confirmar ubicacion" cuando el pin este en el punto deseado.
