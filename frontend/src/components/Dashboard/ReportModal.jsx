@@ -498,6 +498,27 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
               <div className="rm-field">
                 <label>Buscar direccion</label>
 
+                <div className="rm-inline-location-actions">
+                  <button
+                    className={`rm-inline-location-btn ${locationMethod === "current" ? "active" : ""}`}
+                    type="button"
+                    disabled={isLocating}
+                    onClick={handleUseCurrentLocation}
+                  >
+                    {isLocating ? "Obteniendo..." : "Usar mi ubicacion"}
+                  </button>
+                  <button
+                    className={`rm-inline-location-btn ${locationMethod === "map" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => {
+                      setLocationMethod("map");
+                      setLocationFeedback("Mueve el mapa y confirma la ubicacion.");
+                    }}
+                  >
+                    Elegir en mapa
+                  </button>
+                </div>
+
                 <PlacesSearch
                   value={address}
                   onValueChange={setAddress}
