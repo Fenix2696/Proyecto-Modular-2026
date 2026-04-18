@@ -471,60 +471,29 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
             <>
               <h3 className="rm-h3">Ubicacion</h3>
 
-              <div className="rm-location-methods">
-                <button
-                  className={`rm-location-method ${locationMethod === "current" ? "active" : ""}`}
-                  type="button"
-                  onClick={() => setLocationMethod("current")}
-                >
-                  Usar mi ubicacion actual
-                </button>
-                <button
-                  className={`rm-location-method ${locationMethod === "map" ? "active" : ""}`}
-                  type="button"
-                  onClick={() => setLocationMethod("map")}
-                >
-                  Elegir en el mapa
-                </button>
-              </div>
-
-              {locationMethod === "current" && (
-                <div className="rm-current-location-card">
-                  <p className="rm-small rm-small-no-margin">
-                    Usa la ubicacion del dispositivo y ajusta manualmente si lo necesitas.
-                  </p>
+              <div className="rm-location-selector-block">
+                <div className="rm-location-selector-title">¿Como quieres indicar la ubicacion?</div>
+                <div className="rm-inline-location-actions">
                   <button
-                    className="rm-btn rm-btn-primary rm-locate-btn"
+                    className={`rm-inline-location-btn ${locationMethod === "current" ? "active" : ""}`}
                     type="button"
                     disabled={isLocating}
                     onClick={handleUseCurrentLocation}
                   >
-                    {isLocating ? "Obteniendo ubicacion..." : "Usar mi ubicacion actual"}
+                    {isLocating ? "⏳ Obteniendo..." : "📍 Usar mi ubicacion"}
                   </button>
-                </div>
-              )}
-
-              {locationMethod === "map" && (
-                <div className="rm-map-picker-wrap">
-                  <div ref={mapPickerContainerRef} className="rm-map-picker" />
-                  <div className="rm-map-pin-fixed" aria-hidden="true">
-                    📍
-                  </div>
-                  <div className="rm-small rm-small-no-margin">
-                    Mueve el mapa y deja el pin en el punto exacto del incidente.
-                  </div>
                   <button
-                    className="rm-btn rm-btn-primary rm-confirm-location-btn"
+                    className={`rm-inline-location-btn ${locationMethod === "map" ? "active" : ""}`}
                     type="button"
                     onClick={() => {
-                      setLocationPickedFromMap(true);
-                      setLocationFeedback("Ubicacion confirmada desde el mapa.");
+                      setLocationMethod("map");
+                      setLocationFeedback("Mueve el mapa y confirma la ubicacion.");
                     }}
                   >
-                    Confirmar ubicacion
+                    🗺️ Elegir en mapa
                   </button>
                 </div>
-              )}
+              </div>
 
               <div className="rm-field">
                 <label>Buscar direccion</label>

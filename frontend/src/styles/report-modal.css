@@ -200,6 +200,17 @@
   margin-top: 0;
 }
 
+.rm-location-selector-block{
+  margin-bottom: 12px;
+}
+
+.rm-location-selector-title{
+  font-size: 12px;
+  font-weight: 900;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
 .rm-inline-location-actions{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
