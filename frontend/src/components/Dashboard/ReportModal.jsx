@@ -188,126 +188,6 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
     );
   };
 
-  useEffect(() => {
-    if (step !== 3 || locationMethod !== "map") return undefined;
-
-    let cancelled = false;
-    let mapContainer = mapPickerContainerRef.current;
-
-    const setupMap = () => {
-      if (cancelled) return;
-      mapContainer = mapPickerContainerRef.current;
-      if (!mapContainer) return;
-
-      const mapsApi = window.google?.maps;
-      if (!mapsApi?.Map) {
-        setLocationFeedback("Mapa no disponible. Puedes usar tu ubicacion actual o buscar direccion.");
-        return;
-      }
-
-      if (!mapPickerInstanceRef.current) {
-        mapPickerInstanceRef.current = new mapsApi.Map(mapContainer, {
-          center: {
-            lat: Number(latestCoordsRef.current.lat),
-            lng: Number(latestCoordsRef.current.lng),
-          },
-          zoom: 17,
-          mapTypeControl: false,
-          fullscreenControl: false,
-          streetViewControl: false,
-          clickableIcons: false,
-          gestureHandling: "greedy",
-        });
-      } else {
-        mapPickerInstanceRef.current.panTo({
-          lat: Number(latestCoordsRef.current.lat),
-          lng: Number(latestCoordsRef.current.lng),
-        });
-      }
-
-      mapCenterListenerRef.current?.remove?.();
-      mapIdleListenerRef.current?.remove?.();
-
-      mapCenterListenerRef.current = mapPickerInstanceRef.current.addListener("center_changed", () => {
-        const center = mapPickerInstanceRef.current?.getCenter?.();
-        const la = center?.lat?.();
-        const ln = center?.lng?.();
-        if (typeof la === "number" && typeof ln === "number") {
-          setLat(la);
-          setLng(ln);
-          setLocationPickedFromMap(false);
-        }
-      });
-
-      mapIdleListenerRef.current = mapPickerInstanceRef.current.addListener("idle", () => {
-        const Geocoder = window.google?.maps?.Geocoder;
-        if (typeof Geocoder !== "function") return;
-        const geocoder = new Geocoder();
-        geocoder.geocode(
-          {
-            location: {
-              lat: Number(mapPickerInstanceRef.current?.getCenter()?.lat?.()),
-              lng: Number(mapPickerInstanceRef.current?.getCenter()?.lng?.()),
-            },
-          },
-          (results, status) => {
-            if (cancelled) return;
-            if (status === "OK" && Array.isArray(results) && results.length > 0) {
-              setAddress(results[0].formatted_address || "");
-            }
-          }
-        );
-      });
-    };
-
-    const t = setTimeout(setupMap, 0);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-      mapCenterListenerRef.current?.remove?.();
-      mapIdleListenerRef.current?.remove?.();
-    };
-  }, [step, locationMethod]);
-
-  useEffect(() => {
-    if (locationMethod === "map") {
-      setLocationPickedFromMap(false);
-    }
-  }, [locationMethod]);
-
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationFeedback("Tu navegador no permite geolocalizacion en este dispositivo.");
-      return;
-    }
-
-    setIsLocating(true);
-    setLocationFeedback("Obteniendo tu ubicacion...");
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const la = Number(pos?.coords?.latitude);
-        const ln = Number(pos?.coords?.longitude);
-        if (Number.isFinite(la) && Number.isFinite(ln)) {
-          setLat(la);
-          setLng(ln);
-          setLocationMethod("current");
-          setLocationPickedFromMap(false);
-          setLocationFeedback("Ubicacion actual cargada.");
-        } else {
-          setLocationFeedback("No se pudo leer tu ubicacion.");
-        }
-        setIsLocating(false);
-      },
-      () => {
-        setLocationFeedback("No pudimos acceder a tu ubicacion. Revisa permisos del navegador.");
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
   // 🔥 NUEVO — Manejo imagen
   const compressImageIfNeeded = async (file) => {
     if (!file) return file;
@@ -568,7 +448,7 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
           {/* STEP 3 */}
           {step === 3 && (
             <>
-              <h3 className="rm-h3">Ubicacion</h3>
+              <h3 className="rm-h3">Ubicacion (actual o mapa)</h3>
 
               <div className="rm-location-selector-block">
                 <div className="rm-location-selector-title">¿Como quieres indicar la ubicacion?</div>
@@ -594,11 +474,8 @@ export default function ReportModal({ onClose, onSubmit, currentPosition }) {
                 </div>
               </div>
 
-              <div className="rm-field">
-                <label>Ubicacion del incidente</label>
-                <div className="rm-small rm-small-no-margin">
-                  Selecciona tu ubicacion actual o ajusta el mapa manualmente.
-                </div>
+              <div className="rm-small rm-small-no-margin">
+                Selecciona tu ubicacion actual o ajusta el mapa manualmente.
               </div>
 
               {locationMethod === "map" && (
