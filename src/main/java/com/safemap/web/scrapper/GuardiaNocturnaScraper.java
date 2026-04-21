@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class GuardiaNocturnaScraper {
 
@@ -27,14 +28,25 @@ public class GuardiaNocturnaScraper {
     private static final int MAX_CHARS = 450000;
     private static final int MAX_SECTIONS = 14;
     private static final int MAX_SECTION_PAGES = 2;
+    private static final long CACHE_TTL_MS = resolveCacheTtlMs();
+
+    private static final Object CACHE_LOCK = new Object();
+    private static volatile List<NewsResult> cachedNews = new ArrayList<>();
+    private static final AtomicLong cacheUpdatedAtMs = new AtomicLong(0);
 
     public static List<NewsResult> fetch() {
+        List<NewsResult> freshCache = getFreshCacheIfAvailable();
+        if (!freshCache.isEmpty()) {
+            System.out.println("Guardia Nocturna cache hit: " + freshCache.size() + " notas");
+            return freshCache;
+        }
+
         try {
             String homeHtml = getHtml(BASE_URL);
 
             if (homeHtml == null || homeHtml.isBlank()) {
                 System.out.println("Guardia Nocturna: HTML vacio");
-                return new ArrayList<>();
+                return getAnyCache();
             }
 
             List<NewsResult> parsed = new ArrayList<>();
@@ -66,11 +78,56 @@ public class GuardiaNocturnaScraper {
             System.out.println("Guardia Nocturna parsed items: " + parsed.size());
             System.out.println("Guardia Nocturna final unique: " + deduped.size());
 
-            return deduped;
+            updateCache(deduped);
+            return cloneNewsList(deduped);
         } catch (Exception e) {
             System.out.println("Error Guardia Nocturna: " + e.getMessage());
-            return new ArrayList<>();
+            return getAnyCache();
         }
+    }
+
+    private static List<NewsResult> getFreshCacheIfAvailable() {
+        long now = System.currentTimeMillis();
+        long updatedAt = cacheUpdatedAtMs.get();
+        if (updatedAt <= 0 || (now - updatedAt) > CACHE_TTL_MS) return new ArrayList<>();
+
+        synchronized (CACHE_LOCK) {
+            return cloneNewsList(cachedNews);
+        }
+    }
+
+    private static List<NewsResult> getAnyCache() {
+        synchronized (CACHE_LOCK) {
+            if (cachedNews == null || cachedNews.isEmpty()) {
+                return new ArrayList<>();
+            }
+            System.out.println("Guardia Nocturna usando cache stale: " + cachedNews.size() + " notas");
+            return cloneNewsList(cachedNews);
+        }
+    }
+
+    private static void updateCache(List<NewsResult> news) {
+        synchronized (CACHE_LOCK) {
+            cachedNews = cloneNewsList(news);
+            cacheUpdatedAtMs.set(System.currentTimeMillis());
+        }
+    }
+
+    private static List<NewsResult> cloneNewsList(List<NewsResult> list) {
+        return list == null ? new ArrayList<>() : new ArrayList<>(list);
+    }
+
+    private static long resolveCacheTtlMs() {
+        String raw = System.getenv("GUARDIA_CACHE_MINUTES");
+        long minutes = 12;
+        if (raw != null && !raw.isBlank()) {
+            try {
+                minutes = Long.parseLong(raw.trim());
+            } catch (Exception ignored) {
+            }
+        }
+        minutes = Math.max(1, Math.min(minutes, 120));
+        return minutes * 60 * 1000;
     }
 
     private static String getHtml(String urlStr) throws Exception {
