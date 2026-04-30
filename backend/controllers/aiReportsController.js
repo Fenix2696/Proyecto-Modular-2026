@@ -917,7 +917,7 @@ async function resolveLocationForNews(item) {
 
 function looksLikeRateLimitError(message = "") {
   const m = String(message || "").toLowerCase();
-  return m.includes("429") || m.includes("too many requests");
+  return m.includes("429") || m.includes("too many requests") || m.includes("rate limit");
 }
 
 async function fetchGuardiaNocturna() {
@@ -1203,7 +1203,7 @@ async function syncAIReports(req, res) {
         message: hasRateLimit
           ? "Las fuentes externas alcanzaron su limite. Mostrando noticias guardadas en base de datos."
           : "No se pudieron obtener noticias externas. Mostrando noticias guardadas en base de datos.",
-        reason: hasRateLimit ? "Rate limit 429 detectado" : "Sin resultados externos",
+        reason: hasRateLimit ? "Rate limit detectado en fuente externa" : "Sin resultados externos",
       });
     }
 
