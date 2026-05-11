@@ -15,7 +15,7 @@ import ReportModal from "./ReportModal";
 
 import { getAllIncidents, createIncident } from "../../services/api";
 import { getMe } from "../../services/user";
-import { getActiveAIReports } from "../../services/aiReports";
+import { getActiveAIReports, syncAIReports } from "../../services/aiReports";
 
 // consume backend Routes API v2
 import { computeTrafficRoutes } from "../../services/routesTraffic";
@@ -472,27 +472,37 @@ export default function Dashboard() {
     }
   };
 
+  const normalizeAIReportRows = useCallback((rows = []) => {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const activos = safeRows.filter(
+      (r) =>
+        r.is_active === true ||
+        r.is_active === undefined ||
+        r.is_active === null
+    );
+
+    return activos.length ? activos : safeRows;
+  }, []);
+
   const loadAIReports = useCallback(async (limit = 50) => {
     try {
       const response = await getActiveAIReports(limit);
-      const rows = response?.data || [];
+      let rows = normalizeAIReportRows(response?.data || []);
 
-      const activos = rows.filter(
-        (r) =>
-          r.is_active === true ||
-          r.is_active === undefined ||
-          r.is_active === null
-      );
+      if (!rows.length) {
+        const syncResponse = await syncAIReports(false);
+        rows = normalizeAIReportRows(syncResponse?.data || []);
+      }
 
-      setAiReports(activos.length ? activos : rows);
+      setAiReports(rows);
 
-      return activos.length ? activos : rows;
+      return rows;
     } catch (error) {
       console.error("Error cargando noticias IA:", error);
       setAiReports([]);
       return [];
     }
-  }, []);
+  }, [normalizeAIReportRows]);
 
   const handleLogout = () => {
     localStorage.clear();
