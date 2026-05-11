@@ -1003,6 +1003,8 @@ async function getLastAISyncInfo() {
   const result = await pool.query(`
     SELECT MAX(updated_at) AS last_sync_at
     FROM ai_reports
+    WHERE is_active = TRUE
+      AND expires_at > NOW()
   `);
 
   return result.rows?.[0] || { last_sync_at: null };
