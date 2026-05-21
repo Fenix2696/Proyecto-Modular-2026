@@ -3,13 +3,13 @@ import { GoogleMap, InfoWindow, useLoadScript } from "@react-google-maps/api";
 
 import MapTypeSelector from "./components/MapTypeSelector";
 import HeatmapControls from "./components/HeatmapControls";
-import { buildHeatmapData, getHeatmapOptions } from "./utils/heatmapUtils";
+import { buildHeatmapData, getHeatmapOptions, getHeatPointStyle } from "./utils/heatmapUtils";
 
 // url helper para imagen del incidente normal
 import { getIncidentImageUrl } from "../../services/api";
 
 const containerStyle = { width: "100%", height: "100%" };
-const GOOGLE_LIBRARIES = ["places", "visualization", "geometry"];
+const GOOGLE_LIBRARIES = ["places", "geometry"];
 
 const TYPE = {
   robbery: { label: "Robos/Asaltos", color: "#ef4444", emoji: "🚨", z: 60 },
@@ -313,7 +313,7 @@ export default function IncidentMapGoogle({
 
   const markersRef = useRef(new Map());
   const aiMarkersRef = useRef(new Map());
-  const heatLayerRef = useRef(null);
+  const heatCirclesRef = useRef([]);
 
   const [selected, setSelected] = useState(null);
   const [showMapMode, setShowMapMode] = useState(false);
@@ -424,9 +424,7 @@ export default function IncidentMapGoogle({
 
   const heatmapData = useMemo(() => {
     if (!isLoaded) return [];
-    if (!window.google) return [];
     return buildHeatmapData({
-      google: window.google,
       incidents: heatmapSourceItems,
       mode: "all",
       weighted: true,
@@ -577,6 +575,16 @@ export default function IncidentMapGoogle({
     trafficPolylinesRef.current = [];
   }, []);
 
+  const cleanupHeatCircles = useCallback(() => {
+    const arr = heatCirclesRef.current || [];
+    for (const circle of arr) {
+      try {
+        circle.setMap(null);
+      } catch { /* no-op */ }
+    }
+    heatCirclesRef.current = [];
+  }, []);
+
   const cleanupDestMarker = useCallback(() => {
     if (destMarkerRef.current) {
       try {
@@ -593,12 +601,7 @@ export default function IncidentMapGoogle({
     for (const m of aiMarkersRef.current.values()) m.setMap(null);
     aiMarkersRef.current.clear();
 
-    if (heatLayerRef.current) {
-      try {
-        heatLayerRef.current.setMap(null);
-      } catch { /* no-op */ }
-      heatLayerRef.current = null;
-    }
+    cleanupHeatCircles();
 
     cleanupMeLayers();
     cleanupDirections();
@@ -606,7 +609,7 @@ export default function IncidentMapGoogle({
     cleanupDestMarker();
 
     setMapObj(null);
-  }, [cleanupMeLayers, cleanupDirections, cleanupTrafficPolylines, cleanupDestMarker]);
+  }, [cleanupMeLayers, cleanupDirections, cleanupTrafficPolylines, cleanupDestMarker, cleanupHeatCircles]);
 
   useEffect(() => {
     if (!mapObj || !clearMapToken) return;
@@ -870,32 +873,27 @@ export default function IncidentMapGoogle({
   useEffect(() => {
     if (!isLoaded) return;
     if (!mapObj) return;
-    if (!window.google?.maps?.visualization?.HeatmapLayer) return;
 
     if (!heatmapOn) {
-      if (heatLayerRef.current) {
-        try {
-          heatLayerRef.current.setMap(null);
-        } catch { /* no-op */ }
-        heatLayerRef.current = null;
-      }
+      cleanupHeatCircles();
       return;
     }
 
-    if (!heatLayerRef.current) {
-      heatLayerRef.current = new window.google.maps.visualization.HeatmapLayer({
-        data: heatmapData,
-        ...heatmapOptions,
+    cleanupHeatCircles();
+
+    if (!window.google?.maps?.Circle) return;
+
+    heatCirclesRef.current = heatmapData.map((point) => {
+      const circle = new window.google.maps.Circle({
+        map: mapObj,
+        center: { lat: point.lat, lng: point.lng },
+        ...getHeatPointStyle(point, heatmapOptions),
       });
-      heatLayerRef.current.setMap(mapObj);
-    } else {
-      try {
-        heatLayerRef.current.setData(heatmapData);
-        heatLayerRef.current.setOptions(heatmapOptions);
-        heatLayerRef.current.setMap(mapObj);
-      } catch { /* no-op */ }
-    }
-  }, [isLoaded, mapObj, heatmapOn, heatmapData, heatmapOptions]);
+      return circle;
+    });
+
+    return cleanupHeatCircles;
+  }, [isLoaded, mapObj, heatmapOn, heatmapData, heatmapOptions, cleanupHeatCircles]);
 
   useEffect(() => {
     if (!isLoaded) return;

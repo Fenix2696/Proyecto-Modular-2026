@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -317,7 +318,7 @@ public class GuardiaNocturnaScraper {
     }
 
     private static String resolvePublishedDate(String link, String title) {
-        String fromUrl = extractDateFromUrl(link);
+        String fromUrl = extractExactDateFromUrl(link);
         if (fromUrl != null && !fromUrl.isBlank()) return fromUrl;
 
         String fromTitle = extractDateFromTitle(title);
@@ -326,7 +327,7 @@ public class GuardiaNocturnaScraper {
         return Instant.EPOCH.toString();
     }
 
-    private static String extractDateFromUrl(String link) {
+    private static String extractExactDateFromUrl(String link) {
         if (link == null) return null;
 
         java.util.regex.Matcher dayMatcher = java.util.regex.Pattern
@@ -343,26 +344,14 @@ public class GuardiaNocturnaScraper {
                     .toString();
         }
 
-        java.util.regex.Matcher monthMatcher = java.util.regex.Pattern
-                .compile("https://guardianocturna\\.mx/(\\d{4})/(\\d{2})/.+")
-                .matcher(link);
-
-        if (monthMatcher.find()) {
-            int y = Integer.parseInt(monthMatcher.group(1));
-            int mo = Integer.parseInt(monthMatcher.group(2));
-            return LocalDate.of(y, mo, 1)
-                    .atStartOfDay()
-                    .toInstant(ZoneOffset.UTC)
-                    .toString();
-        }
-
         return null;
     }
 
     private static String extractDateFromTitle(String title) {
         if (title == null || title.isBlank()) return null;
 
-        String normalized = title
+        String normalized = Normalizer.normalize(title, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
                 .toLowerCase()
                 .replace("á", "a")
                 .replace("é", "e")

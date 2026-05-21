@@ -488,8 +488,14 @@ export default function Dashboard() {
     try {
       const response = await getActiveAIReports(limit);
       let rows = normalizeAIReportRows(response?.data || []);
+      const hasActiveRows = (response?.data || []).some(
+        (r) =>
+          r?.is_active === true ||
+          r?.is_active === undefined ||
+          r?.is_active === null
+      );
 
-      if (!rows.length) {
+      if (!rows.length || response?.usedDatabaseFallback || !hasActiveRows) {
         const syncResponse = await syncAIReports(false);
         rows = normalizeAIReportRows(syncResponse?.data || []);
       }

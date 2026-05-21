@@ -1449,6 +1449,7 @@ async function getActiveAIReports(req, res) {
     const limit = clampLimit(req.query.limit, DEFAULT_REPORT_LIMIT);
 
     let rows = await getStoredActiveAIReports(limit);
+    const activeCount = rows.length;
 
     if (!rows.length) {
       rows = await getStoredFallbackAIReports(limit);
@@ -1457,6 +1458,8 @@ async function getActiveAIReports(req, res) {
     return res.json({
       success: true,
       limit,
+      activeCount,
+      usedDatabaseFallback: activeCount === 0 && rows.length > 0,
       count: rows.length,
       data: rows,
     });

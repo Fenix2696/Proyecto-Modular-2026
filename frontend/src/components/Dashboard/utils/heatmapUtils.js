@@ -11,10 +11,10 @@ const TYPE_WEIGHT = {
   vandalism: 0.6,
 };
 
-// Construye data compatible con Google Heatmap:
-// [{ location: LatLng, weight: number }, ...]
-export function buildHeatmapData({ google, incidents = [], mode = "all", weighted = true } = {}) {
-  if (!google || !google.maps || !Array.isArray(incidents)) return [];
+// Construye puntos para una capa de intensidad propia basada en google.maps.Circle.
+// Evita google.maps.visualization.HeatmapLayer, removido desde Maps JS API 3.65.
+export function buildHeatmapData({ incidents = [], mode = "all", weighted = true } = {}) {
+  if (!Array.isArray(incidents)) return [];
 
   return incidents
     .filter((i) => {
@@ -29,20 +29,20 @@ export function buildHeatmapData({ google, incidents = [], mode = "all", weighte
       const w = weighted ? TYPE_WEIGHT[i?.type] ?? 1 : 1;
 
       return {
-        location: new google.maps.LatLng(lat, lng),
+        lat,
+        lng,
+        type: i?.type || "theft",
         weight: w,
       };
     })
     .filter(Boolean);
 }
 
-// Opciones visuales del heatmap
+// Opciones visuales de la capa de intensidad.
 // IMPORTANT: = {} evita el error "Cannot read properties of undefined (reading 'preset')"
 export function getHeatmapOptions({ preset = "auto", pointCount = 0 } = {}) {
-  let radius = 45;
-  let blur = 28;
+  let radiusMeters = 520;
   let opacity = 0.85;
-  let maxIntensity = 12;
 
   const count = Number(pointCount);
   const n = Number.isFinite(count) ? count : 0;
@@ -50,53 +50,47 @@ export function getHeatmapOptions({ preset = "auto", pointCount = 0 } = {}) {
   // Auto tuning segun cantidad de puntos
   if (preset === "auto") {
     if (n < 20) {
-      radius = 55;
-      blur = 34;
-      maxIntensity = 6;
+      radiusMeters = 680;
     } else if (n < 80) {
-      radius = 48;
-      blur = 30;
-      maxIntensity = 10;
+      radiusMeters = 560;
     } else if (n < 200) {
-      radius = 40;
-      blur = 26;
-      maxIntensity = 14;
+      radiusMeters = 440;
     } else {
-      radius = 34;
-      blur = 22;
-      maxIntensity = 18;
+      radiusMeters = 340;
     }
   } else if (preset === "tight") {
-    // Heatmap mas concentrado
-    radius = 30;
-    blur = 18;
+    radiusMeters = 320;
     opacity = 0.9;
-    maxIntensity = Math.max(10, Math.round(n / 10));
   } else if (preset === "soft") {
-    // Heatmap mas amplio y difuso
-    radius = 60;
-    blur = 40;
+    radiusMeters = 760;
     opacity = 0.75;
-    maxIntensity = 10;
   }
 
-  // Gradiente clasico tipo Google (azul -> rojo)
-  const gradient = [
-    "rgba(0, 0, 255, 0)",
-    "rgba(0, 0, 255, 0.7)",
-    "rgba(0, 255, 255, 0.8)",
-    "rgba(0, 255, 0, 0.8)",
-    "rgba(255, 255, 0, 0.9)",
-    "rgba(255, 128, 0, 0.95)",
-    "rgba(255, 0, 0, 1)",
-  ];
+  return {
+    radiusMeters,
+    opacity,
+  };
+}
+
+export function getHeatPointStyle(point, options = {}) {
+  const weight = Number(point?.weight);
+  const w = Number.isFinite(weight) ? Math.max(0.4, Math.min(weight, 1.8)) : 1;
+  const radiusMeters = Number(options.radiusMeters) || 520;
+  const opacity = Number(options.opacity) || 0.85;
+
+  let fillColor = "#22c55e";
+  if (w >= 1.35) fillColor = "#ef4444";
+  else if (w >= 1.1) fillColor = "#f97316";
+  else if (w >= 0.85) fillColor = "#facc15";
 
   return {
-    radius,
-    blur,
-    opacity,
-    dissipating: true,
-    maxIntensity,
-    gradient,
+    radius: radiusMeters * (0.75 + w * 0.3),
+    fillColor,
+    fillOpacity: Math.min(0.34, 0.12 + w * 0.08) * opacity,
+    strokeColor: fillColor,
+    strokeOpacity: 0.12 * opacity,
+    strokeWeight: 1,
+    clickable: false,
+    zIndex: 20,
   };
 }

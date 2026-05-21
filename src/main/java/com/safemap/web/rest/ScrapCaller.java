@@ -20,6 +20,7 @@ import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -75,9 +76,7 @@ public class ScrapCaller {
                 out.setLastUpdated(item.getLastUpdated());
                 out.setUrl(item.getUrl());
 
-                // sin llamar a la IA aqui
-                out.setType("Otro");
-                out.setConfidence(0.20);
+                applyFallbackCategory(out, (safeText(item.getTitle()) + ", " + safeText(item.getSnippet())).trim());
 
                 result.add(out);
             }
@@ -227,7 +226,7 @@ public class ScrapCaller {
     }
 
     private void applyFallbackCategory(ClassifiedNews resultItem, String text) {
-        String t = safeText(text).toLowerCase();
+        String t = normalizeSearchText(text);
 
         if (
                 t.contains("incendio") ||
@@ -279,7 +278,12 @@ public class ScrapCaller {
         if (
                 t.contains("arma blanca") ||
                         t.contains("balacera") ||
+                        t.contains("baleado") ||
+                        t.contains("baleados") ||
                         t.contains("homicidio") ||
+                        t.contains("asesinan") ||
+                        t.contains("asesinado") ||
+                        t.contains("agresion") ||
                         t.contains("disparos") ||
                         t.contains("violencia") ||
                         t.contains("ataque armado") ||
@@ -302,6 +306,20 @@ public class ScrapCaller {
 
         resultItem.setType("Otro");
         resultItem.setConfidence(0.20);
+    }
+
+    private String normalizeSearchText(String value) {
+        String normalized = Normalizer.normalize(safeText(value), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase();
+
+        return normalized
+                .replace("Ã¡", "a")
+                .replace("Ã©", "e")
+                .replace("Ã­", "i")
+                .replace("Ã³", "o")
+                .replace("Ãº", "u")
+                .replace("Ã±", "n");
     }
 
     private String generateSearchQuery(SearchQueryParams queryParams) {
